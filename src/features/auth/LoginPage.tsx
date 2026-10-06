@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Copy,
   X,
+  AlertCircle,
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -25,9 +26,36 @@ export default function LoginPage() {
 
   const [step, setStep] = useState<"MOBILE" | "OTP">("MOBILE");
   const [mobile, setMobile] = useState("");
+  const [lookupUser, setLookupUser] = useState<{
+    name?: string | null;
+    role?: string;
+    organizationName?: string | null;
+  } | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Live lookup when 10 digits entered
+  useEffect(() => {
+    const clean = mobile.trim();
+    if (/^\d{10}$/.test(clean)) {
+      setIsLookingUp(true);
+      authService
+        .lookup(clean)
+        .then((res) => {
+          if (res?.exists && res?.user) {
+            setLookupUser(res.user);
+          } else {
+            setLookupUser(null);
+          }
+        })
+        .catch(() => setLookupUser(null))
+        .finally(() => setIsLookingUp(false));
+    } else {
+      setLookupUser(null);
+    }
+  }, [mobile]);
 
   // Dev Toast Notification state
   const [toastOtp, setToastOtp] = useState<string | null>(null);
@@ -80,7 +108,11 @@ export default function LoginPage() {
     try {
       const result = await authService.verifyOtp(mobile.trim(), otpValue);
       dispatch(setCredentials({ user: result.user, token: result.token }));
-      navigate("/", { replace: true });
+      if (result.user.isSuperAdmin) {
+        navigate("/superadmin", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (err) {
       setError(errMsg(err));
     } finally {
@@ -332,6 +364,41 @@ export default function LoginPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Dynamic User Lookup Banner */}
+                  {lookupUser && (
+                    <div className="mt-3 rounded-xl bg-emerald-50 p-3 border border-emerald-200 text-xs text-emerald-900 flex items-center gap-2.5 animate-in fade-in">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shrink-0 font-bold text-xs">
+                        ✓
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-900 truncate">
+                          Welcome, {lookupUser.name || "Member"}!
+                        </p>
+                        <p className="text-[11px] text-emerald-700 truncate">
+                          {lookupUser.role || "Staff"} {lookupUser.organizationName ? `at ${lookupUser.organizationName}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {mobile.length === 10 && !isLookingUp && !lookupUser && (
+                    <div className="mt-3 rounded-xl bg-amber-50 p-3 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5 animate-in fade-in">
+                      <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-amber-950">Number Not Registered</p>
+                        <p className="text-[11px] text-amber-800 leading-snug mt-0.5">
+                          Only pre-registered owners and staff invited by an administrator can log in.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {isLookingUp && (
+                    <p className="mt-2 text-[11px] text-slate-400 animate-pulse">
+                      Checking profile records...
+                    </p>
+                  )}
                 </div>
 
                 <Button

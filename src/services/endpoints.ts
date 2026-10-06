@@ -9,8 +9,10 @@ export const ENDPOINTS = {
 
   // Authentication & Identity
   AUTH: {
+    LOOKUP: "/auth/lookup",
     SEND_OTP: "/auth/send-otp",
     VERIFY_OTP: "/auth/verify-otp",
+    REFRESH_TOKEN: "/auth/refresh-token",
     ME: "/auth/me",
     LOGOUT: "/auth/logout",
   },
@@ -42,15 +44,48 @@ export const ENDPOINTS = {
     DELETE: (id: string) => `/payments/${id}`,
   },
 
-  // Organizations & Roles
+  // Dynamic RBAC Roles & Permissions
+  ROLES: {
+    LIST: "/roles",
+    PERMISSIONS: "/roles/permissions",
+    CREATE: "/roles",
+    UPDATE: (id: string) => `/roles/${id}`,
+    DELETE: (id: string) => `/roles/${id}`,
+  },
+
+  // SuperAdmin Control Center
+  ADMIN: {
+    OVERVIEW: "/admin/overview",
+    USERS_LIST: "/admin/users",
+    USER_CREATE: "/admin/users",
+    USER_STATUS: (id: string) => `/admin/users/${id}/status`,
+    USER_ROLE: (id: string) => `/admin/users/${id}/role`,
+    USER_ADMIN_ROLE: (id: string) => `/admin/users/${id}/admin-role`,
+    ROLES_LIST: "/admin/roles",
+    ROLE_CREATE: "/admin/roles",
+    ROLE_UPDATE: (id: string) => `/admin/roles/${id}`,
+    ROLE_DELETE: (id: string) => `/admin/roles/${id}`,
+    ORGANIZATIONS_LIST: "/admin/organizations",
+    ORGANIZATION_SUBSCRIPTION: (id: string) => `/admin/organizations/${id}/subscription`,
+  },
+
+  // SaaS Plans & Subscriptions
+  PLANS: {
+    LIST: "/plans",
+    CREATE: "/plans",
+    DETAIL: (id: string) => `/plans/${id}`,
+    UPDATE: (id: string) => `/plans/${id}`,
+    DELETE: (id: string) => `/plans/${id}`,
+  },
+
+  // Organizations
   ORGANIZATIONS: {
     LIST: "/organizations",
     CREATE: "/organizations",
     DETAIL: (id: string) => `/organizations/${id}`,
-  },
-  ROLES: {
-    LIST: "/roles",
-    DETAIL: (id: string) => `/roles/${id}`,
+    MEMBERS_LIST: (orgId: string) => `/organizations/${orgId}/members`,
+    MEMBER_ADD: (orgId: string) => `/organizations/${orgId}/members`,
+    MEMBER_REMOVE: (orgId: string, userId: string) => `/organizations/${orgId}/members/${userId}`,
   },
 } as const;
 

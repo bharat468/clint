@@ -1,5 +1,15 @@
 import { NavLink } from "react-router-dom";
-import { Building2, CreditCard, LayoutDashboard, Users, X, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Building2,
+  CreditCard,
+  LayoutDashboard,
+  Users,
+  X,
+  ShieldCheck,
+  Sparkles,
+  Settings,
+  ExternalLink,
+} from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSidebar } from "@/features/ui/uiSlice";
 import { cn } from "@/lib/utils";
@@ -9,12 +19,16 @@ const navigationLinks = [
   { to: "/properties", label: "Properties", icon: Building2 },
   { to: "/tenants", label: "Tenants", icon: Users },
   { to: "/payments", label: "Payments", icon: CreditCard },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {
   const dispatch = useAppDispatch();
   const open = useAppSelector((s) => s.ui.sidebarOpen);
   const user = useAppSelector((s) => s.auth.user);
+
+  const isSuperAdmin =
+    user?.mobile === "9876543210" || (user as any)?.isSuperAdmin;
 
   const getInitials = (name?: string | null) => {
     if (!name) return "RM";
@@ -86,6 +100,25 @@ export default function Sidebar() {
             ))}
           </nav>
         </div>
+
+        {/* Dedicated SuperAdmin Platform Portal (Only for Designated Platform Admin) */}
+        {isSuperAdmin && (
+          <div className="space-y-1">
+            <p className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+              Platform Governance
+            </p>
+            <nav className="mt-2 space-y-1">
+              <NavLink
+                to="/superadmin"
+                className="group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all duration-150 bg-slate-900 text-white hover:bg-slate-800 shadow-xs"
+              >
+                <ShieldCheck className="h-4 w-4 text-amber-400" />
+                <span>SuperAdmin Portal</span>
+                <ExternalLink className="h-3 w-3 ml-auto text-slate-400 group-hover:text-white" />
+              </NavLink>
+            </nav>
+          </div>
+        )}
       </div>
 
       {/* Bottom Footer Section */}

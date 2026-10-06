@@ -7,6 +7,8 @@ import DashboardPage from "@/features/dashboard/DashboardPage";
 import PropertiesPage from "@/features/properties/PropertiesPage";
 import TenantsPage from "@/features/tenants/TenantsPage";
 import PaymentsPage from "@/features/payments/PaymentsPage";
+import SettingsPage from "@/features/settings/SettingsPage";
+import SuperAdminPage from "@/features/superadmin/SuperAdminPage";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -21,7 +23,13 @@ export const router = createBrowserRouter([
           { path: "/properties", element: <PropertiesPage /> },
           { path: "/tenants", element: <TenantsPage /> },
           { path: "/payments", element: <PaymentsPage /> },
+          { path: "/settings", element: <SettingsPage /> },
         ],
+      },
+      // Dedicated Independent SuperAdmin Portal
+      {
+        path: "/superadmin",
+        element: <SuperAdminPage />,
       },
     ],
   },
