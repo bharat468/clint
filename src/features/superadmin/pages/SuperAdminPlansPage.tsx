@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Plus, CheckCircle2, AlertCircle } from "lucide-react";
+import { Plus, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { planService } from "@/services/plan.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { State } from "@/components/ui/page";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { Toast } from "@/components/ui/toast";
 import { formatINR } from "@/lib/utils";
 import PlanModal from "../components/PlanModal";
 import type { Plan } from "@/types";
@@ -17,11 +19,12 @@ export default function SuperAdminPlansPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [deletingPlan, setDeletingPlan] = useState<Plan | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const showFeedback = (text: string, type: "success" | "error" = "success") => {
     setFeedback({ text, type });
-    setTimeout(() => setFeedback(null), 4000);
   };
 
   const handleOpenCreate = () => {
@@ -34,25 +37,44 @@ export default function SuperAdminPlansPage() {
     setModalOpen(true);
   };
 
+  const handleToggleActive = async (p: Plan) => {
+    try {
+      await planService.updatePlan(p.id, { isActive: !p.isActive });
+      showFeedback(`Plan "${p.name}" status updated to ${!p.isActive ? "Active" : "Inactive"}`);
+      reloadPlans();
+    } catch (err: any) {
+      showFeedback(err?.message || "Failed to update plan status", "error");
+    }
+  };
+
+  const handleRequestDelete = (p: Plan) => {
+    setDeletingPlan(p);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingPlan) return;
+    setIsDeleting(true);
+    try {
+      await planService.deletePlan(deletingPlan.id);
+      showFeedback(`Plan "${deletingPlan.name}" deleted successfully`);
+      setDeletingPlan(null);
+      reloadPlans();
+    } catch (err: any) {
+      showFeedback(err?.message || "Failed to delete plan", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Toast */}
-      {feedback && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-semibold animate-in fade-in slide-in-from-top-2 duration-200 ${
-            feedback.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : "bg-rose-50 text-rose-800 border-rose-200"
-          }`}
-        >
-          {feedback.type === "success" ? (
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-          ) : (
-            <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
-          )}
-          <span>{feedback.text}</span>
-        </div>
-      )}
+      {/* Bottom Center Toast */}
+      <Toast
+        show={Boolean(feedback)}
+        message={feedback?.text || ""}
+        type={feedback?.type}
+        onClose={() => setFeedback(null)}
+      />
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -142,22 +164,41 @@ export default function SuperAdminPlansPage() {
               </div>
 
               <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                <span
-                  className={`text-[11px] font-bold ${
-                    p.isActive ? "text-emerald-600" : "text-slate-400"
+                <button
+                  type="button"
+                  onClick={() => handleToggleActive(p)}
+                  title={`Click to ${p.isActive ? "deactivate" : "activate"} plan tier`}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors cursor-pointer ${
+                    p.isActive
+                      ? "text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
+                      : "text-slate-600 bg-slate-100 border-slate-200 hover:bg-slate-200"
                   }`}
                 >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      p.isActive ? "bg-emerald-500" : "bg-slate-400"
+                    }`}
+                  />
                   {p.isActive ? "Active Tier" : "Inactive"}
-                </span>
+                </button>
 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleOpenEdit(p)}
-                  className="text-xs"
-                >
-                  Edit Plan Specs
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleOpenEdit(p)}
+                    className="text-xs h-7 px-2.5"
+                  >
+                    Edit Specs
+                  </Button>
+                  <button
+                    onClick={() => handleRequestDelete(p)}
+                    title="Delete Plan Tier"
+                    className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </Card>
           ))}
@@ -173,6 +214,22 @@ export default function SuperAdminPlansPage() {
           showFeedback(msg);
           reloadPlans();
         }}
+      />
+
+      {/* Delete Plan Confirm Modal */}
+      <ConfirmModal
+        open={Boolean(deletingPlan)}
+        title="Delete Plan Tier?"
+        description={
+          deletingPlan
+            ? `Are you sure you want to permanently delete plan "${deletingPlan.name}"? Organizations currently subscribed to this tier should be transitioned to a different plan.`
+            : "Are you sure you want to delete this plan?"
+        }
+        confirmText="Yes, Delete Plan"
+        tone="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingPlan(null)}
       />
     </div>
   );

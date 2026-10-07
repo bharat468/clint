@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Plus, CheckCircle2, AlertCircle, ShieldCheck } from "lucide-react";
+import { Plus, CheckCircle2, AlertCircle, ShieldCheck, Pencil, Trash2 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { adminService } from "@/services/admin.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { State } from "@/components/ui/page";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { Toast } from "@/components/ui/toast";
 import RoleModal from "../components/RoleModal";
 import type { SuperAdminRole } from "@/types";
 
@@ -15,32 +17,53 @@ export default function SuperAdminRolesPage() {
   );
 
   const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<SuperAdminRole | null>(null);
+  const [deletingRole, setDeletingRole] = useState<SuperAdminRole | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const showFeedback = (text: string, type: "success" | "error" = "success") => {
     setFeedback({ text, type });
-    setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const handleOpenCreate = () => {
+    setEditingRole(null);
+    setRoleModalOpen(true);
+  };
+
+  const handleOpenEdit = (role: SuperAdminRole) => {
+    setEditingRole(role);
+    setRoleModalOpen(true);
+  };
+
+  const handleRequestDelete = (role: SuperAdminRole) => {
+    setDeletingRole(role);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingRole) return;
+    setIsDeleting(true);
+    try {
+      await adminService.deleteRole(deletingRole.id);
+      showFeedback(`Platform role "${deletingRole.name}" deleted successfully`);
+      setDeletingRole(null);
+      reloadRoles();
+    } catch (err: any) {
+      showFeedback(err?.message || "Failed to delete role", "error");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Toast */}
-      {feedback && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-semibold animate-in fade-in slide-in-from-top-2 duration-200 ${
-            feedback.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : "bg-rose-50 text-rose-800 border-rose-200"
-          }`}
-        >
-          {feedback.type === "success" ? (
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-          ) : (
-            <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
-          )}
-          <span>{feedback.text}</span>
-        </div>
-      )}
+      {/* Bottom Center Toast */}
+      <Toast
+        show={Boolean(feedback)}
+        message={feedback?.text || ""}
+        type={feedback?.type}
+        onClose={() => setFeedback(null)}
+      />
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -59,7 +82,7 @@ export default function SuperAdminRolesPage() {
         </div>
 
         <Button
-          onClick={() => setRoleModalOpen(true)}
+          onClick={handleOpenCreate}
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs gap-1.5 shadow-xs"
         >
           <Plus className="h-4 w-4" />
@@ -74,36 +97,59 @@ export default function SuperAdminRolesPage() {
           {adminRoles.map((role) => (
             <Card
               key={role.id}
-              className="p-5 bg-white border border-slate-200/80 rounded-2xl space-y-3 shadow-xs hover:border-blue-300 transition-all"
+              className="p-5 bg-white border border-slate-200/80 rounded-2xl flex flex-col justify-between shadow-xs hover:border-blue-300 transition-all"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-                    <ShieldCheck className="h-4 w-4" />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+                      <ShieldCheck className="h-4 w-4" />
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-900">{role.name}</h4>
                   </div>
-                  <h4 className="text-sm font-bold text-slate-900">{role.name}</h4>
+                  <span className="text-[10px] font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-bold">
+                    {role.slug}
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-bold">
-                  {role.slug}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 min-h-[30px]">
-                {role.description || "Platform executive management role"}
-              </p>
+                <p className="text-xs text-slate-500 min-h-[30px]">
+                  {role.description || "Platform executive management role"}
+                </p>
 
-              <div className="pt-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Granted Privileges ({role.permissions.length}):
-                </span>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {role.permissions.map((p, idx) => (
-                    <span
-                      key={idx}
-                      className="text-[10px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60"
-                    >
-                      {p.replace("PLATFORM_", "")}
-                    </span>
-                  ))}
+                <div className="pt-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Granted Privileges ({role.permissions.length}):
+                  </span>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {role.permissions.map((p, idx) => (
+                      <span
+                        key={idx}
+                        className="text-[10px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60"
+                      >
+                        {p.replace("PLATFORM_", "")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Footer with Edit & Delete */}
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <span className="font-mono text-slate-400">ID: #{role.id.slice(-6)}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleOpenEdit(role)}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                    title="Edit Role Privileges"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleRequestDelete(role)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                    title="Delete Role"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
             </Card>
@@ -114,11 +160,28 @@ export default function SuperAdminRolesPage() {
       {/* Role Modal */}
       <RoleModal
         open={roleModalOpen}
+        roleToEdit={editingRole}
         onClose={() => setRoleModalOpen(false)}
         onSuccess={(msg) => {
           showFeedback(msg);
           reloadRoles();
         }}
+      />
+
+      {/* Delete Role Confirm Modal */}
+      <ConfirmModal
+        open={Boolean(deletingRole)}
+        title="Delete Platform Role?"
+        description={
+          deletingRole
+            ? `Are you sure you want to permanently delete platform role "${deletingRole.name}"? Users assigned to this role will lose their platform administrative privileges.`
+            : "Are you sure you want to delete this role?"
+        }
+        confirmText="Yes, Delete Role"
+        tone="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingRole(null)}
       />
     </div>
   );

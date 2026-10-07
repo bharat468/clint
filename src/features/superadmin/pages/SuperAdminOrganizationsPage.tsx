@@ -6,6 +6,7 @@ import { planService } from "@/services/plan.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { State } from "@/components/ui/page";
+import { Toast } from "@/components/ui/toast";
 import SubscriptionModal from "../components/SubscriptionModal";
 import type { AdminOrganization, Plan } from "@/types";
 
@@ -25,6 +26,18 @@ export default function SuperAdminOrganizationsPage() {
     setTimeout(() => setFeedback(null), 4000);
   };
 
+  const handleToggleOrgStatus = async (o: AdminOrganization) => {
+    const currentStatus = o.subscription?.status || "ACTIVE";
+    const nextStatus = currentStatus === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
+    try {
+      await adminService.updateSubscription(o.id, { status: nextStatus });
+      showFeedback(`Organization "${o.name}" status updated to ${nextStatus}`);
+      reloadOrgs();
+    } catch (err: any) {
+      showFeedback(err?.message || "Failed to update organization status", "error");
+    }
+  };
+
   const filteredOrgs = orgs.filter(
     (o) =>
       o.name?.toLowerCase().includes(searchOrg.toLowerCase()) ||
@@ -34,23 +47,13 @@ export default function SuperAdminOrganizationsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Toast */}
-      {feedback && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-semibold animate-in fade-in slide-in-from-top-2 duration-200 ${
-            feedback.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : "bg-rose-50 text-rose-800 border-rose-200"
-          }`}
-        >
-          {feedback.type === "success" ? (
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-          ) : (
-            <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
-          )}
-          <span>{feedback.text}</span>
-        </div>
-      )}
+      {/* Bottom Center Toast */}
+      <Toast
+        show={Boolean(feedback)}
+        message={feedback?.text || ""}
+        type={feedback?.type}
+        onClose={() => setFeedback(null)}
+      />
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -173,28 +176,58 @@ export default function SuperAdminOrganizationsPage() {
                           )}
                         </td>
                         <td className="px-5 py-4">
-                          <span
-                            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                              sub?.status === "SUSPENDED"
-                                ? "text-rose-700 bg-rose-50 border-rose-200"
-                                : isExpired
-                                ? "text-rose-700 bg-rose-50 border-rose-200"
-                                : "text-emerald-700 bg-emerald-50 border-emerald-200"
-                            }`}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleOrgStatus(o)}
+                            title="Click to toggle Active / Suspended status"
+                            className="transition-transform active:scale-95"
                           >
-                            {sub?.status === "SUSPENDED" ? "SUSPENDED" : isExpired ? "EXPIRED" : "ACTIVE"}
-                          </span>
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border cursor-pointer ${
+                                sub?.status === "SUSPENDED"
+                                  ? "text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100"
+                                  : isExpired
+                                  ? "text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100"
+                                  : "text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
+                              }`}
+                            >
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  sub?.status === "SUSPENDED"
+                                    ? "bg-rose-500"
+                                    : isExpired
+                                    ? "bg-rose-500"
+                                    : "bg-emerald-500"
+                                }`}
+                              />
+                              {sub?.status === "SUSPENDED" ? "SUSPENDED" : isExpired ? "EXPIRED" : "ACTIVE"}
+                            </span>
+                          </button>
                         </td>
                         <td className="px-5 py-4 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setSelectedOrgForSub(o)}
-                            className="text-xs gap-1.5"
-                          >
-                            <Calendar className="h-3.5 w-3.5 text-blue-600" />
-                            <span>Manage Plan</span>
-                          </Button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleToggleOrgStatus(o)}
+                              className={`text-xs h-7 px-2 ${
+                                sub?.status === "SUSPENDED"
+                                  ? "text-emerald-600 hover:bg-emerald-50"
+                                  : "text-rose-600 hover:bg-rose-50"
+                              }`}
+                            >
+                              {sub?.status === "SUSPENDED" ? "Activate" : "Suspend"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSelectedOrgForSub(o)}
+                              className="text-xs gap-1.5 h-7"
+                            >
+                              <Calendar className="h-3 w-3 text-blue-600" />
+                              <span>Plan</span>
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
