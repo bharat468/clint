@@ -20,8 +20,8 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/85 px-4 backdrop-blur-md transition-all sm:px-6">
-      {/* Left side: Menu Toggle & Quick Context */}
-      <div className="flex items-center gap-3 sm:gap-4">
+      {/* Left side: Menu Toggle, Mobile Logo & Quick Context */}
+      <div className="flex items-center gap-2.5 sm:gap-4">
         <Button
           variant="ghost"
           size="icon"
@@ -32,10 +32,17 @@ export default function Navbar() {
           <Menu className="h-5 w-5" />
         </Button>
 
+        {/* Mobile / Tablet Logo */}
+        <img
+          src="/RentMate%20Smart%20Rentals%20Logo.png"
+          alt="RentMate Logo"
+          className="h-10 w-auto md:hidden object-contain"
+        />
+
         {/* Search Bar Display */}
         <div className="hidden sm:flex items-center gap-2 rounded-xl bg-slate-100/80 px-3.5 py-1.5 text-xs text-slate-400 border border-slate-200/50 transition-colors hover:border-slate-300">
           <Search className="h-3.5 w-3.5 text-slate-400" />
-          <span className="font-normal text-slate-500">Search dashboard...</span>
+          <span className="font-normal text-slate-500">Search properties, tenants, payments...</span>
           <kbd className="ml-3 rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 shadow-2xs border border-slate-200">
             ⌘K
           </kbd>
