@@ -10,14 +10,9 @@ import {
   ArrowRight,
   RefreshCw,
   Phone,
-  ShieldCheck,
   ArrowLeft,
-  Sparkles,
-  CheckCircle2,
-  Copy,
-  X,
-  AlertCircle,
   Building2,
+  ShieldCheck,
 } from "lucide-react";
 import type { User } from "@/types";
 
@@ -28,48 +23,26 @@ export default function LoginPage() {
 
   const [step, setStep] = useState<"MOBILE" | "OTP">("MOBILE");
   const [mobile, setMobile] = useState("");
-  const [lookupUser, setLookupUser] = useState<{
-    name?: string | null;
-    role?: string;
-    organizationName?: string | null;
-    isSuperAdmin?: boolean;
-  } | null>(null);
-  const [isLookingUp, setIsLookingUp] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [pendingSuperAdminAuth, setPendingSuperAdminAuth] = useState<{
     user: User;
     token: string;
   } | null>(null);
 
-  // Live lookup when 10 digits entered
-  useEffect(() => {
-    const clean = mobile.trim();
-    if (/^\d{10}$/.test(clean)) {
-      setIsLookingUp(true);
-      authService
-        .lookup(clean)
-        .then((res) => {
-          if (res?.exists && res?.user) {
-            setLookupUser(res.user);
-          } else {
-            setLookupUser(null);
-          }
-        })
-        .catch(() => setLookupUser(null))
-        .finally(() => setIsLookingUp(false));
-    } else {
-      setLookupUser(null);
-    }
-  }, [mobile]);
-
-  // Dev Toast Notification state
-  const [toastOtp, setToastOtp] = useState<string | null>(null);
-  const [copiedToast, setCopiedToast] = useState(false);
-
   // Input refs for 6 OTP boxes
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Resend countdown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   if (token) return <Navigate to="/" replace />;
 
@@ -89,11 +62,13 @@ export default function LoginPage() {
     try {
       const res = await authService.sendOtp(cleanMobile);
       setStep("OTP");
-      setOtpDigits(["", "", "", "", "", ""]);
+      setResendCooldown(30);
 
-      // Show toast if devOtp is returned by API
-      if (res.devOtp) {
-        setToastOtp(res.devOtp);
+      // In development/test mode, auto-fill OTP digits if provided by backend API
+      if (res.devOtp && res.devOtp.length === 6) {
+        setOtpDigits(res.devOtp.split(""));
+      } else {
+        setOtpDigits(["", "", "", "", "", ""]);
       }
     } catch (err) {
       setError(errMsg(err));
@@ -116,7 +91,7 @@ export default function LoginPage() {
       const result = await authService.verifyOtp(mobile.trim(), otpValue);
       const isSuper =
         Boolean(result.user?.isSuperAdmin) ||
-        ["8003953815", "9876543210"].includes(result.user?.mobile || "");
+        result.user?.adminRole === "SUPER_ADMIN";
 
       if (isSuper) {
         // Show Workspace Selection Popup Modal for SuperAdmin
@@ -159,12 +134,14 @@ export default function LoginPage() {
   };
 
   const handleResend = async () => {
+    if (resendCooldown > 0 || loading) return;
     setError(null);
     setLoading(true);
     try {
       const res = await authService.sendOtp(mobile.trim());
-      if (res.devOtp) {
-        setToastOtp(res.devOtp);
+      setResendCooldown(30);
+      if (res.devOtp && res.devOtp.length === 6) {
+        setOtpDigits(res.devOtp.split(""));
       }
     } catch (err) {
       setError(errMsg(err));
@@ -173,11 +150,13 @@ export default function LoginPage() {
     }
   };
 
-  // Auto-focus first OTP box when entering OTP step
+  // Auto-focus first empty OTP box when entering OTP step
   useEffect(() => {
     if (step === "OTP") {
       setTimeout(() => {
-        inputRefs.current[0]?.focus();
+        const firstEmptyIndex = otpDigits.findIndex((d) => !d);
+        const targetIndex = firstEmptyIndex === -1 ? 5 : firstEmptyIndex;
+        inputRefs.current[targetIndex]?.focus();
       }, 100);
     }
   }, [step]);
@@ -227,148 +206,63 @@ export default function LoginPage() {
     }
     setOtpDigits(newOtp);
 
-    // Focus last filled index
     const focusIndex = Math.min(pasted.length, 5);
     inputRefs.current[focusIndex]?.focus();
   };
 
-  // Auto-fill from Toast
-  const handleAutofillToast = () => {
-    if (!toastOtp) return;
-    const digits = toastOtp.slice(0, 6).split("");
-    setOtpDigits(digits);
-    setCopiedToast(true);
-    setTimeout(() => setCopiedToast(false), 2000);
-    inputRefs.current[5]?.focus();
-  };
-
   return (
-    <div className="h-screen w-full flex bg-slate-50 font-sans overflow-hidden relative">
+    <div className="min-h-screen w-full flex bg-slate-50 font-sans">
       {/* ============================================================ */}
-      {/* FLOATING DEV TOAST NOTIFICATION                              */}
+      {/* LEFT SIDE: PROMINENT BIG LOGO & VALUE PROPOSITION            */}
       {/* ============================================================ */}
-      {toastOtp && (
-        <div className="fixed top-4 right-4 z-50 max-w-sm w-full animate-in slide-in-from-top-4 duration-300">
-          <div className="rounded-2xl border border-blue-200 bg-white p-3.5 shadow-xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600 shrink-0">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">Dev OTP Ready</h4>
-                  <p className="text-[11px] text-slate-500">Verification code generated</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setToastOtp(null)}
-                className="text-slate-400 hover:text-slate-600 p-0.5 rounded-lg"
-                aria-label="Dismiss toast"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="mt-2.5 flex items-center justify-between rounded-xl bg-blue-50/70 px-3 py-1.5 border border-blue-100">
-              <span className="font-mono text-base font-extrabold tracking-widest text-blue-800">
-                {toastOtp}
-              </span>
-              <button
-                type="button"
-                onClick={handleAutofillToast}
-                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 active:scale-95 transition-all"
-              >
-                {copiedToast ? (
-                  <>
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>Auto-filled!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5" />
-                    <span>Auto-fill OTP</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* LEFT SIDE: SIMPLE FULL BIG LOGO & 1-2 LINES (NO SCROLL)      */}
-      {/* ============================================================ */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-12 bg-gradient-to-br from-blue-50/70 via-slate-50 to-indigo-50/40 border-r border-slate-200/80 text-center select-none">
-        <div className="max-w-md flex flex-col items-center">
-          {/* Full Big Logo */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-12 xl:p-16 bg-gradient-to-br from-blue-50/80 via-slate-50 to-indigo-50/50 border-r border-slate-200 select-none">
+        <div className="max-w-lg flex flex-col items-center text-center">
+          {/* Big, Crisp, High-Resolution Brand Logo */}
           <img
             src="/RentMate%20Smart%20Rentals%20Logo.png"
-            alt="RentMate Smart Rentals Logo"
-            className="h-28 xl:h-32 w-auto max-w-[320px] object-contain drop-shadow-xs mb-6 transition-transform hover:scale-105 duration-300"
+            alt="RentMate - Smarter Rentals. Happier Living."
+            className="h-44 lg:h-48 xl:h-56 w-auto max-w-[480px] xl:max-w-[540px] object-contain drop-shadow-sm mb-8 transition-transform hover:scale-[1.02] duration-300"
           />
 
-          {/* Simple 1-2 Line Title & Subtitle */}
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 leading-snug">
-            Smart Property & Rental Management
-          </h2>
-          <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-sm">
-            Simplify rent collections, manage tenants, and track occupancies effortlessly in real-time.
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 leading-snug">
+            Property & Rental Management Platform
+          </h1>
+          <p className="mt-3 text-base text-slate-600 leading-relaxed max-w-md">
+            Streamline rent collections, tenant tracking, and property maintenance in one centralized workspace.
           </p>
-
-          <div className="mt-6 flex items-center gap-2 text-xs font-medium text-slate-400">
-            <ShieldCheck className="h-4 w-4 text-emerald-500" />
-            <span>Fast, secure & transparent platform</span>
-          </div>
         </div>
       </div>
 
       {/* ============================================================ */}
-      {/* RIGHT SIDE: CLEAN COMPACT FORM (NO SCROLL, 100% RESPONSIVE)  */}
+      {/* RIGHT SIDE: CLEAN, PROFESSIONAL SIGN-IN CARD                */}
       {/* ============================================================ */}
-      <div className="flex flex-1 flex-col justify-center px-4 py-8 sm:px-6 lg:px-12 xl:px-16 overflow-y-auto lg:overflow-hidden">
-        <div className="mx-auto w-full max-w-sm">
-          {/* Logo on Normal / Mobile screens */}
-          <div className="text-center mb-6 lg:hidden">
+      <div className="flex flex-1 flex-col justify-center items-center px-4 py-12 sm:px-6 lg:px-12">
+        <div className="w-full max-w-md">
+          {/* Mobile / Tablet Logo (Prominent) */}
+          <div className="text-center mb-8 lg:hidden">
             <img
               src="/RentMate%20Smart%20Rentals%20Logo.png"
-              alt="RentMate Smart Rentals Logo"
-              className="h-14 w-auto mx-auto object-contain drop-shadow-xs mb-2"
+              alt="RentMate Logo"
+              className="h-24 sm:h-28 md:h-32 w-auto max-w-[340px] sm:max-w-[380px] mx-auto object-contain drop-shadow-xs mb-4"
             />
-            <h2 className="text-xl font-bold tracking-tight text-slate-900">
-              Welcome to RentMate
-            </h2>
-            <p className="text-xs text-slate-500">
-              {step === "MOBILE"
-                ? "Enter your mobile number to sign in"
-                : `Enter the code sent to +91 ${mobile}`}
-            </p>
-          </div>
-
-          {/* Heading on Large Screens */}
-          <div className="hidden lg:block mb-6 text-center">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-              Sign In
-            </h2>
-            <p className="mt-1 text-xs text-slate-500">
-              {step === "MOBILE"
-                ? "Enter your mobile number to receive an OTP"
-                : `Enter verification code sent to +91 ${mobile}`}
-            </p>
           </div>
 
           {/* Form Card */}
-          <Card className="p-6 sm:p-7 shadow-xs border-slate-200/90 rounded-2xl bg-white">
-            {/* Dev Mode Notification Alert */}
-            <div className="mb-4 flex items-center gap-2 rounded-xl bg-blue-50/70 p-2.5 text-xs text-blue-900 border border-blue-100">
-              <Sparkles className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-              <span className="text-[11px] leading-snug">
-                <strong>Dev Mode:</strong> OTP auto-generates via backend API & Toast.
-              </span>
+          <Card className="p-8 sm:p-9 shadow-sm border border-slate-200/90 rounded-2xl bg-white">
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                Sign In
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {step === "MOBILE"
+                  ? "Enter your mobile number to receive a verification code"
+                  : `Enter the 6-digit code sent to +91 ${mobile}`}
+              </p>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="mb-4 rounded-xl bg-rose-50 p-2.5 text-xs font-medium text-rose-700 border border-rose-200 animate-in fade-in">
+              <div className="mb-5 rounded-xl bg-rose-50 p-3 text-xs font-medium text-rose-700 border border-rose-200 animate-in fade-in">
                 {error}
               </div>
             )}
@@ -380,9 +274,9 @@ export default function LoginPage() {
                   <label htmlFor="mobile" className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Mobile Number
                   </label>
-                  <div className="relative flex rounded-xl border border-slate-200 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all bg-white overflow-hidden">
-                    <div className="flex items-center gap-1.5 bg-slate-50 px-3.5 border-r border-slate-200 text-xs font-semibold text-slate-600 select-none">
-                      <Phone className="h-3.5 w-3.5 text-slate-400" />
+                  <div className="relative flex rounded-xl border border-slate-300 focus-within:border-blue-600 focus-within:ring-3 focus-within:ring-blue-100 transition-all bg-white overflow-hidden">
+                    <div className="flex items-center gap-1.5 bg-slate-50 px-3.5 border-r border-slate-200 text-sm font-semibold text-slate-700 select-none">
+                      <Phone className="h-4 w-4 text-slate-400" />
                       <span>+91</span>
                     </div>
                     <input
@@ -391,71 +285,32 @@ export default function LoginPage() {
                       inputMode="numeric"
                       placeholder="98765 43210"
                       value={mobile}
-                      onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                      className="h-11 w-full px-3.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setMobile(val);
+                        if (error) setError(null);
+                      }}
+                      className="h-12 w-full px-3.5 text-base text-slate-900 placeholder:text-slate-400 outline-none"
                       autoFocus
                       required
                     />
                     {mobile.length > 0 && (
-                      <div className="flex items-center pr-3 text-[11px] font-semibold text-slate-400">
+                      <div className="flex items-center pr-3.5 text-xs font-semibold text-slate-400">
                         {mobile.length}/10
                       </div>
                     )}
                   </div>
-
-                  {/* Dynamic User Lookup Banner */}
-                  {lookupUser && (
-                    <div className="mt-3 rounded-xl bg-emerald-50 p-3 border border-emerald-200 text-xs text-emerald-900 flex items-center gap-2.5 animate-in fade-in">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shrink-0 font-bold text-xs">
-                        ✓
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <p className="font-bold text-slate-900 truncate">
-                            Welcome, {lookupUser.name || "Member"}!
-                          </p>
-                          {(lookupUser as any).isSuperAdmin && (
-                            <span className="rounded bg-blue-100 text-blue-800 text-[10px] font-bold px-1.5 py-0.2 shrink-0">
-                              SuperAdmin
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-emerald-700 truncate">
-                          {lookupUser.role || "Staff"}{" "}
-                          {lookupUser.organizationName ? `at ${lookupUser.organizationName}` : ""}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {mobile.length === 10 && !isLookingUp && !lookupUser && (
-                    <div className="mt-3 rounded-xl bg-amber-50 p-3 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5 animate-in fade-in">
-                      <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-amber-950">Number Not Registered</p>
-                        <p className="text-[11px] text-amber-800 leading-snug mt-0.5">
-                          Only pre-registered owners and staff invited by an administrator can log in.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {isLookingUp && (
-                    <p className="mt-2 text-[11px] text-slate-400 animate-pulse">
-                      Checking profile records...
-                    </p>
-                  )}
                 </div>
 
                 <Button
                   type="submit"
                   disabled={loading || mobile.length !== 10}
-                  className="w-full h-11 text-sm font-semibold gap-2 mt-2 bg-blue-600 hover:bg-blue-700 shadow-xs shadow-blue-500/20"
+                  className="w-full h-12 text-sm font-semibold gap-2 mt-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors"
                 >
                   {loading ? (
                     <>
                       <RefreshCw className="h-4 w-4 animate-spin" />
-                      <span>Sending OTP...</span>
+                      <span>Sending Code...</span>
                     </>
                   ) : (
                     <>
@@ -467,14 +322,14 @@ export default function LoginPage() {
               </form>
             ) : (
               /* Step 2: 6 Separate OTP Input Boxes */
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <form onSubmit={handleVerifyOtp} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2 text-center">
-                    Enter 6-Digit Code
+                  <label className="block text-xs font-semibold text-slate-700 mb-3 text-center">
+                    Enter Verification Code
                   </label>
 
                   {/* 6 Individual OTP Boxes */}
-                  <div className="flex justify-between gap-1.5 sm:gap-2" onPaste={handlePaste}>
+                  <div className="flex justify-between gap-2" onPaste={handlePaste}>
                     {otpDigits.map((digit, idx) => (
                       <input
                         key={idx}
@@ -485,10 +340,10 @@ export default function LoginPage() {
                         value={digit}
                         onChange={(e) => handleOtpChange(idx, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(idx, e)}
-                        className={`h-11 sm:h-12 w-10 sm:w-11 text-center text-lg sm:text-xl font-bold rounded-xl border transition-all outline-none ${
+                        className={`h-12 w-11 sm:w-12 text-center text-xl font-bold rounded-xl border transition-all outline-none ${
                           digit
-                            ? "border-blue-600 bg-blue-50/40 text-blue-900 ring-2 ring-blue-500/10"
-                            : "border-slate-200 text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                            ? "border-blue-600 bg-blue-50/30 text-blue-900 ring-2 ring-blue-500/10"
+                            : "border-slate-300 text-slate-800 focus:border-blue-600 focus:ring-3 focus:ring-blue-100"
                         }`}
                       />
                     ))}
@@ -498,7 +353,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   disabled={loading || otpValue.length !== 6}
-                  className="w-full h-11 text-sm font-semibold gap-2 mt-1 bg-blue-600 hover:bg-blue-700 shadow-xs shadow-blue-500/20"
+                  className="w-full h-12 text-sm font-semibold gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors"
                 >
                   {loading ? (
                     <>
@@ -519,7 +374,7 @@ export default function LoginPage() {
                       setOtpDigits(["", "", "", "", "", ""]);
                       setError(null);
                     }}
-                    className="flex items-center gap-1 font-medium text-slate-500 hover:text-slate-800 transition-colors"
+                    className="flex items-center gap-1.5 font-medium text-slate-500 hover:text-slate-800 transition-colors"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     <span>Change number</span>
@@ -528,39 +383,42 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={handleResend}
-                    disabled={loading}
-                    className="font-semibold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
+                    disabled={loading || resendCooldown > 0}
+                    className={`font-semibold transition-colors flex items-center gap-1 ${
+                      resendCooldown > 0
+                        ? "text-slate-400 cursor-not-allowed"
+                        : "text-blue-600 hover:text-blue-800"
+                    }`}
                   >
                     <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-                    <span>Resend OTP</span>
+                    <span>
+                      {resendCooldown > 0 ? `Resend code (${resendCooldown}s)` : "Resend OTP"}
+                    </span>
                   </button>
                 </div>
               </form>
             )}
-
-            <div className="mt-5 flex items-center justify-center gap-1.5 border-t border-slate-100 pt-3 text-[11px] text-slate-400">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Passwordless login secured by RentMate</span>
-            </div>
           </Card>
         </div>
       </div>
 
       {/* ============================================================ */}
-      {/* DUAL-DASHBOARD WORKSPACE SELECTION POPUP MODAL               */}
+      {/* WORKSPACE SELECTION MODAL                                    */}
       {/* ============================================================ */}
       {pendingSuperAdminAuth && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="max-w-lg w-full bg-white border border-slate-200 p-6 sm:p-7 rounded-2xl shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
-            <div className="text-center space-y-1.5">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 mb-2">
-                <ShieldCheck className="h-6 w-6" />
-              </div>
+          <Card className="max-w-lg w-full bg-white border border-slate-200 p-6 sm:p-8 rounded-2xl shadow-xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="text-center">
+              <img
+                src="/RentMate%20Smart%20Rentals%20Logo.png"
+                alt="RentMate Logo"
+                className="h-12 w-auto mx-auto object-contain mb-3"
+              />
               <h3 className="text-xl font-bold tracking-tight text-slate-900">
-                Choose Workspace Dashboard
+                Select Workspace
               </h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Mobile <span className="font-semibold text-slate-800 font-mono">+91 {pendingSuperAdminAuth.user.mobile}</span> has Platform SuperAdmin authorization. Please select which dashboard you want to enter:
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                Your account has access to multiple workspace environments. Choose which dashboard to open:
               </p>
             </div>
 
@@ -569,7 +427,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => handleSelectPortal("LANDLORD")}
-                className="group w-full flex items-start gap-3.5 p-4 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 text-left transition-all duration-150 shadow-2xs"
+                className="group w-full flex items-start gap-4 p-4 rounded-xl border border-slate-200 hover:border-blue-600 hover:bg-blue-50/30 text-left transition-all duration-150 shadow-2xs bg-white"
               >
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <Building2 className="h-5 w-5" />
@@ -577,14 +435,14 @@ export default function LoginPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm text-slate-900 group-hover:text-blue-700 transition-colors">
-                      Normal Landlord / User Dashboard
+                      Property & Rental Workspace
                     </span>
                     <span className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded group-hover:bg-blue-100 group-hover:text-blue-800">
                       Standard
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1 leading-snug">
-                    Manage rental properties, tenant leases, and track monthly payments according to your assigned organization role.
+                    Manage properties, tenant leases, and track monthly rental collections.
                   </p>
                 </div>
               </button>
@@ -593,25 +451,22 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => handleSelectPortal("SUPERADMIN")}
-                className="group w-full flex items-start gap-3.5 p-4 rounded-xl border border-blue-200/90 bg-blue-50/25 hover:border-blue-600 hover:bg-blue-50/70 text-left transition-all duration-150 shadow-2xs"
+                className="group w-full flex items-start gap-4 p-4 rounded-xl border border-slate-200 hover:border-blue-600 hover:bg-blue-50/30 text-left transition-all duration-150 shadow-2xs bg-white"
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-amber-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                   <ShieldCheck className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm text-slate-900 group-hover:text-blue-700 transition-colors">
-                      SuperAdmin Executive Portal
+                      SuperAdmin Console
                     </span>
-                    <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
                       Platform Master
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1 leading-snug">
-                    Access platform vitals, dynamic SaaS pricing engines, client subscription expiry management, and platform RBAC.
-                  </p>
-                  <p className="text-[11px] font-medium text-amber-700 mt-1.5 flex items-center gap-1">
-                    <span>* SuperAdmin portal me jaane ke baad vapis aane ke liye logout karna hoga.</span>
+                    Manage SaaS plans, client organizations, platform RBAC, and system controls.
                   </p>
                 </div>
               </button>

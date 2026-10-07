@@ -12,14 +12,10 @@ export default function ProtectedRoute() {
   }
 
   const isSuperAdminRoute = location.pathname.startsWith("/superadmin");
+  const hasAdminPrivileges = Boolean(user.isSuperAdmin || user.adminRole);
 
-  // If in SuperAdmin mode, lock navigation to SuperAdmin portal until logged out
-  if (activePortal === "SUPERADMIN" && !isSuperAdminRoute) {
-    return <Navigate to="/superadmin" replace />;
-  }
-
-  // If in Landlord mode, prevent entering SuperAdmin portal without selecting it at login
-  if (activePortal === "LANDLORD" && isSuperAdminRoute) {
+  // If a non-admin tries to access /superadmin, redirect to landlord home
+  if (isSuperAdminRoute && !hasAdminPrivileges) {
     return <Navigate to="/" replace />;
   }
 
