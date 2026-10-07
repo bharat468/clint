@@ -197,16 +197,12 @@ export default function AdminPage() {
 
   // Handle Role Deletion
   const handleDeleteRole = async (role: Role) => {
-    if (role.isSystem) {
-      alert("System roles (Owner, Manager, Accountant) cannot be deleted.");
-      return;
-    }
-    if (!confirm(`Are you sure you want to delete custom role "${role.name}"?`)) return;
+    if (role.isSystem) return;
     try {
       await roleService.deleteRole(role.id);
       reloadRoles();
     } catch (err) {
-      alert(errMsg(err));
+      console.error(errMsg(err));
     }
   };
 
@@ -538,7 +534,7 @@ export default function AdminPage() {
                 ) : (
                   filteredUsers.map((u) => {
                     const primaryRole = u.userRoles?.[0]?.role?.name || "Member";
-                    const isSuperAdmin = u.mobile === "9876543210" || primaryRole === "Owner";
+                    const isSuperAdmin = (u as any).isSuperAdmin || primaryRole === "Owner";
                     const scope = u.userRoles?.[0]?.propertyScope || [];
 
                     return (

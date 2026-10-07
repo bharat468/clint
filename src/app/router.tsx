@@ -7,7 +7,11 @@ import DashboardPage from "@/features/dashboard/DashboardPage";
 import PropertiesPage from "@/features/properties/PropertiesPage";
 import TenantsPage from "@/features/tenants/TenantsPage";
 import PaymentsPage from "@/features/payments/PaymentsPage";
-import SettingsPage from "@/features/settings/SettingsPage";
+import SettingsLayout from "@/features/settings/layouts/SettingsLayout";
+import TeamSettingsPage from "@/features/settings/pages/TeamSettingsPage";
+import RolesSettingsPage from "@/features/settings/pages/RolesSettingsPage";
+import OrganizationSettingsPage from "@/features/settings/pages/OrganizationSettingsPage";
+import BillingSettingsPage from "@/features/settings/pages/BillingSettingsPage";
 
 // Modular SuperAdmin Platform Architecture
 import SuperAdminLayout from "@/features/superadmin/layouts/SuperAdminLayout";
@@ -16,7 +20,7 @@ import SuperAdminOrganizationsPage from "@/features/superadmin/pages/SuperAdminO
 import SuperAdminPlansPage from "@/features/superadmin/pages/SuperAdminPlansPage";
 import SuperAdminRolesPage from "@/features/superadmin/pages/SuperAdminRolesPage";
 import SuperAdminUsersPage from "@/features/superadmin/pages/SuperAdminUsersPage";
-import SuperAdminSecurityPage from "@/features/superadmin/pages/SuperAdminSecurityPage";
+import SuperAdminSettingsPage from "@/features/superadmin/pages/SuperAdminSettingsPage";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -32,7 +36,17 @@ export const router = createBrowserRouter([
           { path: "/properties", element: <PropertiesPage /> },
           { path: "/tenants", element: <TenantsPage /> },
           { path: "/payments", element: <PaymentsPage /> },
-          { path: "/settings", element: <SettingsPage /> },
+          {
+            path: "/settings",
+            element: <SettingsLayout />,
+            children: [
+              { index: true, element: <Navigate to="/settings/team" replace /> },
+              { path: "team", element: <TeamSettingsPage /> },
+              { path: "roles", element: <RolesSettingsPage /> },
+              { path: "organization", element: <OrganizationSettingsPage /> },
+              { path: "billing", element: <BillingSettingsPage /> },
+            ],
+          },
         ],
       },
       // 2. Dedicated Platform SuperAdmin Portal (Completely Modular Layout & Routes)
@@ -45,7 +59,7 @@ export const router = createBrowserRouter([
           { path: "plans", element: <SuperAdminPlansPage /> },
           { path: "roles", element: <SuperAdminRolesPage /> },
           { path: "users", element: <SuperAdminUsersPage /> },
-          { path: "security", element: <SuperAdminSecurityPage /> },
+          { path: "settings", element: <SuperAdminSettingsPage /> },
         ],
       },
     ],
