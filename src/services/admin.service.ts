@@ -24,6 +24,15 @@ export interface UpdateSubscriptionInput {
   status?: string;
 }
 
+export interface SystemSetting {
+  id: string;
+  key: string;
+  value: string;
+  category: string;
+  description?: string;
+  updatedAt: string;
+}
+
 export const adminService = {
   getOverview: () =>
     api.get(ENDPOINTS.ADMIN.OVERVIEW).then((r) => (r.data?.data ?? r.data) as PlatformOverview),
@@ -33,6 +42,12 @@ export const adminService = {
 
   createUser: (data: CreateUserInput) =>
     api.post(ENDPOINTS.ADMIN.USER_CREATE, data).then((r) => (r.data?.data ?? r.data) as AdminUser),
+
+  updateUser: (id: string, data: { name?: string; email?: string; mobile?: string }) =>
+    api.put(ENDPOINTS.ADMIN.USER_UPDATE(id), data).then((r) => (r.data?.data ?? r.data) as AdminUser),
+
+  deleteUser: (id: string) =>
+    api.delete(ENDPOINTS.ADMIN.USER_DELETE(id)).then((r) => r.data?.data ?? r.data),
 
   updateStatus: (id: string, status: "ACTIVE" | "INACTIVE" | "SUSPENDED") =>
     api.put(ENDPOINTS.ADMIN.USER_STATUS(id), { status }).then((r) => (r.data?.data ?? r.data) as AdminUser),
@@ -62,5 +77,12 @@ export const adminService = {
 
   updateSubscription: (orgId: string, data: UpdateSubscriptionInput) =>
     api.put(ENDPOINTS.ADMIN.ORGANIZATION_SUBSCRIPTION(orgId), data).then((r) => r.data?.data ?? r.data),
+
+  // Dynamic Platform System Settings (Stored in DB)
+  listSettings: () =>
+    api.get(ENDPOINTS.ADMIN.SETTINGS_LIST).then((r) => (r.data?.data ?? r.data) as SystemSetting[]),
+
+  updateSetting: (key: string, value: string) =>
+    api.put(ENDPOINTS.ADMIN.SETTING_UPDATE(key), { value }).then((r) => (r.data?.data ?? r.data) as SystemSetting),
 };
 

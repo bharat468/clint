@@ -41,6 +41,15 @@ export const organizationService = {
       .post(ENDPOINTS.ORGANIZATIONS.MEMBER_ADD(orgId), data)
       .then((r) => r.data?.data ?? r.data),
 
+  updateMember: (
+    orgId: string,
+    userId: string,
+    data: Partial<AddMemberInput & { status: "ACTIVE" | "INACTIVE" | "SUSPENDED" }>
+  ) =>
+    api
+      .put(ENDPOINTS.ORGANIZATIONS.MEMBER_UPDATE(orgId, userId), data)
+      .then((r) => r.data?.data ?? r.data),
+
   removeMember: (orgId: string, userId: string) =>
     api
       .delete(ENDPOINTS.ORGANIZATIONS.MEMBER_REMOVE(orgId, userId))

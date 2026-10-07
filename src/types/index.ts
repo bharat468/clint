@@ -99,7 +99,12 @@ export interface PlatformOverview {
   totalTenants: number;
   totalPayments: number;
   totalCollected: number;
+  totalOrganizations: number;
   activePlans: number;
+  activeSubscriptions: number;
+  expiringSubscriptions: number;
+  mrr: number;
+  collectionRate: number;
 }
 
 export interface SuperAdminRole {

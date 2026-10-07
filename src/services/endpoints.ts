@@ -58,6 +58,8 @@ export const ENDPOINTS = {
     OVERVIEW: "/admin/overview",
     USERS_LIST: "/admin/users",
     USER_CREATE: "/admin/users",
+    USER_UPDATE: (id: string) => `/admin/users/${id}`,
+    USER_DELETE: (id: string) => `/admin/users/${id}`,
     USER_STATUS: (id: string) => `/admin/users/${id}/status`,
     USER_ROLE: (id: string) => `/admin/users/${id}/role`,
     USER_ADMIN_ROLE: (id: string) => `/admin/users/${id}/admin-role`,
@@ -67,6 +69,8 @@ export const ENDPOINTS = {
     ROLE_DELETE: (id: string) => `/admin/roles/${id}`,
     ORGANIZATIONS_LIST: "/admin/organizations",
     ORGANIZATION_SUBSCRIPTION: (id: string) => `/admin/organizations/${id}/subscription`,
+    SETTINGS_LIST: "/admin/settings",
+    SETTING_UPDATE: (key: string) => `/admin/settings/${key}`,
   },
 
   // SaaS Plans & Subscriptions
@@ -85,6 +89,7 @@ export const ENDPOINTS = {
     DETAIL: (id: string) => `/organizations/${id}`,
     MEMBERS_LIST: (orgId: string) => `/organizations/${orgId}/members`,
     MEMBER_ADD: (orgId: string) => `/organizations/${orgId}/members`,
+    MEMBER_UPDATE: (orgId: string, userId: string) => `/organizations/${orgId}/members/${userId}`,
     MEMBER_REMOVE: (orgId: string, userId: string) => `/organizations/${orgId}/members/${userId}`,
   },
 } as const;
