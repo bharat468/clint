@@ -5,7 +5,9 @@ export interface User {
   email?: string | null;
   avatar?: string | null;
   status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
-  role?: "OWNER" | "TENANT" | "ADMIN";
+  role?: string;
+  isSuperAdmin?: boolean;
+  adminRole?: string;
 }
 
 export interface Property {

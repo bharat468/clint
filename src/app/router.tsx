@@ -8,7 +8,15 @@ import PropertiesPage from "@/features/properties/PropertiesPage";
 import TenantsPage from "@/features/tenants/TenantsPage";
 import PaymentsPage from "@/features/payments/PaymentsPage";
 import SettingsPage from "@/features/settings/SettingsPage";
-import SuperAdminPage from "@/features/superadmin/SuperAdminPage";
+
+// Modular SuperAdmin Platform Architecture
+import SuperAdminLayout from "@/features/superadmin/layouts/SuperAdminLayout";
+import SuperAdminOverviewPage from "@/features/superadmin/pages/SuperAdminOverviewPage";
+import SuperAdminOrganizationsPage from "@/features/superadmin/pages/SuperAdminOrganizationsPage";
+import SuperAdminPlansPage from "@/features/superadmin/pages/SuperAdminPlansPage";
+import SuperAdminRolesPage from "@/features/superadmin/pages/SuperAdminRolesPage";
+import SuperAdminUsersPage from "@/features/superadmin/pages/SuperAdminUsersPage";
+import SuperAdminSecurityPage from "@/features/superadmin/pages/SuperAdminSecurityPage";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -16,6 +24,7 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
+      // 1. Standard Landlord & Staff Workspace
       {
         element: <AppLayout />,
         children: [
@@ -26,10 +35,18 @@ export const router = createBrowserRouter([
           { path: "/settings", element: <SettingsPage /> },
         ],
       },
-      // Dedicated Independent SuperAdmin Portal
+      // 2. Dedicated Platform SuperAdmin Portal (Completely Modular Layout & Routes)
       {
         path: "/superadmin",
-        element: <SuperAdminPage />,
+        element: <SuperAdminLayout />,
+        children: [
+          { path: "", element: <SuperAdminOverviewPage /> },
+          { path: "organizations", element: <SuperAdminOrganizationsPage /> },
+          { path: "plans", element: <SuperAdminPlansPage /> },
+          { path: "roles", element: <SuperAdminRolesPage /> },
+          { path: "users", element: <SuperAdminUsersPage /> },
+          { path: "security", element: <SuperAdminSecurityPage /> },
+        ],
       },
     ],
   },

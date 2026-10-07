@@ -1,60 +1,61 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
-  Building2,
-  CreditCard,
   LayoutDashboard,
-  Users,
-  X,
+  Building2,
+  Layers,
   ShieldCheck,
-  Sparkles,
-  Settings,
-  ExternalLink,
+  Users,
+  Lock,
+  LogOut,
+  X,
+  Server,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { logout } from "@/features/auth/authSlice";
 import { toggleSidebar } from "@/features/ui/uiSlice";
 import { cn } from "@/lib/utils";
 
-const navigationLinks = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/properties", label: "Properties", icon: Building2 },
-  { to: "/tenants", label: "Tenants", icon: Users },
-  { to: "/payments", label: "Payments", icon: CreditCard },
-  { to: "/settings", label: "Settings", icon: Settings },
+const superAdminNavLinks = [
+  { to: "/superadmin", label: "Platform Vitals", icon: LayoutDashboard, end: true },
+  { to: "/superadmin/organizations", label: "Organizations & Expiry", icon: Building2 },
+  { to: "/superadmin/plans", label: "Dynamic SaaS Plans", icon: Layers },
+  { to: "/superadmin/roles", label: "Platform RBAC & Roles", icon: ShieldCheck },
+  { to: "/superadmin/users", label: "User Accounts Gate", icon: Users },
+  { to: "/superadmin/security", label: "Security & Tokens", icon: Lock },
 ];
 
-export default function Sidebar() {
+export default function SuperAdminSidebar() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const open = useAppSelector((s) => s.ui.sidebarOpen);
   const user = useAppSelector((s) => s.auth.user);
 
-  const isSuperAdmin =
-    user?.mobile === "8003953815" ||
-    user?.mobile === "9876543210" ||
-    Boolean((user as any)?.isSuperAdmin);
-
-  const getInitials = (name?: string | null) => {
-    if (!name) return "RM";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login", { replace: true });
   };
 
   const navContent = (
     <div className="flex h-full flex-col justify-between p-4 bg-white">
       <div className="space-y-6">
-        {/* Brand Header with Official Logo */}
+        {/* Brand Header */}
         <div className="flex items-center justify-between px-2 pt-1">
-          <div className="flex items-center gap-2">
-            <img
-              src="/RentMate%20Smart%20Rentals%20Logo.png"
-              alt="RentMate Logo"
-              className="h-11 w-auto object-contain"
-            />
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <img
+                src="/RentMate%20Smart%20Rentals%20Logo.png"
+                alt="RentMate Logo"
+                className="h-10 w-auto object-contain"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 pt-1">
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-200/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                SuperAdmin Platform
+              </span>
+            </div>
           </div>
-          {/* Mobile close button */}
+          {/* Mobile close */}
           <button
             onClick={() => dispatch(toggleSidebar())}
             aria-label="Close sidebar"
@@ -66,13 +67,15 @@ export default function Sidebar() {
 
         {/* Navigation Section */}
         <div className="space-y-1">
-          <p className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">Main Menu</p>
+          <p className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+            Platform Modules
+          </p>
           <nav className="mt-2 space-y-1">
-            {navigationLinks.map(({ to, label, icon: Icon }) => (
+            {superAdminNavLinks.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}
-                end={to === "/"}
+                end={end}
                 onClick={() => {
                   if (window.innerWidth < 768) {
                     dispatch(toggleSidebar());
@@ -102,41 +105,47 @@ export default function Sidebar() {
             ))}
           </nav>
         </div>
-
       </div>
 
       {/* Bottom Footer Section */}
       <div className="space-y-3 pt-4 border-t border-slate-100">
-        <div className="rounded-xl bg-blue-50/70 p-3 border border-blue-100/80">
-          <div className="flex items-center gap-2 text-xs font-semibold text-blue-900">
-            <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-            <span>Smart Dashboard</span>
+        {/* SuperAdmin Telemetry Badge */}
+        <div className="rounded-xl bg-slate-50 p-2.5 border border-slate-100">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+            <Server className="h-3.5 w-3.5 text-emerald-500" />
+            <span>Master Governance Node</span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
-            Units & payment records synced in real-time.
+          <p className="mt-0.5 text-[11px] text-slate-400 font-mono">
+            Direct Database Access Active
           </p>
         </div>
 
         {/* User Mini Profile */}
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5 border border-slate-100">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 font-bold text-xs text-white shadow-xs">
-            {getInitials(user?.name)}
+            SA
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-bold text-slate-800">{user?.name || "Landlord"}</p>
-            <div className="flex items-center gap-1 text-[11px] text-slate-400">
-              <ShieldCheck className="h-3 w-3 text-emerald-500" />
-              <span>Owner Account</span>
-            </div>
+            <p className="truncate text-xs font-bold text-slate-800">{user?.name || "Super Administrator"}</p>
+            <p className="font-mono text-[11px] text-slate-400">{user?.mobile}</p>
           </div>
         </div>
+
+        {/* Explicit Logout Button (Only way to exit SuperAdmin portal) */}
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-50 px-3.5 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-100 transition-colors border border-rose-100 shadow-2xs"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Exit / Logout Platform</span>
+        </button>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Mobile Drawer (Slide-over with Backdrop) */}
+      {/* Mobile Drawer */}
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div

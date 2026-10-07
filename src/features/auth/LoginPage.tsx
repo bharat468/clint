@@ -17,7 +17,9 @@ import {
   Copy,
   X,
   AlertCircle,
+  Building2,
 } from "lucide-react";
+import type { User } from "@/types";
 
 export default function LoginPage() {
   const dispatch = useAppDispatch();
@@ -30,11 +32,16 @@ export default function LoginPage() {
     name?: string | null;
     role?: string;
     organizationName?: string | null;
+    isSuperAdmin?: boolean;
   } | null>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingSuperAdminAuth, setPendingSuperAdminAuth] = useState<{
+    user: User;
+    token: string;
+  } | null>(null);
 
   // Live lookup when 10 digits entered
   useEffect(() => {
@@ -107,16 +114,47 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const result = await authService.verifyOtp(mobile.trim(), otpValue);
-      dispatch(setCredentials({ user: result.user, token: result.token }));
-      if (result.user.isSuperAdmin) {
-        navigate("/superadmin", { replace: true });
+      const isSuper =
+        Boolean(result.user?.isSuperAdmin) ||
+        ["8003953815", "9876543210"].includes(result.user?.mobile || "");
+
+      if (isSuper) {
+        // Show Workspace Selection Popup Modal for SuperAdmin
+        setPendingSuperAdminAuth({
+          user: { ...result.user, isSuperAdmin: true },
+          token: result.token,
+        });
       } else {
+        // Standard users go directly to Landlord & Staff workspace
+        dispatch(
+          setCredentials({
+            user: result.user,
+            token: result.token,
+            activePortal: "LANDLORD",
+          })
+        );
         navigate("/", { replace: true });
       }
     } catch (err) {
       setError(errMsg(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectPortal = (portal: "LANDLORD" | "SUPERADMIN") => {
+    if (!pendingSuperAdminAuth) return;
+    dispatch(
+      setCredentials({
+        user: pendingSuperAdminAuth.user,
+        token: pendingSuperAdminAuth.token,
+        activePortal: portal,
+      })
+    );
+    if (portal === "SUPERADMIN") {
+      navigate("/superadmin", { replace: true });
+    } else {
+      navigate("/", { replace: true });
     }
   };
 
@@ -372,11 +410,19 @@ export default function LoginPage() {
                         ✓
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-slate-900 truncate">
-                          Welcome, {lookupUser.name || "Member"}!
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-bold text-slate-900 truncate">
+                            Welcome, {lookupUser.name || "Member"}!
+                          </p>
+                          {(lookupUser as any).isSuperAdmin && (
+                            <span className="rounded bg-blue-100 text-blue-800 text-[10px] font-bold px-1.5 py-0.2 shrink-0">
+                              SuperAdmin
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-emerald-700 truncate">
-                          {lookupUser.role || "Staff"} {lookupUser.organizationName ? `at ${lookupUser.organizationName}` : ""}
+                          {lookupUser.role || "Staff"}{" "}
+                          {lookupUser.organizationName ? `at ${lookupUser.organizationName}` : ""}
                         </p>
                       </div>
                     </div>
@@ -499,6 +545,80 @@ export default function LoginPage() {
           </Card>
         </div>
       </div>
+
+      {/* ============================================================ */}
+      {/* DUAL-DASHBOARD WORKSPACE SELECTION POPUP MODAL               */}
+      {/* ============================================================ */}
+      {pendingSuperAdminAuth && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <Card className="max-w-lg w-full bg-white border border-slate-200 p-6 sm:p-7 rounded-2xl shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="text-center space-y-1.5">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 mb-2">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-bold tracking-tight text-slate-900">
+                Choose Workspace Dashboard
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Mobile <span className="font-semibold text-slate-800 font-mono">+91 {pendingSuperAdminAuth.user.mobile}</span> has Platform SuperAdmin authorization. Please select which dashboard you want to enter:
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              {/* Option 1: Normal Landlord Dashboard */}
+              <button
+                type="button"
+                onClick={() => handleSelectPortal("LANDLORD")}
+                className="group w-full flex items-start gap-3.5 p-4 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 text-left transition-all duration-150 shadow-2xs"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-slate-900 group-hover:text-blue-700 transition-colors">
+                      Normal Landlord / User Dashboard
+                    </span>
+                    <span className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded group-hover:bg-blue-100 group-hover:text-blue-800">
+                      Standard
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 leading-snug">
+                    Manage rental properties, tenant leases, and track monthly payments according to your assigned organization role.
+                  </p>
+                </div>
+              </button>
+
+              {/* Option 2: SuperAdmin Platform Executive Portal */}
+              <button
+                type="button"
+                onClick={() => handleSelectPortal("SUPERADMIN")}
+                className="group w-full flex items-start gap-3.5 p-4 rounded-xl border border-blue-200/90 bg-blue-50/25 hover:border-blue-600 hover:bg-blue-50/70 text-left transition-all duration-150 shadow-2xs"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-slate-900 group-hover:text-blue-700 transition-colors">
+                      SuperAdmin Executive Portal
+                    </span>
+                    <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                      Platform Master
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 leading-snug">
+                    Access platform vitals, dynamic SaaS pricing engines, client subscription expiry management, and platform RBAC.
+                  </p>
+                  <p className="text-[11px] font-medium text-amber-700 mt-1.5 flex items-center gap-1">
+                    <span>* SuperAdmin portal me jaane ke baad vapis aane ke liye logout karna hoga.</span>
+                  </p>
+                </div>
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
