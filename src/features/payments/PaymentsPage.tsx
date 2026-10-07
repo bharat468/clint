@@ -4,11 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Plus,
+  Trash2,
+  Pencil,
   Calendar,
   CheckCircle2,
   Clock,
   AlertCircle,
   Search,
+  RefreshCw,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { paymentService } from "@/services/payment.service";
@@ -19,6 +22,7 @@ import { Field } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
 import { errMsg, formatINR } from "@/lib/utils";
 import type { Payment, Tenant } from "@/types";
@@ -37,6 +41,9 @@ export default function PaymentsPage() {
   const { data, loading, error, reload } = useApi(paymentService.list, [] as Payment[]);
   const { data: tenants } = useApi(tenantService.list, [] as Tenant[]);
   const [open, setOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [deletingPayment, setDeletingPayment] = useState<Payment | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "PAID" | "PENDING" | "OVERDUE">("ALL");
   const [formError, setFormError] = useState<string | null>(null);
@@ -66,28 +73,75 @@ export default function PaymentsPage() {
 
   const tenantName = (id: string) => tenants.find((t) => t.id === id)?.name ?? "Tenant";
 
+  const handleOpenCreate = () => {
+    setEditingPayment(null);
+    reset({
+      tenantId: "",
+      amount: 20000,
+      month: currentMonth,
+      status: "PENDING",
+    });
+    setFormError(null);
+    setOpen(true);
+  };
+
+  const handleOpenEdit = (p: Payment) => {
+    setEditingPayment(p);
+    reset({
+      tenantId: p.tenantId,
+      amount: p.amount,
+      month: p.month,
+      status: p.status,
+    });
+    setFormError(null);
+    setOpen(true);
+  };
+
   const onSubmit = async (v: Form) => {
     setFormError(null);
     const tenant = tenants.find((t) => t.id === v.tenantId);
     try {
-      await paymentService.create({
-        ...v,
-        propertyId: tenant?.propertyId ?? "",
-        paidOn: v.status === "PAID" ? new Date().toISOString().slice(0, 10) : null,
-      });
+      if (editingPayment) {
+        await paymentService.update(editingPayment.id, {
+          ...v,
+          propertyId: tenant?.propertyId ?? editingPayment.propertyId ?? "",
+          paidOn: v.status === "PAID" ? new Date().toISOString().slice(0, 10) : null,
+        });
+      } else {
+        await paymentService.create({
+          ...v,
+          propertyId: tenant?.propertyId ?? "",
+          paidOn: v.status === "PAID" ? new Date().toISOString().slice(0, 10) : null,
+        });
+      }
       reset();
       setOpen(false);
+      setEditingPayment(null);
       reload();
     } catch (e) {
       setFormError(errMsg(e));
     }
   };
 
-  const markPaid = async (id: string) => {
+  const handleConfirmDelete = async () => {
+    if (!deletingPayment) return;
+    setIsDeleting(true);
+    try {
+      await paymentService.remove(deletingPayment.id);
+      setDeletingPayment(null);
+      reload();
+    } catch (e) {
+      alert(errMsg(e));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const markStatus = async (id: string, newStatus: "PAID" | "PENDING" | "OVERDUE") => {
     try {
       await paymentService.update(id, {
-        status: "PAID",
-        paidOn: new Date().toISOString().slice(0, 10),
+        status: newStatus,
+        paidOn: newStatus === "PAID" ? new Date().toISOString().slice(0, 10) : null,
       });
       reload();
     } catch (e) {
@@ -129,7 +183,7 @@ export default function PaymentsPage() {
         title="Rent & Payments"
         subtitle="Track rent invoices, payment statuses, and overdue collections"
         action={
-          <Button onClick={() => setOpen(true)} className="gap-2">
+          <Button onClick={handleOpenCreate} className="gap-2">
             <Plus className="h-4 w-4" /> Record Payment
           </Button>
         }
@@ -139,56 +193,62 @@ export default function PaymentsPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-5 border-emerald-100 bg-emerald-50/30">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
-              Collected Revenue
+            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
+              Total Collected
             </span>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-              <CheckCircle2 className="h-4.5 w-4.5" />
+              <CheckCircle2 className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-700">{formatINR(totalCollected)}</div>
-          <p className="mt-1 text-xs text-emerald-600 font-medium">
-            {paidList.length} transactions completed
-          </p>
+          <div className="mt-3">
+            <div className="text-2xl font-bold text-emerald-800">{formatINR(totalCollected)}</div>
+            <div className="mt-1 text-xs text-emerald-700">
+              {paidList.length} payments marked as paid
+            </div>
+          </div>
         </Card>
 
         <Card className="p-5 border-amber-100 bg-amber-50/30">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-700">
-              Pending Collections
+            <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
+              Pending Dues
             </span>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-              <Clock className="h-4.5 w-4.5" />
+              <Clock className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 text-2xl font-bold text-amber-700">{formatINR(totalPending)}</div>
-          <p className="mt-1 text-xs text-amber-600 font-medium">
-            {pendingList.length} awaiting payment
-          </p>
+          <div className="mt-3">
+            <div className="text-2xl font-bold text-amber-800">{formatINR(totalPending)}</div>
+            <div className="mt-1 text-xs text-amber-700">
+              {pendingList.length} invoices awaiting payment
+            </div>
+          </div>
         </Card>
 
         <Card className="p-5 border-rose-100 bg-rose-50/30">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-rose-700">
-              Overdue Dues
+            <span className="text-xs font-semibold uppercase tracking-wider text-rose-800">
+              Overdue Amount
             </span>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-100 text-rose-700">
-              <AlertCircle className="h-4.5 w-4.5" />
+              <AlertCircle className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 text-2xl font-bold text-rose-700">{formatINR(totalOverdue)}</div>
-          <p className="mt-1 text-xs text-rose-600 font-medium">
-            {overdueList.length} overdue payments
-          </p>
+          <div className="mt-3">
+            <div className="text-2xl font-bold text-rose-800">{formatINR(totalOverdue)}</div>
+            <div className="mt-1 text-xs text-rose-700">
+              {overdueList.length} invoices critically delayed
+            </div>
+          </div>
         </Card>
       </div>
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
+        <div className="relative max-w-md w-full">
           <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Search tenant or month (e.g. 2026-03)..."
+            placeholder="Search by tenant name or YYYY-MM..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -217,35 +277,34 @@ export default function PaymentsPage() {
         loading={loading}
         error={error}
         empty={!loading && !error && data.length === 0}
-        emptyMessage="No payments recorded yet. Log your first rent payment or invoice."
+        emptyMessage="No payment records found. Log monthly rental invoices to track payment history."
         emptyAction={
-          <Button onClick={() => setOpen(true)} size="sm">
+          <Button onClick={handleOpenCreate} size="sm">
             <Plus className="h-4 w-4" /> Record Payment
           </Button>
         }
       />
 
-      {/* Payments Content */}
-      {!loading && !error && filteredPayments.length > 0 && (
+      {!loading && !error && (
         <>
           {/* Desktop Table View */}
           <div className="hidden md:block">
-            <Card className="overflow-hidden border-slate-200/80">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <Card className="overflow-hidden border border-slate-200/80 bg-white rounded-2xl shadow-xs">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-slate-200 bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold">
                   <tr>
                     <th className="px-5 py-3.5">Tenant</th>
                     <th className="px-5 py-3.5">Billing Month</th>
                     <th className="px-5 py-3.5">Amount</th>
                     <th className="px-5 py-3.5">Status</th>
-                    <th className="px-5 py-3.5 text-right">Action</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 text-slate-600">
                   {filteredPayments.map((p) => {
                     const name = tenantName(p.tenantId);
                     return (
-                      <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
+                      <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
                         {/* Tenant */}
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
@@ -254,14 +313,16 @@ export default function PaymentsPage() {
                             </div>
                             <div>
                               <p className="font-semibold text-slate-900">{name}</p>
-                              <span className="text-[11px] text-slate-400">ID: #{p.id.slice(-6)}</span>
+                              <span className="text-[11px] font-medium text-slate-400">
+                                ID: #{p.id.slice(-6)}
+                              </span>
                             </div>
                           </div>
                         </td>
 
                         {/* Month */}
                         <td className="px-5 py-4">
-                          <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                          <div className="flex items-center gap-1.5 font-medium text-slate-700">
                             <Calendar className="h-3.5 w-3.5 text-slate-400" />
                             <span>{p.month}</span>
                           </div>
@@ -274,26 +335,62 @@ export default function PaymentsPage() {
                           </span>
                         </td>
 
-                        {/* Status */}
+                        {/* Interactive Status Badge (Click to toggle status) */}
                         <td className="px-5 py-4">
-                          <Badge tone={tone[p.status]} dot>
-                            {p.status}
-                          </Badge>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              markStatus(
+                                p.id,
+                                p.status === "PAID"
+                                  ? "PENDING"
+                                  : p.status === "PENDING"
+                                  ? "OVERDUE"
+                                  : "PAID"
+                              )
+                            }
+                            title="Click to advance status (Paid -> Pending -> Overdue -> Paid)"
+                            className="transition-transform active:scale-95"
+                          >
+                            <Badge tone={tone[p.status]} dot className="cursor-pointer">
+                              {p.status}
+                            </Badge>
+                          </button>
                         </td>
 
-                        {/* Action */}
+                        {/* Actions: Mark Paid + Edit + Delete */}
                         <td className="px-5 py-4 text-right">
-                          {p.status !== "PAID" && (
+                          <div className="flex items-center justify-end gap-1.5">
+                            {p.status !== "PAID" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => markStatus(p.id, "PAID")}
+                                className="gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-8 text-xs font-semibold px-2"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                <span>Paid</span>
+                              </Button>
+                            )}
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
-                              onClick={() => markPaid(p.id)}
-                              className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                              onClick={() => handleOpenEdit(p)}
+                              aria-label="Edit payment"
+                              className="text-slate-500 hover:bg-blue-50 hover:text-blue-600 h-8 w-8 p-1.5"
                             >
-                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                              <span>Mark Paid</span>
+                              <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                          )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeletingPayment(p)}
+                              aria-label="Delete payment"
+                              className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 h-8 w-8 p-1.5"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -335,17 +432,37 @@ export default function PaymentsPage() {
                       </span>
                     </div>
 
-                    {p.status !== "PAID" && (
+                    <div className="flex items-center gap-1">
+                      {p.status !== "PAID" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => markStatus(p.id, "PAID")}
+                          className="gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-8 text-xs font-semibold px-2"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>Paid</span>
+                        </Button>
+                      )}
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => markPaid(p.id)}
-                        className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                        onClick={() => handleOpenEdit(p)}
+                        aria-label="Edit payment"
+                        className="text-slate-500 hover:text-blue-600 h-8 w-8 p-1.5"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                        <span>Mark Paid</span>
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                    )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletingPayment(p)}
+                        aria-label="Delete payment"
+                        className="text-slate-400 hover:text-rose-600 h-8 w-8 p-1.5"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               );
@@ -354,11 +471,15 @@ export default function PaymentsPage() {
         </>
       )}
 
-      {/* Record Payment Modal */}
+      {/* Record / Edit Payment Modal */}
       <Modal
         open={open}
-        title="Record Rent Payment"
-        subtitle="Log a new rent invoice or payment transaction"
+        title={editingPayment ? "Edit Rent Payment" : "Record Rent Payment"}
+        subtitle={
+          editingPayment
+            ? "Update payment invoice records, amount or status"
+            : "Log a new rent invoice or payment transaction"
+        }
         onClose={() => setOpen(false)}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -405,16 +526,36 @@ export default function PaymentsPage() {
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2.5 pt-3">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Record Payment"}
+            <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>{editingPayment ? "Save Changes" : "Record Payment"}</span>
+              )}
             </Button>
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        open={Boolean(deletingPayment)}
+        title="Delete Payment Record"
+        description={`Are you sure you want to delete this payment record of ${
+          deletingPayment ? formatINR(deletingPayment.amount) : ""
+        } for ${deletingPayment ? tenantName(deletingPayment.tenantId) : "this tenant"}? This action cannot be undone.`}
+        confirmLabel="Delete Record"
+        loading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingPayment(null)}
+      />
     </div>
   );
 }

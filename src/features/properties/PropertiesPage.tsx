@@ -5,11 +5,13 @@ import { z } from "zod";
 import {
   Plus,
   Trash2,
+  Pencil,
   Building2,
   MapPin,
   Bed,
   IndianRupee,
   Search,
+  RefreshCw,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { propertyService } from "@/services/property.service";
@@ -19,6 +21,7 @@ import { Field } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
 import { errMsg, formatINR } from "@/lib/utils";
 import type { Property } from "@/types";
@@ -36,6 +39,9 @@ type Form = z.infer<typeof schema>;
 export default function PropertiesPage() {
   const { data, loading, error, reload } = useApi(propertyService.list, [] as Property[]);
   const [open, setOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [deletingProperty, setDeletingProperty] = useState<Property | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "VACANT" | "OCCUPIED">("ALL");
   const [formError, setFormError] = useState<string | null>(null);
@@ -50,22 +56,73 @@ export default function PropertiesPage() {
     defaultValues: { status: "VACANT" },
   });
 
+  const handleOpenCreate = () => {
+    setEditingProperty(null);
+    reset({
+      title: "",
+      address: "",
+      city: "",
+      rent: 20000,
+      bedrooms: 2,
+      status: "VACANT",
+    });
+    setFormError(null);
+    setOpen(true);
+  };
+
+  const handleOpenEdit = (p: Property) => {
+    setEditingProperty(p);
+    reset({
+      title: p.title,
+      address: p.address,
+      city: p.city,
+      rent: p.rent,
+      bedrooms: p.bedrooms,
+      status: p.status,
+    });
+    setFormError(null);
+    setOpen(true);
+  };
+
   const onSubmit = async (v: Form) => {
     setFormError(null);
     try {
-      await propertyService.create(v);
+      if (editingProperty) {
+        await propertyService.update(editingProperty.id, v);
+      } else {
+        await propertyService.create(v);
+      }
       reset();
       setOpen(false);
+      setEditingProperty(null);
       reload();
     } catch (e) {
       setFormError(errMsg(e));
     }
   };
 
-  const onDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this property?")) return;
+  const handleRequestDelete = (p: Property) => {
+    setDeletingProperty(p);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingProperty) return;
+    setIsDeleting(true);
     try {
-      await propertyService.remove(id);
+      await propertyService.remove(deletingProperty.id);
+      setDeletingProperty(null);
+      reload();
+    } catch (e) {
+      setFormError(errMsg(e));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleToggleStatus = async (p: Property) => {
+    const newStatus = p.status === "VACANT" ? "OCCUPIED" : "VACANT";
+    try {
+      await propertyService.update(p.id, { status: newStatus });
       reload();
     } catch (e) {
       alert(errMsg(e));
@@ -94,7 +151,7 @@ export default function PropertiesPage() {
         title="Properties"
         subtitle={`Managing ${data.length} registered units (${occupiedCount} occupied, ${vacantCount} vacant)`}
         action={
-          <Button onClick={() => setOpen(true)} className="gap-2">
+          <Button onClick={handleOpenCreate} className="gap-2">
             <Plus className="h-4 w-4" /> Add Property
           </Button>
         }
@@ -136,7 +193,7 @@ export default function PropertiesPage() {
         empty={!loading && !error && data.length === 0}
         emptyMessage="No properties in your portfolio yet. Add your first rental apartment or house to begin tracking."
         emptyAction={
-          <Button onClick={() => setOpen(true)} size="sm">
+          <Button onClick={handleOpenCreate} size="sm">
             <Plus className="h-4 w-4" /> Add Property
           </Button>
         }
@@ -170,9 +227,18 @@ export default function PropertiesPage() {
                         </p>
                       </div>
                     </div>
-                    <Badge tone={isVacant ? "green" : "blue"} dot>
-                      {p.status}
-                    </Badge>
+
+                    {/* Interactive Status Badge (Click to toggle) */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleStatus(p)}
+                      title="Click to toggle Occupied/Vacant status"
+                      className="transition-transform active:scale-95"
+                    >
+                      <Badge tone={isVacant ? "green" : "blue"} dot className="cursor-pointer">
+                        {p.status}
+                      </Badge>
+                    </button>
                   </div>
 
                   <p className="mt-3 text-xs text-slate-500 line-clamp-2 leading-relaxed">
@@ -192,20 +258,31 @@ export default function PropertiesPage() {
                   </div>
                 </div>
 
-                {/* Card Footer */}
+                {/* Card Footer with Edit & Delete */}
                 <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-3">
                   <span className="text-[11px] font-medium text-slate-400">
                     ID: #{p.id.slice(-6)}
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDelete(p.id)}
-                    aria-label="Delete property"
-                    className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 p-1.5 h-8 w-8"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenEdit(p)}
+                      aria-label="Edit property"
+                      className="text-slate-500 hover:bg-blue-50 hover:text-blue-600 p-1.5 h-8 w-8"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRequestDelete(p)}
+                      aria-label="Delete property"
+                      className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 p-1.5 h-8 w-8"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </Card>
             );
@@ -213,14 +290,24 @@ export default function PropertiesPage() {
         </div>
       )}
 
-      {/* Add Property Modal */}
+      {/* Add / Edit Property Modal */}
       <Modal
         open={open}
-        title="Add New Property"
-        subtitle="Enter property details to include in your portfolio"
+        title={editingProperty ? "Edit Property Details" : "Add New Property"}
+        subtitle={
+          editingProperty
+            ? `Update specifications and rental terms for ${editingProperty.title}`
+            : "Enter property details to include in your portfolio"
+        }
         onClose={() => setOpen(false)}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {formError && (
+            <div className="rounded-xl bg-rose-50 p-2.5 text-xs text-rose-700 border border-rose-200">
+              {formError}
+            </div>
+          )}
+
           <Field label="Property Title" error={errors.title?.message} required>
             <Input placeholder="e.g. Skyline Heights - Flat 402" {...register("title")} />
           </Field>
@@ -251,29 +338,46 @@ export default function PropertiesPage() {
             </Field>
           </div>
 
-          <Field label="Occupancy Status">
+          <Field label="Occupancy Status" required>
             <Select {...register("status")}>
-              <option value="VACANT">Vacant (Ready for Tenant)</option>
-              <option value="OCCUPIED">Occupied (Tenant Assigned)</option>
+              <option value="VACANT">VACANT (Ready for tenant)</option>
+              <option value="OCCUPIED">OCCUPIED (Leased)</option>
             </Select>
           </Field>
 
-          {formError && (
-            <div className="rounded-xl bg-rose-50 p-3 text-xs text-rose-600 border border-rose-100">
-              {formError}
-            </div>
-          )}
-
-          <div className="flex items-center justify-end gap-2.5 pt-3">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Property"}
+            <Button type="submit" disabled={isSubmitting} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>{editingProperty ? "Save Changes" : "Create Property"}</span>
+              )}
             </Button>
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        open={Boolean(deletingProperty)}
+        title="Delete Property?"
+        description={
+          deletingProperty
+            ? `Are you sure you want to remove "${deletingProperty.title}" (${deletingProperty.city})? Any associated units or active leases should be reviewed before deletion.`
+            : "Are you sure you want to delete this property?"
+        }
+        confirmText="Yes, Delete Property"
+        tone="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingProperty(null)}
+      />
     </div>
   );
 }

@@ -5,11 +5,13 @@ import { z } from "zod";
 import {
   Plus,
   Trash2,
+  Pencil,
   Mail,
   Phone,
   Building2,
   Calendar,
   Search,
+  RefreshCw,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { tenantService } from "@/services/tenant.service";
@@ -18,7 +20,9 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
 import { errMsg } from "@/lib/utils";
 import type { Property, Tenant } from "@/types";
@@ -37,6 +41,9 @@ export default function TenantsPage() {
   const { data, loading, error, reload } = useApi(tenantService.list, [] as Tenant[]);
   const { data: properties } = useApi(propertyService.list, [] as Property[]);
   const [open, setOpen] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -50,25 +57,66 @@ export default function TenantsPage() {
   const propertyName = (id?: string | null) =>
     properties.find((p) => p.id === id)?.title ?? "Not assigned";
 
+  const handleOpenCreate = () => {
+    setEditingTenant(null);
+    reset({
+      name: "",
+      email: "",
+      phone: "",
+      propertyId: "",
+      leaseStart: "",
+      leaseEnd: "",
+    });
+    setFormError(null);
+    setOpen(true);
+  };
+
+  const handleOpenEdit = (t: Tenant) => {
+    setEditingTenant(t);
+    reset({
+      name: t.name,
+      email: t.email,
+      phone: t.phone,
+      propertyId: t.propertyId || "",
+      leaseStart: t.leaseStart || "",
+      leaseEnd: t.leaseEnd || "",
+    });
+    setFormError(null);
+    setOpen(true);
+  };
+
   const onSubmit = async (v: Form) => {
     setFormError(null);
     try {
-      await tenantService.create({ ...v, propertyId: v.propertyId || null });
+      if (editingTenant) {
+        await tenantService.update(editingTenant.id, { ...v, propertyId: v.propertyId || null });
+      } else {
+        await tenantService.create({ ...v, propertyId: v.propertyId || null });
+      }
       reset();
       setOpen(false);
+      setEditingTenant(null);
       reload();
     } catch (e) {
       setFormError(errMsg(e));
     }
   };
 
-  const onDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this tenant?")) return;
+  const handleRequestDelete = (tenant: Tenant) => {
+    setDeletingTenant(tenant);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingTenant) return;
+    setIsDeleting(true);
     try {
-      await tenantService.remove(id);
+      await tenantService.remove(deletingTenant.id);
+      setDeletingTenant(null);
       reload();
     } catch (e) {
-      alert(errMsg(e));
+      setFormError(errMsg(e));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -99,17 +147,17 @@ export default function TenantsPage() {
         title="Tenants"
         subtitle={`Managing ${data.length} registered tenant profiles`}
         action={
-          <Button onClick={() => setOpen(true)} className="gap-2">
+          <Button onClick={handleOpenCreate} className="gap-2">
             <Plus className="h-4 w-4" /> Add Tenant
           </Button>
         }
       />
 
-      {/* Search Input */}
-      <div className="relative max-w-md">
+      {/* Search Bar */}
+      <div className="relative max-w-md w-full">
         <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
         <Input
-          placeholder="Search by name, email, phone, or property..."
+          placeholder="Search by name, email, phone, or unit..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -120,33 +168,33 @@ export default function TenantsPage() {
         loading={loading}
         error={error}
         empty={!loading && !error && data.length === 0}
-        emptyMessage="No tenants added yet. Register tenants and assign them to your units to track leases."
+        emptyMessage="No tenants registered yet. Add a tenant and associate them with a rental property."
         emptyAction={
-          <Button onClick={() => setOpen(true)} size="sm">
+          <Button onClick={handleOpenCreate} size="sm">
             <Plus className="h-4 w-4" /> Add Tenant
           </Button>
         }
       />
 
-      {/* Tenants Content */}
-      {!loading && !error && filteredTenants.length > 0 && (
+      {!loading && !error && (
         <>
           {/* Desktop Table View */}
           <div className="hidden md:block">
-            <Card className="overflow-hidden border-slate-200/80">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <Card className="overflow-hidden border border-slate-200/80 bg-white rounded-2xl shadow-xs">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-slate-200 bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold">
                   <tr>
-                    <th className="px-5 py-3.5">Tenant</th>
+                    <th className="px-5 py-3.5">Tenant Profile</th>
                     <th className="px-5 py-3.5">Contact Details</th>
                     <th className="px-5 py-3.5">Assigned Unit</th>
                     <th className="px-5 py-3.5">Lease Term</th>
-                    <th className="px-5 py-3.5 text-right">Action</th>
+                    <th className="px-5 py-3.5">Status</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 text-slate-600">
                   {filteredTenants.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
                       {/* Tenant with Avatar */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
@@ -200,17 +248,35 @@ export default function TenantsPage() {
                         )}
                       </td>
 
-                      {/* Action */}
+                      {/* Status */}
+                      <td className="px-5 py-4">
+                        <Badge tone={t.propertyId ? "green" : "yellow"} dot>
+                          {t.propertyId ? "Active Lease" : "Unassigned"}
+                        </Badge>
+                      </td>
+
+                      {/* Action Buttons: Edit + Delete */}
                       <td className="px-5 py-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDelete(t.id)}
-                          aria-label="Remove tenant"
-                          className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 h-8 w-8 p-1.5"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEdit(t)}
+                            aria-label="Edit tenant"
+                            className="text-slate-500 hover:bg-blue-50 hover:text-blue-600 h-8 w-8 p-1.5"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRequestDelete(t)}
+                            aria-label="Remove tenant"
+                            className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 h-8 w-8 p-1.5"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -233,15 +299,26 @@ export default function TenantsPage() {
                       <span className="text-[11px] text-slate-400">ID: #{t.id.slice(-6)}</span>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDelete(t.id)}
-                    aria-label="Remove tenant"
-                    className="text-slate-400 hover:text-rose-600 p-1.5 h-8 w-8"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenEdit(t)}
+                      aria-label="Edit tenant"
+                      className="text-slate-500 hover:text-blue-600 p-1.5 h-8 w-8"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRequestDelete(t)}
+                      aria-label="Remove tenant"
+                      className="text-slate-400 hover:text-rose-600 p-1.5 h-8 w-8"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="rounded-xl bg-slate-50 p-3 space-y-2 text-xs">
@@ -253,34 +330,35 @@ export default function TenantsPage() {
                     <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                     <span>{t.phone}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-slate-800 font-medium">
+                  <div className="flex items-center gap-2 text-slate-700 font-medium pt-1 border-t border-slate-200/60">
                     <Building2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
                     <span>{propertyName(t.propertyId)}</span>
                   </div>
                 </div>
-
-                {(t.leaseStart || t.leaseEnd) && (
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 pt-1">
-                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                    <span>
-                      {t.leaseStart || "—"} → {t.leaseEnd || "—"}
-                    </span>
-                  </div>
-                )}
               </Card>
             ))}
           </div>
         </>
       )}
 
-      {/* Add Tenant Modal */}
+      {/* Add / Edit Tenant Modal */}
       <Modal
         open={open}
-        title="Register New Tenant"
-        subtitle="Add tenant contact info and link to a rental property"
+        title={editingTenant ? "Edit Tenant Profile" : "Register New Tenant"}
+        subtitle={
+          editingTenant
+            ? `Update profile details and lease agreement for ${editingTenant.name}`
+            : "Add tenant contact info and link to a rental property"
+        }
         onClose={() => setOpen(false)}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {formError && (
+            <div className="rounded-xl bg-rose-50 p-3 text-xs text-rose-600 border border-rose-100">
+              {formError}
+            </div>
+          )}
+
           <Field label="Full Name" error={errors.name?.message} required>
             <Input placeholder="e.g. Rahul Sharma" {...register("name")} />
           </Field>
@@ -314,22 +392,39 @@ export default function TenantsPage() {
             </Field>
           </div>
 
-          {formError && (
-            <div className="rounded-xl bg-rose-50 p-3 text-xs text-rose-600 border border-rose-100">
-              {formError}
-            </div>
-          )}
-
-          <div className="flex items-center justify-end gap-2.5 pt-3">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Register Tenant"}
+            <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <span>{editingTenant ? "Save Changes" : "Register Tenant"}</span>
+              )}
             </Button>
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        open={Boolean(deletingTenant)}
+        title="Remove Tenant Record?"
+        description={
+          deletingTenant
+            ? `Are you sure you want to remove ${deletingTenant.name} (${deletingTenant.phone})? Any associated active lease assignments will be unlinked.`
+            : "Are you sure you want to remove this tenant?"
+        }
+        confirmText="Yes, Remove Tenant"
+        tone="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingTenant(null)}
+      />
     </div>
   );
 }
