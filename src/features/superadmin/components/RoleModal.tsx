@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, UserPlus, RefreshCw, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { adminService } from "@/services/admin.service";
+import type { SuperAdminRole } from "@/types";
 
 interface RoleModalProps {
   open: boolean;
+  roleToEdit?: SuperAdminRole | null;
   onClose: () => void;
   onSuccess: (msg: string) => void;
 }
@@ -19,13 +21,28 @@ const availablePlatformPermissions = [
   { key: "PLATFORM_MANAGE_BILLING", label: "Settlements & Gateway Keys", desc: "Oversee payment gateways and corporate invoices" },
 ];
 
-export default function RoleModal({ open, onClose, onSuccess }: RoleModalProps) {
+export default function RoleModal({ open, roleToEdit, onClose, onSuccess }: RoleModalProps) {
   const [roleName, setRoleName] = useState("");
   const [roleSlug, setRoleSlug] = useState("");
   const [roleDesc, setRoleDesc] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (roleToEdit) {
+      setRoleName(roleToEdit.name);
+      setRoleSlug(roleToEdit.slug);
+      setRoleDesc(roleToEdit.description || "");
+      setSelectedPermissions(roleToEdit.permissions || []);
+    } else {
+      setRoleName("");
+      setRoleSlug("");
+      setRoleDesc("");
+      setSelectedPermissions([]);
+    }
+    setError(null);
+  }, [roleToEdit, open]);
 
   if (!open) return null;
 
@@ -42,20 +59,26 @@ export default function RoleModal({ open, onClose, onSuccess }: RoleModalProps) 
     setError(null);
     try {
       const slug = roleSlug || roleName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      await adminService.createRole({
-        name: roleName,
-        slug,
-        description: roleDesc,
-        permissions: selectedPermissions,
-      });
-      onSuccess(`Successfully created SuperAdmin role: ${roleName}`);
-      setRoleName("");
-      setRoleSlug("");
-      setRoleDesc("");
-      setSelectedPermissions([]);
+      if (roleToEdit) {
+        await adminService.updateRoleDefinition(roleToEdit.id, {
+          name: roleName,
+          slug,
+          description: roleDesc,
+          permissions: selectedPermissions,
+        });
+        onSuccess(`Successfully updated role: ${roleName}`);
+      } else {
+        await adminService.createRole({
+          name: roleName,
+          slug,
+          description: roleDesc,
+          permissions: selectedPermissions,
+        });
+        onSuccess(`Successfully created SuperAdmin role: ${roleName}`);
+      }
       onClose();
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Failed to create role");
+      setError(err?.response?.data?.message || err?.message || "Failed to save role");
     } finally {
       setSubmitting(false);
     }

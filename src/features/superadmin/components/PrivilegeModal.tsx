@@ -26,7 +26,7 @@ export default function PrivilegeModal({
   useEffect(() => {
     if (user) {
       setTargetIsSuperAdmin(
-        Boolean((user as any).isSuperAdmin) || ["8003953815", "9876543210"].includes(user.mobile)
+        Boolean((user as any).isSuperAdmin) || (user as any).adminRole === "SUPER_ADMIN"
       );
       setTargetAdminRole((user as any).adminRole || "SUPER_ADMIN");
     }
@@ -53,7 +53,7 @@ export default function PrivilegeModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-      <Card className="max-w-md w-full bg-white border border-slate-200 p-6 text-slate-900 rounded-2xl shadow-2xl space-y-4">
+      <Card className="max-w-md w-full bg-white border border-slate-200 p-6 text-slate-900 rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">

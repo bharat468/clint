@@ -12,9 +12,8 @@ export default function SuperAdminLayout() {
   const user = useAppSelector((s) => s.auth.user);
 
   const isSuperAdmin =
-    user?.mobile === "8003953815" ||
-    user?.mobile === "9876543210" ||
-    Boolean((user as any)?.isSuperAdmin);
+    Boolean(user?.isSuperAdmin) ||
+    user?.adminRole === "SUPER_ADMIN";
 
   if (!isSuperAdmin) {
     return (
