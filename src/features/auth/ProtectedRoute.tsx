@@ -3,7 +3,6 @@ import { useAppSelector } from "@/app/hooks";
 
 export default function ProtectedRoute() {
   const token = useAppSelector((s) => s.auth.token);
-  const activePortal = useAppSelector((s) => s.auth.activePortal);
   const user = useAppSelector((s) => s.auth.user);
   const location = useLocation();
 

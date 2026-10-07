@@ -2,9 +2,7 @@ import { useState, useMemo } from "react";
 import {
   Sliders,
   Plus,
-  ShieldCheck,
   X,
-  CheckCircle2,
   Pencil,
   Trash2,
 } from "lucide-react";

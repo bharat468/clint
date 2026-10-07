@@ -1,4 +1,4 @@
-import { Lock, ShieldCheck, Key, Server, Users } from "lucide-react";
+import { Lock, ShieldCheck, Key, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 export default function SuperAdminSecurityPage() {

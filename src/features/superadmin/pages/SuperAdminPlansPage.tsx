@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
+import { Plus, CheckCircle2, Trash2 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { planService } from "@/services/plan.service";
 import { Card } from "@/components/ui/card";

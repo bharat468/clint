@@ -1,8 +1,6 @@
 import { useState, useMemo } from "react";
 import {
   RefreshCw,
-  CheckCircle2,
-  AlertCircle,
   Shield,
   Plus,
   Search,

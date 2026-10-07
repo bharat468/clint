@@ -8,11 +8,10 @@ import {
   Sliders,
   LogOut,
   X,
-  Server,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { logout, setActivePortal } from "@/features/auth/authSlice";
-import { toggleSidebar, closeSidebar } from "@/features/ui/uiSlice";
+import { toggleSidebar } from "@/features/ui/uiSlice";
 import { cn } from "@/lib/utils";
 
 const superAdminNavLinks = [

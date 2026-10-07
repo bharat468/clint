@@ -1,4 +1,4 @@
-import { CreditCard, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { organizationService } from "@/services/organization.service";
 import { propertyService } from "@/services/property.service";

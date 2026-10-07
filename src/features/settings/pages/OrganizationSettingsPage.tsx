@@ -1,4 +1,4 @@
-import { Building2, ShieldCheck, MapPin, Users, Home } from "lucide-react";
+import { Building2, ShieldCheck, Users, Home } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { organizationService } from "@/services/organization.service";
 import { propertyService } from "@/services/property.service";

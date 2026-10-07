@@ -1,4 +1,4 @@
-import { Menu, LogOut, Server, ShieldCheck } from "lucide-react";
+import { Menu, LogOut, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSidebar } from "@/features/ui/uiSlice";

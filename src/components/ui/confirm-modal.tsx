@@ -6,9 +6,12 @@ interface ConfirmModalProps {
   title: string;
   description: string;
   confirmLabel?: string;
+  confirmText?: string;
   cancelLabel?: string;
-  variant?: "danger" | "warning" | "default";
+  variant?: "danger" | "warning" | "default" | string;
+  tone?: "danger" | "warning" | "default" | string;
   loading?: boolean;
+  isLoading?: boolean;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
 }
@@ -17,13 +20,20 @@ export function ConfirmModal({
   open,
   title,
   description,
-  confirmLabel = "Delete",
+  confirmLabel,
+  confirmText,
   cancelLabel = "Cancel",
-  variant = "danger",
-  loading = false,
+  variant,
+  tone,
+  loading,
+  isLoading,
   onConfirm,
   onClose,
 }: ConfirmModalProps) {
+  const finalConfirmLabel = confirmText || confirmLabel || "Confirm";
+  const finalVariant = tone || variant || "danger";
+  const isBusy = isLoading ?? loading ?? false;
+
   if (!open) return null;
 
   return (
@@ -36,7 +46,7 @@ export function ConfirmModal({
         {/* Close X Button */}
         <button
           onClick={onClose}
-          disabled={loading}
+          disabled={isBusy}
           className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
         >
           <X className="h-4 w-4" />
@@ -45,12 +55,12 @@ export function ConfirmModal({
         <div className="flex items-start gap-4">
           <div
             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${
-              variant === "danger"
+              finalVariant === "danger"
                 ? "bg-rose-50 text-rose-600 border-rose-100"
                 : "bg-amber-50 text-amber-600 border-amber-100"
             }`}
           >
-            {variant === "danger" ? (
+            {finalVariant === "danger" ? (
               <Trash2 className="h-5 w-5" />
             ) : (
               <AlertTriangle className="h-5 w-5" />
@@ -69,7 +79,7 @@ export function ConfirmModal({
             variant="outline"
             size="sm"
             onClick={onClose}
-            disabled={loading}
+            disabled={isBusy}
             className="text-xs h-9 px-4 font-semibold text-slate-700 hover:bg-slate-100"
           >
             {cancelLabel}
@@ -79,14 +89,14 @@ export function ConfirmModal({
             type="button"
             size="sm"
             onClick={onConfirm}
-            disabled={loading}
+            disabled={isBusy}
             className={`text-xs h-9 px-4 font-semibold text-white shadow-xs ${
-              variant === "danger"
+              finalVariant === "danger"
                 ? "bg-rose-600 hover:bg-rose-700 border-rose-700"
                 : "bg-amber-600 hover:bg-amber-700 border-amber-700"
             }`}
           >
-            {loading ? "Processing..." : confirmLabel}
+            {isBusy ? "Processing..." : finalConfirmLabel}
           </Button>
         </div>
       </div>

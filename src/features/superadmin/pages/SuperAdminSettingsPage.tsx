@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sliders, RefreshCw, CheckCircle2, AlertCircle, Save } from "lucide-react";
+import { Sliders, RefreshCw, Save } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { adminService, type SystemSetting } from "@/services/admin.service";
 import { Card } from "@/components/ui/card";

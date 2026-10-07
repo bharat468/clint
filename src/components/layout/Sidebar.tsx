@@ -198,7 +198,7 @@ export default function Sidebar() {
 
       {/* Bottom Footer Section: Clean User Profile & Portal Switcher */}
       <div className="pt-4 border-t border-slate-100 space-y-2.5">
-        {(Boolean((user as any)?.isSuperAdmin) || Boolean((user as any)?.adminRole)) && (
+        {(isSuperAdmin || Boolean((user as any)?.adminRole)) && (
           <button
             type="button"
             onClick={() => {

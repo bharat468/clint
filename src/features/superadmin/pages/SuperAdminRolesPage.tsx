@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, CheckCircle2, AlertCircle, ShieldCheck, Pencil, Trash2 } from "lucide-react";
+import { Plus, ShieldCheck, Pencil, Trash2 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { adminService } from "@/services/admin.service";
 import { Card } from "@/components/ui/card";
