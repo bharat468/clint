@@ -62,30 +62,25 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Executive Welcome & Action Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/60 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live Portfolio
-            </span>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Portfolio Overview
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Real-time occupancy status, revenue collection, and tenant management.
+            Real-time occupancy status, revenue collections, and tenant lease management.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           <Link to="/properties">
-            <Button variant="outline" size="sm" className="gap-1.5">
+            <Button variant="outline" size="sm" className="gap-2 text-slate-700 font-semibold border-slate-300">
               <Home className="h-4 w-4 text-blue-600" />
               <span>Properties</span>
             </Button>
           </Link>
           <Link to="/payments">
-            <Button size="sm" className="gap-1.5 bg-blue-600 hover:bg-blue-700">
+            <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
               <Plus className="h-4 w-4" />
               <span>Record Payment</span>
             </Button>
