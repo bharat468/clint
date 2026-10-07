@@ -8,6 +8,7 @@ import {
   type ReactNode,
   type InputHTMLAttributes,
   type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
 } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,20 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   ({ className, ...props }, ref) => <input ref={ref} className={cn(baseInput, className)} {...props} />
 );
 Input.displayName = "Input";
+
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  ({ className, ...props }, ref) => (
+    <textarea
+      ref={ref}
+      className={cn(
+        "w-full rounded-xl border border-slate-200 bg-white p-3.5 text-sm text-slate-800 placeholder:text-slate-400 transition-all outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60",
+        className
+      )}
+      {...props}
+    />
+  )
+);
+Textarea.displayName = "Textarea";
 
 interface OptionItem {
   value: string;

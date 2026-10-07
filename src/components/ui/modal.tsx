@@ -21,7 +21,7 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl transition-all animate-in zoom-in-95 duration-150"
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-2xl transition-all animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-start justify-between border-b border-slate-100 pb-4">
