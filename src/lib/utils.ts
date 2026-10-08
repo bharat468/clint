@@ -10,3 +10,28 @@ export const errMsg = (e: unknown) =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
   (e as Error)?.message ??
   "Something went wrong";
+
+export const formatDateTime = (dateStr?: string | Date | null) => {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+export const formatDate = (dateStr?: string | Date | null) => {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};

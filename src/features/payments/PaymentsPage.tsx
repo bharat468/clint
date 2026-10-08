@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
-import { errMsg, formatINR } from "@/lib/utils";
+import { errMsg, formatINR, formatDateTime } from "@/lib/utils";
 import type { Payment, Tenant } from "@/types";
 
 const schema = z.object({
@@ -297,6 +297,7 @@ export default function PaymentsPage() {
                     <th className="px-5 py-3.5">Billing Month</th>
                     <th className="px-5 py-3.5">Amount</th>
                     <th className="px-5 py-3.5">Status</th>
+                    <th className="px-5 py-3.5">Payment / Recorded Date</th>
                     <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -356,6 +357,25 @@ export default function PaymentsPage() {
                               {p.status}
                             </Badge>
                           </button>
+                        </td>
+
+                        {/* Payment Date & Time */}
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium">
+                            <Clock className="h-3.5 w-3.5 text-slate-400" />
+                            <span>
+                              {p.paidOn
+                                ? formatDateTime(p.paidOn)
+                                : p.createdAt
+                                ? formatDateTime(p.createdAt)
+                                : "—"}
+                            </span>
+                          </div>
+                          {p.paidOn && (
+                            <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded ml-5">
+                              Settled
+                            </span>
+                          )}
                         </td>
 
                         {/* Actions: Mark Paid + Edit + Delete */}

@@ -11,6 +11,7 @@ import {
   Pencil,
   UserCheck,
   UserX,
+  Clock,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import {
@@ -26,7 +27,7 @@ import { Field } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Toast } from "@/components/ui/toast";
-import { errMsg } from "@/lib/utils";
+import { errMsg, formatDateTime } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import type { Role, Property } from "@/types";
@@ -298,13 +299,14 @@ export default function TeamSettingsPage() {
               <th className="px-5 py-3.5">Assigned Role</th>
               <th className="px-5 py-3.5">Property Scope</th>
               <th className="px-5 py-3.5">Status</th>
+              <th className="px-5 py-3.5">Joined / Onboarded</th>
               <th className="px-5 py-3.5 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {members.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-400">
+                <td colSpan={6} className="py-12 text-center text-slate-400">
                   No staff members onboarded yet. Click &quot;Add Staff / Team Member&quot; to invite your first employee.
                 </td>
               </tr>
@@ -358,6 +360,12 @@ export default function TeamSettingsPage() {
                           </Badge>
                         </button>
                       )}
+                    </td>
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                        <Clock className="h-3.5 w-3.5 text-slate-400" />
+                        <span>{formatDateTime(m.joinedAt)}</span>
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">

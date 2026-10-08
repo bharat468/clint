@@ -12,6 +12,7 @@ import {
   IndianRupee,
   Search,
   RefreshCw,
+  Clock,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { propertyService } from "@/services/property.service";
@@ -23,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
-import { errMsg, formatINR } from "@/lib/utils";
+import { errMsg, formatINR, formatDateTime } from "@/lib/utils";
 import type { Property } from "@/types";
 
 const schema = z.object({
@@ -256,10 +257,23 @@ export default function PropertiesPage() {
                       {formatINR(p.rent)}/mo
                     </span>
                   </div>
+
+                  {/* Audit Info: Created At / Created By */}
+                  <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-100/80 pt-2.5">
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-slate-400" />
+                      <span>{p.createdAt ? formatDateTime(p.createdAt) : "Recently added"}</span>
+                    </div>
+                    {p.createdBy?.name && (
+                      <span className="truncate max-w-[120px] font-medium text-slate-500" title={`Added by ${p.createdBy.name}`}>
+                        by {p.createdBy.name}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Card Footer with Edit & Delete */}
-                <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-3">
+                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
                   <span className="text-[11px] font-medium text-slate-400">
                     ID: #{p.id.slice(-6)}
                   </span>

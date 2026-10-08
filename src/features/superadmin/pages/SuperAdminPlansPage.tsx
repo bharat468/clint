@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, CheckCircle2, Trash2, ShieldAlert } from "lucide-react";
+import { Plus, CheckCircle2, Trash2, ShieldAlert, Clock } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 import { canAccessPlatform } from "@/lib/permissions";
 import { useApi } from "@/hooks/useApi";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { State } from "@/components/ui/page";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Toast } from "@/components/ui/toast";
-import { formatINR } from "@/lib/utils";
+import { formatINR, formatDateTime } from "@/lib/utils";
 import PlanModal from "../components/PlanModal";
 import type { Plan } from "@/types";
 
@@ -175,6 +175,18 @@ export default function SuperAdminPlansPage() {
                     ))}
                   </div>
                 </div>
+
+                {p.createdAt && (
+                  <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-50 pt-2">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-slate-400" />
+                      Created: {formatDateTime(p.createdAt)}
+                    </span>
+                    {p.updatedAt && p.updatedAt !== p.createdAt && (
+                      <span>Updated: {formatDateTime(p.updatedAt)}</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">

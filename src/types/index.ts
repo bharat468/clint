@@ -20,6 +20,14 @@ export interface Property {
   rent: number;
   bedrooms: number;
   status: "VACANT" | "OCCUPIED";
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: {
+    id: string;
+    name?: string | null;
+    mobile?: string;
+    email?: string | null;
+  } | null;
 }
 export type PropertyInput = Omit<Property, "id">;
 
@@ -29,8 +37,11 @@ export interface Tenant {
   email: string;
   phone: string;
   propertyId?: string | null;
+  property?: Property | null;
   leaseStart?: string;
   leaseEnd?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 export type TenantInput = Omit<Tenant, "id">;
 
@@ -38,10 +49,14 @@ export interface Payment {
   id: string;
   tenantId: string;
   propertyId: string;
+  tenant?: Tenant;
+  property?: Property;
   amount: number;
   month: string;
   status: "PAID" | "PENDING" | "OVERDUE";
   paidOn?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 export type PaymentInput = Omit<Payment, "id">;
 
@@ -70,6 +85,7 @@ export interface AdminUser {
   email?: string | null;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   createdAt: string;
+  updatedAt?: string;
   organizationMembers: {
     role: string;
     organization: { id: string; name: string };
@@ -93,6 +109,8 @@ export interface Plan {
   maxStaff: number;
   features: string[];
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PlatformOverview {
@@ -116,6 +134,7 @@ export interface SuperAdminRole {
   description?: string | null;
   permissions: string[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AdminOrganization {
@@ -141,4 +160,5 @@ export interface AdminOrganization {
     expiresAt?: string | null;
   } | null;
   createdAt: string;
+  updatedAt?: string;
 }

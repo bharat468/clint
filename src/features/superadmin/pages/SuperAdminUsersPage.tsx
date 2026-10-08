@@ -9,7 +9,9 @@ import {
   Pencil,
   Trash2,
   ShieldAlert,
+  Clock,
 } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
 import { canAccessPlatform } from "@/lib/permissions";
 import { useApi } from "@/hooks/useApi";
@@ -228,6 +230,7 @@ export default function SuperAdminUsersPage() {
                   <th className="px-5 py-3.5">Mobile Contact</th>
                   <th className="px-5 py-3.5">SuperAdmin Flag</th>
                   <th className="px-5 py-3.5">Platform Role</th>
+                  <th className="px-5 py-3.5">Registered & Updated</th>
                   <th className="px-5 py-3.5">Status</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
@@ -268,6 +271,19 @@ export default function SuperAdminUsersPage() {
                           {(u as any).adminRole ||
                             ((u as any).isSuperAdmin ? "SUPER_ADMIN" : "None")}
                         </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="space-y-0.5 text-[11px]">
+                          <div className="flex items-center gap-1 text-slate-700">
+                            <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+                            <span>{formatDateTime(u.createdAt)}</span>
+                          </div>
+                          {u.updatedAt && u.updatedAt !== u.createdAt && (
+                            <div className="text-[10px] text-slate-400">
+                              Updated: {formatDateTime(u.updatedAt)}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-5 py-3.5">
                         {/* Interactive Status Badge (Click to toggle Active / Suspended) */}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, ShieldCheck, Pencil, Trash2, ShieldAlert } from "lucide-react";
+import { Plus, ShieldCheck, Pencil, Trash2, ShieldAlert, Clock } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 import { canAccessPlatform } from "@/lib/permissions";
 import { useApi } from "@/hooks/useApi";
@@ -10,6 +10,7 @@ import { State } from "@/components/ui/page";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Toast } from "@/components/ui/toast";
 import RoleModal from "../components/RoleModal";
+import { formatDateTime } from "@/lib/utils";
 import type { SuperAdminRole } from "@/types";
 
 export default function SuperAdminRolesPage() {
@@ -146,9 +147,12 @@ export default function SuperAdminRolesPage() {
                 </div>
               </div>
 
-              {/* Card Footer with Edit & Delete */}
+              {/* Card Footer with Timestamps, Edit & Delete */}
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                <span className="font-mono text-slate-400">ID: #{role.id.slice(-6)}</span>
+                <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                  <Clock className="h-3 w-3 shrink-0" />
+                  <span>{formatDateTime(role.createdAt)}</span>
+                </div>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleOpenEdit(role)}

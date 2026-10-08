@@ -75,6 +75,22 @@ export const adminService = {
   listOrganizations: () =>
     api.get(ENDPOINTS.ADMIN.ORGANIZATIONS_LIST).then((r) => (r.data?.data ?? r.data) as AdminOrganization[]),
 
+  createOrganization: (data: {
+    name: string;
+    slug?: string;
+    ownerMobile: string;
+    ownerName?: string;
+    ownerEmail?: string;
+    planId?: string;
+  }) =>
+    api.post(ENDPOINTS.ADMIN.ORGANIZATION_CREATE, data).then((r) => r.data?.data ?? r.data),
+
+  updateOrganization: (id: string, data: { name?: string; slug?: string }) =>
+    api.put(ENDPOINTS.ADMIN.ORGANIZATION_UPDATE(id), data).then((r) => r.data?.data ?? r.data),
+
+  deleteOrganization: (id: string) =>
+    api.delete(ENDPOINTS.ADMIN.ORGANIZATION_DELETE(id)).then((r) => r.data?.data ?? r.data),
+
   updateSubscription: (orgId: string, data: UpdateSubscriptionInput) =>
     api.put(ENDPOINTS.ADMIN.ORGANIZATION_SUBSCRIPTION(orgId), data).then((r) => r.data?.data ?? r.data),
 

@@ -12,6 +12,7 @@ import {
   Calendar,
   Search,
   RefreshCw,
+  Clock,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { tenantService } from "@/services/tenant.service";
@@ -24,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
-import { errMsg } from "@/lib/utils";
+import { errMsg, formatDateTime } from "@/lib/utils";
 import type { Property, Tenant } from "@/types";
 
 const schema = z.object({
@@ -189,6 +190,7 @@ export default function TenantsPage() {
                     <th className="px-5 py-3.5">Assigned Unit</th>
                     <th className="px-5 py-3.5">Lease Term</th>
                     <th className="px-5 py-3.5">Status</th>
+                    <th className="px-5 py-3.5">Added / Updated</th>
                     <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -253,6 +255,19 @@ export default function TenantsPage() {
                         <Badge tone={t.propertyId ? "green" : "yellow"} dot>
                           {t.propertyId ? "Active Lease" : "Unassigned"}
                         </Badge>
+                      </td>
+
+                      {/* Added / Updated Timestamps */}
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium">
+                          <Clock className="h-3.5 w-3.5 text-slate-400" />
+                          <span>{t.createdAt ? formatDateTime(t.createdAt) : "—"}</span>
+                        </div>
+                        {t.updatedAt && t.updatedAt !== t.createdAt && (
+                          <div className="text-[11px] text-slate-400 pl-5 mt-0.5">
+                            Upd: {formatDateTime(t.updatedAt)}
+                          </div>
+                        )}
                       </td>
 
                       {/* Action Buttons: Edit + Delete */}
