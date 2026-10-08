@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Search, RefreshCw, Calendar } from "lucide-react";
+import { Search, RefreshCw, Calendar, ShieldAlert } from "lucide-react";
+import { useAppSelector } from "@/app/hooks";
+import { canAccessPlatform } from "@/lib/permissions";
 import { useApi } from "@/hooks/useApi";
 import { adminService } from "@/services/admin.service";
 import { planService } from "@/services/plan.service";
@@ -11,8 +13,11 @@ import SubscriptionModal from "../components/SubscriptionModal";
 import type { AdminOrganization, Plan } from "@/types";
 
 export default function SuperAdminOrganizationsPage() {
+  const user = useAppSelector((s) => s.auth.user);
+  const canManageOrgs = canAccessPlatform(user, "PLATFORM_MANAGE_ORGANIZATIONS");
+
   const { data: orgs, loading, error, reload: reloadOrgs } = useApi(
-    adminService.listOrganizations,
+    canManageOrgs ? adminService.listOrganizations : async () => [],
     [] as AdminOrganization[]
   );
   const { data: plans } = useApi(planService.listPlans, [] as Plan[]);
@@ -44,6 +49,20 @@ export default function SuperAdminOrganizationsPage() {
       o.slug?.toLowerCase().includes(searchOrg.toLowerCase()) ||
       o.owner?.mobile?.includes(searchOrg)
   );
+
+  if (!canManageOrgs) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-3 border border-rose-100">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <h3 className="text-base font-bold text-slate-900">Access Restricted</h3>
+        <p className="text-xs text-slate-500 max-w-sm mt-1">
+          You lack the platform permission ('PLATFORM_MANAGE_ORGANIZATIONS') required to manage organizations and portfolios.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

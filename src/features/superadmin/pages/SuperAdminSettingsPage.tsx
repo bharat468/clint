@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Sliders, RefreshCw, Save } from "lucide-react";
+import { Sliders, RefreshCw, Save, ShieldAlert } from "lucide-react";
+import { useAppSelector } from "@/app/hooks";
+import { canAccessPlatform } from "@/lib/permissions";
 import { useApi } from "@/hooks/useApi";
 import { adminService, type SystemSetting } from "@/services/admin.service";
 import { Card } from "@/components/ui/card";
@@ -8,8 +10,11 @@ import { State } from "@/components/ui/page";
 import { Toast } from "@/components/ui/toast";
 
 export default function SuperAdminSettingsPage() {
+  const user = useAppSelector((s) => s.auth.user);
+  const canManageBilling = canAccessPlatform(user, "PLATFORM_MANAGE_BILLING");
+
   const { data: settings, loading, error, reload } = useApi(
-    adminService.listSettings,
+    canManageBilling ? adminService.listSettings : async () => [],
     [] as SystemSetting[]
   );
 
@@ -46,6 +51,20 @@ export default function SuperAdminSettingsPage() {
   };
 
   const categories = Array.from(new Set(settings.map((s) => s.category || "GENERAL")));
+
+  if (!canManageBilling) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-3 border border-rose-100">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <h3 className="text-base font-bold text-slate-900">Access Restricted</h3>
+        <p className="text-xs text-slate-500 max-w-sm mt-1">
+          You lack the platform permission ('PLATFORM_MANAGE_BILLING') required to view or modify platform settings.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">

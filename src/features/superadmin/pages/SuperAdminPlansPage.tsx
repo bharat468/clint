@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Plus, CheckCircle2, Trash2 } from "lucide-react";
+import { Plus, CheckCircle2, Trash2, ShieldAlert } from "lucide-react";
+import { useAppSelector } from "@/app/hooks";
+import { canAccessPlatform } from "@/lib/permissions";
 import { useApi } from "@/hooks/useApi";
 import { planService } from "@/services/plan.service";
 import { Card } from "@/components/ui/card";
@@ -12,8 +14,11 @@ import PlanModal from "../components/PlanModal";
 import type { Plan } from "@/types";
 
 export default function SuperAdminPlansPage() {
+  const user = useAppSelector((s) => s.auth.user);
+  const canManagePlans = canAccessPlatform(user, "PLATFORM_MANAGE_PLANS");
+
   const { data: plans, loading, error, reload: reloadPlans } = useApi(
-    planService.listPlans,
+    canManagePlans ? planService.listPlans : async () => [],
     [] as Plan[]
   );
 
@@ -65,6 +70,20 @@ export default function SuperAdminPlansPage() {
       setIsDeleting(false);
     }
   };
+
+  if (!canManagePlans) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-3 border border-rose-100">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <h3 className="text-base font-bold text-slate-900">Access Restricted</h3>
+        <p className="text-xs text-slate-500 max-w-sm mt-1">
+          You lack the required platform permission ('PLATFORM_MANAGE_PLANS') to manage SaaS subscription tiers.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -18,12 +18,27 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { State } from "@/components/ui/page";
 import { formatINR } from "@/lib/utils";
+import { useAppSelector } from "@/app/hooks";
+import { canAccessPlatform } from "@/lib/permissions";
+import { ShieldAlert } from "lucide-react";
 import type { Plan, AdminOrganization } from "@/types";
 
 export default function SuperAdminOverviewPage() {
-  const { data: overview, loading, error, reload } = useApi(adminService.getOverview, null);
-  const { data: orgs } = useApi(adminService.listOrganizations, [] as AdminOrganization[]);
-  const { data: plans } = useApi(planService.listPlans, [] as Plan[]);
+  const user = useAppSelector((s) => s.auth.user);
+  const canViewVitals = canAccessPlatform(user, "PLATFORM_VIEW_VITALS");
+
+  const { data: overview, loading, error, reload } = useApi(
+    canViewVitals ? adminService.getOverview : async () => null,
+    null
+  );
+  const { data: orgs } = useApi(
+    canViewVitals ? adminService.listOrganizations : async () => [],
+    [] as AdminOrganization[]
+  );
+  const { data: plans } = useApi(
+    canViewVitals ? planService.listPlans : async () => [],
+    [] as Plan[]
+  );
 
   const expiringOrgs = orgs.filter((o) => {
     if (!o.subscription?.expiresAt) return false;
@@ -32,6 +47,20 @@ export default function SuperAdminOverviewPage() {
     );
     return diffDays > 0 && diffDays <= 15;
   });
+
+  if (!canViewVitals) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-3 border border-rose-100">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <h3 className="text-base font-bold text-slate-900">Access Restricted</h3>
+        <p className="text-xs text-slate-500 max-w-sm mt-1">
+          You lack the platform permission ('PLATFORM_VIEW_VITALS') required to view platform telemetry and vitals.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

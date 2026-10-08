@@ -26,9 +26,10 @@ export default function PrivilegeModal({
   useEffect(() => {
     if (user) {
       setTargetIsSuperAdmin(
-        Boolean((user as any).isSuperAdmin) || (user as any).adminRole === "SUPER_ADMIN"
+        Boolean((user as any).isSuperAdmin) || Boolean((user as any).adminRole)
       );
       setTargetAdminRole((user as any).adminRole || "SUPER_ADMIN");
+      setError(null);
     }
   }, [user]);
 
@@ -104,7 +105,7 @@ export default function PrivilegeModal({
               >
                 <option value="SUPER_ADMIN">SUPER_ADMIN (Full Platform Master)</option>
                 {adminRoles.map((r) => (
-                  <option key={r.id} value={r.slug.toUpperCase()}>
+                  <option key={r.id} value={r.slug}>
                     {r.name} ({r.slug})
                   </option>
                 ))}

@@ -12,6 +12,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setActivePortal } from "@/features/auth/authSlice";
 import { toggleSidebar, closeSidebar } from "@/features/ui/uiSlice";
+import { canAccessPlatform } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 const superAdminNavLinks = [
@@ -28,6 +29,17 @@ export default function SuperAdminSidebar() {
   const navigate = useNavigate();
   const open = useAppSelector((s) => s.ui.sidebarOpen);
   const user = useAppSelector((s) => s.auth.user);
+
+  // Dynamic RBAC Filter for SuperAdmin: Only show modules authorized for this admin
+  const filteredSuperAdminNavLinks = superAdminNavLinks.filter((link) => {
+    if (link.to === "/superadmin") return canAccessPlatform(user, "PLATFORM_VIEW_VITALS");
+    if (link.to === "/superadmin/organizations") return canAccessPlatform(user, "PLATFORM_MANAGE_ORGANIZATIONS");
+    if (link.to === "/superadmin/plans") return canAccessPlatform(user, "PLATFORM_MANAGE_PLANS");
+    if (link.to === "/superadmin/roles") return canAccessPlatform(user, "PLATFORM_MANAGE_ADMIN_ROLES");
+    if (link.to === "/superadmin/users") return canAccessPlatform(user, "PLATFORM_MANAGE_USERS");
+    if (link.to === "/superadmin/settings") return canAccessPlatform(user, "PLATFORM_MANAGE_BILLING");
+    return true;
+  });
 
   const getInitials = (name?: string | null) => {
     if (!name) return "SA";
@@ -72,7 +84,7 @@ export default function SuperAdminSidebar() {
             Main Menu
           </p>
           <nav className="mt-2 space-y-1">
-            {superAdminNavLinks.map(({ to, label, icon: Icon, end }) => (
+            {filteredSuperAdminNavLinks.map(({ to, label, icon: Icon, end }) => (
               <NavLink
                 key={to}
                 to={to}

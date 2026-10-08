@@ -13,7 +13,7 @@ export default function SuperAdminLayout() {
 
   const isSuperAdmin =
     Boolean(user?.isSuperAdmin) ||
-    user?.adminRole === "SUPER_ADMIN";
+    Boolean(user?.adminRole);
 
   if (!isSuperAdmin) {
     return (

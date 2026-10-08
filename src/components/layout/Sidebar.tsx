@@ -15,6 +15,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSidebar, closeSidebar } from "@/features/ui/uiSlice";
 import { setActivePortal } from "@/features/auth/authSlice";
+import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 const mainNavigationLinks = [
@@ -40,6 +41,25 @@ export default function Sidebar() {
 
   const isSettingsActive = location.pathname.startsWith("/settings");
   const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);
+
+  // Dynamic RBAC Filter: Modules only appear if user has the assigned permission
+  const filteredMainLinks = mainNavigationLinks.filter((link) => {
+    if (link.to === "/") return true;
+    if (link.to === "/properties") return canAccess(user, "property.read") || canAccess(user, "property.create");
+    if (link.to === "/tenants") return canAccess(user, "tenant.read") || canAccess(user, "tenant.create");
+    if (link.to === "/payments") return canAccess(user, "payment.read") || canAccess(user, "payment.create");
+    return true;
+  });
+
+  const filteredSettingsModules = settingsModules.filter((sub) => {
+    if (sub.to === "/settings/team") return canAccess(user, "role.assign") || canAccess(user, "role.read");
+    if (sub.to === "/settings/roles") return canAccess(user, "role.create") || canAccess(user, "role.read");
+    if (sub.to === "/settings/organization") return canAccess(user, "role.assign") || user?.isSuperAdmin || user?.permissions?.includes("*");
+    if (sub.to === "/settings/billing") return user?.isSuperAdmin || user?.permissions?.includes("*");
+    return true;
+  });
+
+  const hasSettingsAccess = filteredSettingsModules.length > 0;
 
   useEffect(() => {
     if (isSettingsActive) {
@@ -87,7 +107,7 @@ export default function Sidebar() {
         <div className="space-y-1">
           <p className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">Main Menu</p>
           <nav className="mt-2 space-y-1">
-            {mainNavigationLinks.map(({ to, label, icon: Icon }) => (
+            {filteredMainLinks.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -120,44 +140,45 @@ export default function Sidebar() {
               </NavLink>
             ))}
 
-            {/* Expandable Settings Dropdown / Drawer */}
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  if (!settingsOpen && !isSettingsActive) {
-                    navigate("/settings/team");
-                  }
-                  setSettingsOpen(!settingsOpen);
-                }}
-                className={cn(
-                  "group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-150",
-                  isSettingsActive
-                    ? "bg-blue-50 text-blue-700 font-bold border border-blue-100"
-                    : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <Settings
+            {/* Expandable Settings Dropdown / Drawer - only shown if user has access to setting modules */}
+            {hasSettingsAccess && (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!settingsOpen && !isSettingsActive && filteredSettingsModules[0]) {
+                      navigate(filteredSettingsModules[0].to);
+                    }
+                    setSettingsOpen(!settingsOpen);
+                  }}
+                  className={cn(
+                    "group flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-150",
+                    isSettingsActive
+                      ? "bg-blue-50 text-blue-700 font-bold border border-blue-100"
+                      : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Settings
+                      className={cn(
+                        "h-4 w-4 transition-transform group-hover:rotate-45",
+                        isSettingsActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+                      )}
+                    />
+                    <span>Settings</span>
+                  </div>
+                  <ChevronDown
                     className={cn(
-                      "h-4 w-4 transition-transform group-hover:rotate-45",
-                      isSettingsActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+                      "h-4 w-4 text-slate-400 transition-transform duration-200",
+                      settingsOpen ? "rotate-180 text-blue-600" : ""
                     )}
                   />
-                  <span>Settings</span>
-                </div>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 text-slate-400 transition-transform duration-200",
-                    settingsOpen ? "rotate-180 text-blue-600" : ""
-                  )}
-                />
-              </button>
+                </button>
 
-              {/* Sub-modules Accordion Drawer */}
-              {settingsOpen && (
-                <div className="ml-3 mt-1.5 space-y-1 border-l-2 border-blue-100 pl-2.5 animate-in slide-in-from-top-2 duration-150">
-                  {settingsModules.map(({ to, label, icon: Icon }) => (
+                {/* Sub-modules Accordion Drawer */}
+                {settingsOpen && (
+                  <div className="ml-3 mt-1.5 space-y-1 border-l-2 border-blue-100 pl-2.5 animate-in slide-in-from-top-2 duration-150">
+                    {filteredSettingsModules.map(({ to, label, icon: Icon }) => (
                     <NavLink
                       key={to}
                       to={to}
@@ -191,8 +212,9 @@ export default function Sidebar() {
                 </div>
               )}
             </div>
-          </nav>
-        </div>
+          )}
+        </nav>
+      </div>
 
       </div>
 

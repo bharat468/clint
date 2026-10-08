@@ -8,6 +8,8 @@ export interface User {
   role?: string;
   isSuperAdmin?: boolean;
   adminRole?: string;
+  permissions?: string[];
+  platformPermissions?: string[];
 }
 
 export interface Property {

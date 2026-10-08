@@ -70,6 +70,7 @@ export default function PlanModal({
         "Unlimited automated rent receipts, Real-time SMS & WhatsApp alerts, Team role delegation"
       );
     }
+    setError(null);
   }, [planToEdit, open]);
 
   if (!open) return null;

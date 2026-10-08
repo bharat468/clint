@@ -8,7 +8,10 @@ import {
   UserX,
   Pencil,
   Trash2,
+  ShieldAlert,
 } from "lucide-react";
+import { useAppSelector } from "@/app/hooks";
+import { canAccessPlatform } from "@/lib/permissions";
 import { useApi } from "@/hooks/useApi";
 import { adminService } from "@/services/admin.service";
 import { Card } from "@/components/ui/card";
@@ -23,8 +26,11 @@ import PrivilegeModal from "../components/PrivilegeModal";
 import type { AdminUser, SuperAdminRole } from "@/types";
 
 export default function SuperAdminUsersPage() {
+  const user = useAppSelector((s) => s.auth.user);
+  const canManageUsers = canAccessPlatform(user, "PLATFORM_MANAGE_USERS");
+
   const { data: users, loading, error, reload: reloadUsers } = useApi(
-    adminService.listUsers,
+    canManageUsers ? adminService.listUsers : async () => [],
     [] as AdminUser[]
   );
   const { data: adminRoles } = useApi(adminService.listRoles, [] as SuperAdminRole[]);
@@ -125,6 +131,17 @@ export default function SuperAdminUsersPage() {
     }
   };
 
+  const handleCloseCreateModal = () => {
+    setCreateModalOpen(false);
+    setNewUser({ mobile: "", name: "", email: "" });
+    setFormError(null);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingUser(null);
+    setEditForm({ name: "", email: "", mobile: "" });
+  };
+
   const filteredUsers = useMemo(() => {
     const q = searchTerm.toLowerCase();
     return users.filter(
@@ -134,6 +151,20 @@ export default function SuperAdminUsersPage() {
         u.email?.toLowerCase().includes(q)
     );
   }, [users, searchTerm]);
+
+  if (!canManageUsers) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-3 border border-rose-100">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <h3 className="text-base font-bold text-slate-900">Access Restricted</h3>
+        <p className="text-xs text-slate-500 max-w-sm mt-1">
+          You lack the platform permission ('PLATFORM_MANAGE_USERS') required to audit and manage registered users.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -335,7 +366,7 @@ export default function SuperAdminUsersPage() {
         open={createModalOpen}
         title="Create Pre-Registered User"
         subtitle="Register user credentials into the platform database"
-        onClose={() => setCreateModalOpen(false)}
+        onClose={handleCloseCreateModal}
       >
         <form onSubmit={handleCreateUser} className="space-y-4">
           {formError && (
@@ -373,7 +404,7 @@ export default function SuperAdminUsersPage() {
           </Field>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-            <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
+            <Button type="button" variant="outline" onClick={handleCloseCreateModal}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -388,7 +419,7 @@ export default function SuperAdminUsersPage() {
         open={Boolean(editingUser)}
         title="Edit User Profile"
         subtitle={`Update details for ${editingUser?.name || editingUser?.mobile || "user"}`}
-        onClose={() => setEditingUser(null)}
+        onClose={handleCloseEditModal}
       >
         <form onSubmit={handleUpdateUser} className="space-y-4">
           <Field label="10-Digit Mobile Number" required>
@@ -420,7 +451,7 @@ export default function SuperAdminUsersPage() {
           </Field>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-            <Button type="button" variant="outline" onClick={() => setEditingUser(null)}>
+            <Button type="button" variant="outline" onClick={handleCloseEditModal}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">

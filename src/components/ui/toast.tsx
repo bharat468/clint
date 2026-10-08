@@ -31,17 +31,17 @@ export function Toast({
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto"
+      className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] pointer-events-auto"
     >
       <div
         className={cn(
-          "flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border text-sm font-semibold backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-4",
+          "flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl border text-sm font-semibold backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-top-4",
           type === "success" &&
-            "bg-emerald-950/90 text-emerald-100 border-emerald-700/60 shadow-emerald-900/30",
+            "bg-emerald-950/95 text-emerald-100 border-emerald-700/60 shadow-emerald-900/40",
           type === "error" &&
-            "bg-rose-950/90 text-rose-100 border-rose-700/60 shadow-rose-900/30",
+            "bg-rose-950/95 text-rose-100 border-rose-700/60 shadow-rose-900/40",
           type === "info" &&
-            "bg-slate-900/90 text-slate-100 border-slate-700/60 shadow-slate-900/30"
+            "bg-slate-900/95 text-slate-100 border-slate-700/60 shadow-slate-900/40"
         )}
       >
         {type === "success" && (

@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Plus, ShieldCheck, Pencil, Trash2 } from "lucide-react";
+import { Plus, ShieldCheck, Pencil, Trash2, ShieldAlert } from "lucide-react";
+import { useAppSelector } from "@/app/hooks";
+import { canAccessPlatform } from "@/lib/permissions";
 import { useApi } from "@/hooks/useApi";
 import { adminService } from "@/services/admin.service";
 import { Card } from "@/components/ui/card";
@@ -11,8 +13,11 @@ import RoleModal from "../components/RoleModal";
 import type { SuperAdminRole } from "@/types";
 
 export default function SuperAdminRolesPage() {
+  const user = useAppSelector((s) => s.auth.user);
+  const canManageRoles = canAccessPlatform(user, "PLATFORM_MANAGE_ADMIN_ROLES");
+
   const { data: adminRoles, loading, error, reload: reloadRoles } = useApi(
-    adminService.listRoles,
+    canManageRoles ? adminService.listRoles : async () => [],
     [] as SuperAdminRole[]
   );
 
@@ -54,6 +59,20 @@ export default function SuperAdminRolesPage() {
       setIsDeleting(false);
     }
   };
+
+  if (!canManageRoles) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-3 border border-rose-100">
+          <ShieldAlert className="h-6 w-6" />
+        </div>
+        <h3 className="text-base font-bold text-slate-900">Access Restricted</h3>
+        <p className="text-xs text-slate-500 max-w-sm mt-1">
+          You lack the platform permission ('PLATFORM_MANAGE_ADMIN_ROLES') required to create or configure platform roles.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

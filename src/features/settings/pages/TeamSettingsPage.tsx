@@ -27,9 +27,15 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Toast } from "@/components/ui/toast";
 import { errMsg } from "@/lib/utils";
+import { useAppSelector } from "@/app/hooks";
+import { canAccess } from "@/lib/permissions";
 import type { Role, Property } from "@/types";
 
 export default function TeamSettingsPage() {
+  const user = useAppSelector((s) => s.auth.user);
+  const canAssignRoles = canAccess(user, "role.assign");
+  const canReadRoles = canAccess(user, "role.read");
+
   const { data: orgs } = useApi(organizationService.list, [] as any[]);
   const currentOrg = orgs[0] || { id: "default", name: "Bharat Estates", slug: "bharat-estates" };
 
@@ -71,6 +77,7 @@ export default function TeamSettingsPage() {
   const [scopeMode, setScopeMode] = useState<"ALL" | "CUSTOM">("ALL");
   const [editScopeMode, setEditScopeMode] = useState<"ALL" | "CUSTOM">("ALL");
   const [memberFormError, setMemberFormError] = useState<string | null>(null);
+  const [editMemberFormError, setEditMemberFormError] = useState<string | null>(null);
   const [isSubmittingMember, setIsSubmittingMember] = useState(false);
   const [deletingMember, setDeletingMember] = useState<OrgMember | null>(null);
   const [isDeletingMember, setIsDeletingMember] = useState(false);
@@ -80,15 +87,18 @@ export default function TeamSettingsPage() {
     setFeedback({ text, type });
   };
 
-  const handleToggleMemberStatus = async (m: OrgMember) => {
-    const nextStatus = m.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-    try {
-      await organizationService.updateMember(currentOrg.id, m.userId, { status: nextStatus });
-      showFeedback(`Staff status updated to ${nextStatus}`);
-      reloadMembers();
-    } catch (err) {
-      showFeedback(errMsg(err), "error");
-    }
+  const handleOpenAddMember = () => {
+    setMemberForm({ mobile: "", name: "", email: "", roleId: "", propertyScope: [] });
+    setScopeMode("ALL");
+    setMemberFormError(null);
+    setIsMemberModalOpen(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setIsMemberModalOpen(false);
+    setMemberForm({ mobile: "", name: "", email: "", roleId: "", propertyScope: [] });
+    setScopeMode("ALL");
+    setMemberFormError(null);
   };
 
   const handleOpenEditMember = (m: OrgMember) => {
@@ -100,11 +110,35 @@ export default function TeamSettingsPage() {
       propertyScope: m.propertyScope || [],
     });
     setEditScopeMode(m.propertyScope && m.propertyScope.length > 0 ? "CUSTOM" : "ALL");
+    setEditMemberFormError(null);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingMember(null);
+    setEditMemberForm({ name: "", email: "", roleId: "", propertyScope: [] });
+    setEditScopeMode("ALL");
+    setEditMemberFormError(null);
+  };
+
+  const handleToggleMemberStatus = async (m: OrgMember) => {
+    if (!canAssignRoles) {
+      showFeedback("Forbidden: You lack permission 'role.assign' to update staff status", "error");
+      return;
+    }
+    const nextStatus = m.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    try {
+      await organizationService.updateMember(currentOrg.id, m.userId, { status: nextStatus });
+      showFeedback(`Staff status updated to ${nextStatus}`);
+      reloadMembers();
+    } catch (err) {
+      showFeedback(errMsg(err), "error");
+    }
   };
 
   const handleUpdateMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMember) return;
+    setEditMemberFormError(null);
     setIsSubmittingMember(true);
     try {
       await organizationService.updateMember(currentOrg.id, editingMember.userId, {
@@ -113,11 +147,13 @@ export default function TeamSettingsPage() {
         roleId: editMemberForm.roleId || undefined,
         propertyScope: editScopeMode === "ALL" ? [] : editMemberForm.propertyScope,
       });
-      setEditingMember(null);
+      handleCloseEditModal();
       showFeedback("Staff member updated successfully");
       reloadMembers();
     } catch (err) {
-      showFeedback(errMsg(err), "error");
+      const msg = errMsg(err);
+      setEditMemberFormError(msg);
+      showFeedback(msg, "error");
     } finally {
       setIsSubmittingMember(false);
     }
@@ -137,19 +173,23 @@ export default function TeamSettingsPage() {
         ...memberForm,
         propertyScope: scopeMode === "ALL" ? [] : memberForm.propertyScope,
       });
-      setIsMemberModalOpen(false);
-      setMemberForm({ mobile: "", name: "", email: "", roleId: "", propertyScope: [] });
-      setScopeMode("ALL");
+      handleCloseAddModal();
       showFeedback("New team member added successfully");
       reloadMembers();
     } catch (err) {
-      setMemberFormError(errMsg(err));
+      const msg = errMsg(err);
+      setMemberFormError(msg);
+      showFeedback(msg, "error");
     } finally {
       setIsSubmittingMember(false);
     }
   };
 
   const handleRequestRemoveMember = (m: OrgMember) => {
+    if (!canAssignRoles) {
+      showFeedback("Forbidden: You lack permission 'role.assign' to remove members", "error");
+      return;
+    }
     setDeletingMember(m);
   };
 
@@ -167,6 +207,20 @@ export default function TeamSettingsPage() {
       setIsDeletingMember(false);
     }
   };
+
+  if (!canAssignRoles && !canReadRoles) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-3 border border-rose-100">
+          <ShieldCheck className="h-6 w-6" />
+        </div>
+        <h3 className="text-base font-bold text-slate-900">Access Restricted</h3>
+        <p className="text-xs text-slate-500 max-w-sm mt-1">
+          You lack the required operational permission ('role.assign') to view or manage staff members in this organization.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -196,10 +250,12 @@ export default function TeamSettingsPage() {
           </p>
         </div>
 
-        <Button onClick={() => setIsMemberModalOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          <span>Add Staff / Team Member</span>
-        </Button>
+        {canAssignRoles && (
+          <Button onClick={handleOpenAddMember} className="gap-2">
+            <Plus className="h-4 w-4" />
+            <span>Add Staff / Team Member</span>
+          </Button>
+        )}
       </div>
 
       {/* Instant Mobile Onboarding Notice Banner */}
@@ -285,7 +341,7 @@ export default function TeamSettingsPage() {
                     </td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {!isOwner && (
+                        {!isOwner && canAssignRoles && (
                           <>
                             <button
                               onClick={() => handleToggleMemberStatus(m)}
@@ -335,7 +391,7 @@ export default function TeamSettingsPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h2 className="text-base font-bold text-slate-900">Add Staff / Team Member</h2>
               <button
-                onClick={() => setIsMemberModalOpen(false)}
+                onClick={handleCloseAddModal}
                 className="text-slate-400 hover:text-slate-700"
               >
                 <X className="h-5 w-5" />
@@ -344,7 +400,7 @@ export default function TeamSettingsPage() {
 
             <form onSubmit={handleAddMember} className="mt-4 space-y-4">
               {memberFormError && (
-                <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-600 font-medium">
+                <div className="rounded-xl bg-red-50 p-3 text-xs text-red-700 font-semibold border border-red-200">
                   {memberFormError}
                 </div>
               )}
@@ -451,7 +507,7 @@ export default function TeamSettingsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsMemberModalOpen(false)}
+                  onClick={handleCloseAddModal}
                 >
                   Cancel
                 </Button>
@@ -474,7 +530,7 @@ export default function TeamSettingsPage() {
                 <p className="text-xs text-slate-500 font-mono mt-0.5">Mobile: {editingMember?.mobile}</p>
               </div>
               <button
-                onClick={() => setEditingMember(null)}
+                onClick={handleCloseEditModal}
                 className="text-slate-400 hover:text-slate-700"
               >
                 <X className="h-5 w-5" />
@@ -482,6 +538,12 @@ export default function TeamSettingsPage() {
             </div>
 
             <form onSubmit={handleUpdateMember} className="mt-4 space-y-4">
+              {editMemberFormError && (
+                <div className="rounded-xl bg-red-50 p-3 text-xs text-red-700 font-semibold border border-red-200">
+                  {editMemberFormError}
+                </div>
+              )}
+
               <Field label="Full Name">
                 <Input
                   placeholder="e.g. Rahul Sharma"
@@ -573,7 +635,7 @@ export default function TeamSettingsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setEditingMember(null)}
+                  onClick={handleCloseEditModal}
                 >
                   Cancel
                 </Button>
