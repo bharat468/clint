@@ -120,6 +120,17 @@ export default function TeamSettingsPage() {
     setEditMemberFormError(null);
   };
 
+  const getEffectiveOrgId = async () => {
+    if (currentOrg?.id && currentOrg.id !== "default") {
+      return currentOrg.id;
+    }
+    const list = await organizationService.list();
+    if (list && list.length > 0) {
+      return list[0].id;
+    }
+    return null;
+  };
+
   const handleToggleMemberStatus = async (m: OrgMember) => {
     if (!canAssignRoles) {
       showFeedback("Forbidden: You lack permission 'role.assign' to update staff status", "error");
@@ -127,7 +138,9 @@ export default function TeamSettingsPage() {
     }
     const nextStatus = m.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     try {
-      await organizationService.updateMember(currentOrg.id, m.userId, { status: nextStatus });
+      const orgId = await getEffectiveOrgId();
+      if (!orgId) throw new Error("No organization found");
+      await organizationService.updateMember(orgId, m.userId, { status: nextStatus });
       showFeedback(`Staff status updated to ${nextStatus}`);
       reloadMembers();
     } catch (err) {
@@ -141,7 +154,9 @@ export default function TeamSettingsPage() {
     setEditMemberFormError(null);
     setIsSubmittingMember(true);
     try {
-      await organizationService.updateMember(currentOrg.id, editingMember.userId, {
+      const orgId = await getEffectiveOrgId();
+      if (!orgId) throw new Error("No organization found. Please reload.");
+      await organizationService.updateMember(orgId, editingMember.userId, {
         name: editMemberForm.name,
         email: editMemberForm.email,
         roleId: editMemberForm.roleId || undefined,
@@ -168,7 +183,10 @@ export default function TeamSettingsPage() {
     }
     setIsSubmittingMember(true);
     try {
-      const orgId = currentOrg?.id;
+      const orgId = await getEffectiveOrgId();
+      if (!orgId) {
+        throw new Error("No organization found. Please create or select an organization.");
+      }
       await organizationService.addMember(orgId, {
         ...memberForm,
         propertyScope: scopeMode === "ALL" ? [] : memberForm.propertyScope,
@@ -197,7 +215,9 @@ export default function TeamSettingsPage() {
     if (!deletingMember) return;
     setIsDeletingMember(true);
     try {
-      await organizationService.removeMember(currentOrg.id, deletingMember.userId);
+      const orgId = await getEffectiveOrgId();
+      if (!orgId) throw new Error("No organization found");
+      await organizationService.removeMember(orgId, deletingMember.userId);
       showFeedback(`Removed "${deletingMember.name || deletingMember.mobile}" from organization`);
       setDeletingMember(null);
       reloadMembers();
