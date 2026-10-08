@@ -146,18 +146,13 @@ export default function SuperAdminUsersPage() {
       />
 
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200/60 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" /> User Accounts Gate
-            </span>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Registered Users & Privileges
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Users
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Audit registered platform accounts, activate or suspend accounts, and manage SuperAdmin privileges.
+            Audit registered platform accounts, activate or suspend accounts, and manage privileges.
           </p>
         </div>
 
@@ -172,7 +167,7 @@ export default function SuperAdminUsersPage() {
             <Plus className="h-4 w-4" />
             <span>Create User</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => reloadUsers()} className="gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => reloadUsers()} className="gap-1.5 text-slate-700 font-semibold border-slate-300">
             <RefreshCw className="h-3.5 w-3.5 text-blue-600" />
             <span>Refresh</span>
           </Button>

@@ -112,10 +112,10 @@ export default function PlanModal({
           <div>
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Layers className="h-4 w-4 text-blue-600" />
-              <span>{planToEdit ? "Edit SaaS Pricing Plan" : "Create Dynamic SaaS Plan"}</span>
+              <span>{planToEdit ? "Edit Subscription Plan" : "Create Subscription Plan"}</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Define real-time plan prices, quotas, and feature flags
+              Configure plan pricing, resource limits, and feature flags
             </p>
           </div>
           <button

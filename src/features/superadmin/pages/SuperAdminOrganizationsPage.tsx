@@ -56,24 +56,19 @@ export default function SuperAdminOrganizationsPage() {
       />
 
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200/60 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" /> Client Registry
-            </span>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Organizations & Subscriptions
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Organizations
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Audit client landlords, monitor usage limits, adjust SaaS plans, and manage subscription expirations.
+            Manage client landlord accounts, subscriptions, quotas, and access status.
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={() => reloadOrgs()} className="gap-1.5">
+        <Button variant="outline" size="sm" onClick={() => reloadOrgs()} className="gap-1.5 text-slate-700 font-semibold border-slate-300">
           <RefreshCw className="h-3.5 w-3.5 text-blue-600" />
-          <span>Refresh List</span>
+          <span>Refresh</span>
         </Button>
       </div>
 

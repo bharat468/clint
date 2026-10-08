@@ -13,12 +13,12 @@ interface RoleModalProps {
 }
 
 const availablePlatformPermissions = [
-  { key: "PLATFORM_MANAGE_PLANS", label: "Dynamic SaaS Plans Management", desc: "Create, edit pricing tiers and change resource limits" },
-  { key: "PLATFORM_MANAGE_ORGANIZATIONS", label: "Client Organizations & Subscriptions", desc: "Assign tiers, adjust expiry dates, suspend portfolios" },
-  { key: "PLATFORM_MANAGE_ADMIN_ROLES", label: "Platform RBAC & Roles", desc: "Create platform access roles and grant administrative rights" },
-  { key: "PLATFORM_VIEW_VITALS", label: "Executive Vitals & Metrics", desc: "View gross collected rent, platform telemetry and server status" },
-  { key: "PLATFORM_MANAGE_USERS", label: "Platform User Accounts Gate", desc: "Audit registered numbers and toggle access statuses" },
-  { key: "PLATFORM_MANAGE_BILLING", label: "Settlements & Gateway Keys", desc: "Oversee payment gateways and corporate invoices" },
+  { key: "PLATFORM_MANAGE_PLANS", label: "Manage SaaS Plans", desc: "Create, edit pricing tiers and change resource limits" },
+  { key: "PLATFORM_MANAGE_ORGANIZATIONS", label: "Manage Organizations", desc: "Assign tiers, adjust expiry dates, suspend portfolios" },
+  { key: "PLATFORM_MANAGE_ADMIN_ROLES", label: "Manage Roles & Permissions", desc: "Create platform access roles and grant administrative rights" },
+  { key: "PLATFORM_VIEW_VITALS", label: "Platform Metrics & Vitals", desc: "View gross collected rent, platform telemetry and server status" },
+  { key: "PLATFORM_MANAGE_USERS", label: "User Management", desc: "Audit registered numbers and toggle access statuses" },
+  { key: "PLATFORM_MANAGE_BILLING", label: "Billing & Gateways", desc: "Oversee payment gateways and corporate invoices" },
 ];
 
 export default function RoleModal({ open, roleToEdit, onClose, onSuccess }: RoleModalProps) {

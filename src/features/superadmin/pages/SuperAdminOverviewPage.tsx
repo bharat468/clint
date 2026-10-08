@@ -36,25 +36,28 @@ export default function SuperAdminOverviewPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200/60 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" /> Business Executive
-            </span>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Platform Executive Overview
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Platform Overview
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Real-time monthly recurring revenue, client subscription portfolio health, and property telemetry.
+            Real-time subscription metrics, client organizations, and platform revenue.
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={() => reload()} className="gap-1.5">
-          <RefreshCw className="h-3.5 w-3.5 text-blue-600" />
-          <span>Refresh Metrics</span>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link to="/superadmin/organizations">
+            <Button variant="outline" size="sm" className="gap-2 text-slate-700 font-semibold border-slate-300">
+              <Building2 className="h-4 w-4 text-blue-600" />
+              <span>Organizations</span>
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm" onClick={() => reload()} className="gap-1.5 text-slate-700 font-semibold border-slate-300">
+            <RefreshCw className="h-3.5 w-3.5 text-blue-600" />
+            <span>Refresh</span>
+          </Button>
+        </div>
       </div>
 
       <State loading={loading} error={error} empty={false} />
@@ -183,10 +186,10 @@ export default function SuperAdminOverviewPage() {
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                     <Layers className="h-4 w-4 text-blue-600" />
-                    <span>Active Commercial SaaS Tiers</span>
+                    <span>Subscription Plans</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {plans.length} dynamic pricing plans configured in database
+                    {plans.length} active pricing tiers configured
                   </p>
                 </div>
                 <Link to="/superadmin/plans">
@@ -222,7 +225,7 @@ export default function SuperAdminOverviewPage() {
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-emerald-600" />
-                  <span>Platform Health & Client Distribution</span>
+                  <span>Platform Distribution</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Portfolio metrics across registered landlord organizations
@@ -243,7 +246,7 @@ export default function SuperAdminOverviewPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/80 border border-slate-100">
-                  <span className="text-slate-600">Total Pre-Registered Accounts</span>
+                  <span className="text-slate-600">Total Registered Accounts</span>
                   <span className="font-bold text-slate-900">
                     {overview?.totalUsers ?? 0} Users
                   </span>
@@ -252,12 +255,12 @@ export default function SuperAdminOverviewPage() {
             </Card>
           </div>
 
-          {/* Quick Business Operations Shortcuts */}
+          {/* Quick Shortcuts */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Link to="/superadmin/organizations">
               <Card hoverEffect className="p-5 flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">Organizations & Expiry</h4>
+                  <h4 className="text-sm font-bold text-slate-900">Organizations</h4>
                   <p className="text-xs text-slate-500 mt-0.5">Manage landlord tiers & renewal dates</p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-blue-600" />
@@ -267,7 +270,7 @@ export default function SuperAdminOverviewPage() {
             <Link to="/superadmin/plans">
               <Card hoverEffect className="p-5 flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">Dynamic SaaS Plans</h4>
+                  <h4 className="text-sm font-bold text-slate-900">Subscription Plans</h4>
                   <p className="text-xs text-slate-500 mt-0.5">Edit pricing tiers and quota limits</p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-blue-600" />
@@ -277,8 +280,8 @@ export default function SuperAdminOverviewPage() {
             <Link to="/superadmin/settings">
               <Card hoverEffect className="p-5 flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">Platform Settings</h4>
-                  <p className="text-xs text-slate-500 mt-0.5">Dynamic DB settings & global parameters</p>
+                  <h4 className="text-sm font-bold text-slate-900">System Settings</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">Global configuration and platform parameters</p>
                 </div>
                 <Sliders className="h-4 w-4 text-blue-600" />
               </Card>

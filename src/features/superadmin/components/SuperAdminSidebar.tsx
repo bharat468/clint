@@ -6,21 +6,21 @@ import {
   ShieldCheck,
   Users,
   Sliders,
-  LogOut,
+  ChevronRight,
   X,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { logout, setActivePortal } from "@/features/auth/authSlice";
-import { toggleSidebar } from "@/features/ui/uiSlice";
+import { setActivePortal } from "@/features/auth/authSlice";
+import { toggleSidebar, closeSidebar } from "@/features/ui/uiSlice";
 import { cn } from "@/lib/utils";
 
 const superAdminNavLinks = [
-  { to: "/superadmin", label: "Executive Overview", icon: LayoutDashboard, end: true },
-  { to: "/superadmin/organizations", label: "Organizations & Expiry", icon: Building2 },
-  { to: "/superadmin/plans", label: "Dynamic SaaS Plans", icon: Layers },
-  { to: "/superadmin/roles", label: "Platform RBAC & Roles", icon: ShieldCheck },
-  { to: "/superadmin/users", label: "User Accounts Gate", icon: Users },
-  { to: "/superadmin/settings", label: "Platform Settings", icon: Sliders },
+  { to: "/superadmin", label: "Overview", icon: LayoutDashboard, end: true },
+  { to: "/superadmin/organizations", label: "Organizations", icon: Building2 },
+  { to: "/superadmin/plans", label: "Plans", icon: Layers },
+  { to: "/superadmin/roles", label: "Roles & Permissions", icon: ShieldCheck },
+  { to: "/superadmin/users", label: "Users", icon: Users },
+  { to: "/superadmin/settings", label: "Settings", icon: Sliders },
 ];
 
 export default function SuperAdminSidebar() {
@@ -39,11 +39,6 @@ export default function SuperAdminSidebar() {
       .slice(0, 2);
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login", { replace: true });
-  };
-
   const handleSwitchToLandlord = () => {
     dispatch(setActivePortal("LANDLORD"));
     navigate("/");
@@ -54,26 +49,18 @@ export default function SuperAdminSidebar() {
       <div className="space-y-6">
         {/* Brand Header with Matching Full Size Logo */}
         <div className="flex items-center justify-between px-2 pt-2 pb-1">
-          <div className="space-y-1.5">
-            <div className="flex items-center">
-              <img
-                src="/RentMate%20Smart%20Rentals%20Logo.png"
-                alt="RentMate Logo"
-                className="h-14 xl:h-16 w-auto max-w-[210px] object-contain drop-shadow-2xs"
-              />
-            </div>
-            <div className="flex items-center gap-1.5 pt-0.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-200/60 shadow-2xs">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse" />
-                SuperAdmin Platform
-              </span>
-            </div>
+          <div className="flex items-center">
+            <img
+              src="/RentMate%20Smart%20Rentals%20Logo.png"
+              alt="RentMate Logo"
+              className="h-14 xl:h-16 w-auto max-w-[210px] object-contain drop-shadow-2xs"
+            />
           </div>
           {/* Mobile close */}
           <button
             onClick={() => dispatch(toggleSidebar())}
             aria-label="Close sidebar"
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 md:hidden"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 md:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -82,7 +69,7 @@ export default function SuperAdminSidebar() {
         {/* Navigation Section */}
         <div className="space-y-1">
           <p className="px-3 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-            Platform Modules
+            Main Menu
           </p>
           <nav className="mt-2 space-y-1">
             {superAdminNavLinks.map(({ to, label, icon: Icon, end }) => (
@@ -92,7 +79,7 @@ export default function SuperAdminSidebar() {
                 end={end}
                 onClick={() => {
                   if (window.innerWidth < 768) {
-                    dispatch(toggleSidebar());
+                    dispatch(closeSidebar());
                   }
                 }}
                 className={({ isActive }) =>
@@ -121,40 +108,33 @@ export default function SuperAdminSidebar() {
         </div>
       </div>
 
-      {/* Bottom Footer Section */}
+      {/* Bottom Footer Section: Matching Landlord Workspace */}
       <div className="space-y-2.5 pt-4 border-t border-slate-100">
         {/* Switch to Landlord Workspace */}
         <button
           type="button"
           onClick={handleSwitchToLandlord}
-          className="flex w-full items-center justify-between rounded-xl bg-slate-100/80 hover:bg-blue-50 px-3 py-2 text-xs font-bold text-slate-700 hover:text-blue-700 transition-colors border border-slate-200/80 shadow-2xs group"
+          className="flex w-full items-center justify-between rounded-xl bg-blue-50/90 hover:bg-blue-100 px-3 py-2 text-xs font-bold text-blue-700 transition-colors border border-blue-200/60 shadow-2xs group"
         >
           <span className="flex items-center gap-2">
             <Building2 className="h-4 w-4 text-blue-600 transition-transform group-hover:scale-110" />
             <span>Landlord Workspace</span>
           </span>
-          <span className="text-[10px] font-semibold text-blue-600 bg-blue-100/60 px-1.5 py-0.5 rounded-md">Switch</span>
+          <ChevronRight className="h-3.5 w-3.5 text-blue-500" />
         </button>
 
-        {/* User Mini Profile */}
-        <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5 border border-slate-100">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 font-bold text-xs text-white shadow-xs">
+        {/* User Mini Profile Card */}
+        <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 border border-slate-200/80">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-bold text-xs text-white shadow-xs">
             {getInitials(user?.name)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-bold text-slate-800">{user?.name || "Super Administrator"}</p>
-            <p className="font-mono text-[11px] text-slate-400">{user?.mobile}</p>
+            <p className="truncate text-xs font-bold text-slate-900">{user?.name || "Super Administrator"}</p>
+            <p className="truncate text-[11px] text-slate-500 font-medium">
+              Super Administrator
+            </p>
           </div>
         </div>
-
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100 transition-colors border border-rose-100 shadow-2xs"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Exit / Logout Platform</span>
-        </button>
       </div>
     </div>
   );

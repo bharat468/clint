@@ -66,18 +66,13 @@ export default function SuperAdminRolesPage() {
       />
 
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200/60 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" /> Access Control
-            </span>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Platform RBAC & Roles
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Roles & Permissions
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Define administrative roles and delegate granular platform permissions across governance modules.
+            Define administrative roles and configure access permissions across platform modules.
           </p>
         </div>
 
@@ -86,7 +81,7 @@ export default function SuperAdminRolesPage() {
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs gap-1.5 shadow-xs"
         >
           <Plus className="h-4 w-4" />
-          <span>Create Platform Role</span>
+          <span>Create Role</span>
         </Button>
       </div>
 

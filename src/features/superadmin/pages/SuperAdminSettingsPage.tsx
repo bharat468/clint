@@ -58,24 +58,19 @@ export default function SuperAdminSettingsPage() {
       />
 
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-1">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-200/60 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" /> Dynamic DB Table
-            </span>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Platform System Settings
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            System Settings
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            All parameters are stored in the PostgreSQL database table and immediately take effect platform-wide.
+            Configure global platform parameters and environment variables.
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={() => reload()} className="gap-1.5">
+        <Button variant="outline" size="sm" onClick={() => reload()} className="gap-1.5 text-slate-700 font-semibold border-slate-300">
           <RefreshCw className="h-3.5 w-3.5 text-blue-600" />
-          <span>Reload Settings</span>
+          <span>Refresh</span>
         </Button>
       </div>
 
