@@ -13,6 +13,17 @@ import RolesSettingsPage from "@/features/settings/pages/RolesSettingsPage";
 import OrganizationSettingsPage from "@/features/settings/pages/OrganizationSettingsPage";
 import BillingSettingsPage from "@/features/settings/pages/BillingSettingsPage";
 
+// Public Marketing Website
+import PublicLayout from "@/features/public/layouts/PublicLayout";
+import LandingPage from "@/features/public/pages/LandingPage";
+import FeaturesPage from "@/features/public/pages/FeaturesPage";
+import PricingPage from "@/features/public/pages/PricingPage";
+import AboutPage from "@/features/public/pages/AboutPage";
+import ContactPage from "@/features/public/pages/ContactPage";
+import FaqPage from "@/features/public/pages/FaqPage";
+import PrivacyPolicyPage from "@/features/public/pages/PrivacyPolicyPage";
+import TermsPage from "@/features/public/pages/TermsPage";
+
 // Modular SuperAdmin Platform Architecture
 import SuperAdminLayout from "@/features/superadmin/layouts/SuperAdminLayout";
 import SuperAdminOverviewPage from "@/features/superadmin/pages/SuperAdminOverviewPage";
@@ -23,16 +34,40 @@ import SuperAdminUsersPage from "@/features/superadmin/pages/SuperAdminUsersPage
 import SuperAdminSettingsPage from "@/features/superadmin/pages/SuperAdminSettingsPage";
 
 export const router = createBrowserRouter([
+  // ============================================================
+  // 1. PUBLIC MARKETING WEBSITE ROUTES (No Auth Required)
+  // ============================================================
+  {
+    element: <PublicLayout />,
+    children: [
+      { path: "/", element: <LandingPage /> },
+      { path: "/features", element: <FeaturesPage /> },
+      { path: "/pricing", element: <PricingPage /> },
+      { path: "/about", element: <AboutPage /> },
+      { path: "/contact", element: <ContactPage /> },
+      { path: "/faq", element: <FaqPage /> },
+      { path: "/privacy-policy", element: <PrivacyPolicyPage /> },
+      { path: "/terms-and-conditions", element: <TermsPage /> },
+    ],
+  },
+
+  // ============================================================
+  // 2. AUTHENTICATION ONBOARDING
+  // ============================================================
   { path: "/login", element: <LoginPage /> },
   { path: "/register", element: <RegisterPage /> },
+
+  // ============================================================
+  // 3. PROTECTED PLATFORM HUBS
+  // ============================================================
   {
     element: <ProtectedRoute />,
     children: [
-      // 1. Standard Landlord & Staff Workspace
+      // A. Standard Landlord & Staff Workspace
       {
         element: <AppLayout />,
         children: [
-          { path: "/", element: <DashboardPage /> },
+          { path: "/dashboard", element: <DashboardPage /> },
           { path: "/properties", element: <PropertiesPage /> },
           { path: "/tenants", element: <TenantsPage /> },
           { path: "/payments", element: <PaymentsPage /> },
@@ -49,7 +84,7 @@ export const router = createBrowserRouter([
           },
         ],
       },
-      // 2. Dedicated Platform SuperAdmin Portal (Completely Modular Layout & Routes)
+      // B. Dedicated Platform SuperAdmin Portal
       {
         path: "/superadmin",
         element: <SuperAdminLayout />,
@@ -64,5 +99,7 @@ export const router = createBrowserRouter([
       },
     ],
   },
+
+  // Catch-all
   { path: "*", element: <Navigate to="/" replace /> },
 ]);

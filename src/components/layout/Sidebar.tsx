@@ -19,7 +19,7 @@ import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 const mainNavigationLinks = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/properties", label: "Properties", icon: Building2 },
   { to: "/tenants", label: "Tenants", icon: Users },
   { to: "/payments", label: "Payments", icon: CreditCard },
@@ -44,7 +44,7 @@ export default function Sidebar() {
 
   // Dynamic RBAC Filter: Modules only appear if user has the assigned permission
   const filteredMainLinks = mainNavigationLinks.filter((link) => {
-    if (link.to === "/") return true;
+    if (link.to === "/dashboard") return true;
     if (link.to === "/properties") return canAccess(user, "property.read") || canAccess(user, "property.create");
     if (link.to === "/tenants") return canAccess(user, "tenant.read") || canAccess(user, "tenant.create");
     if (link.to === "/payments") return canAccess(user, "payment.read") || canAccess(user, "payment.create");

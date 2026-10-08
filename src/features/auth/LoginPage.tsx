@@ -44,7 +44,7 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  if (token) return <Navigate to="/" replace />;
+  if (token) return <Navigate to="/dashboard" replace />;
 
   const otpValue = otpDigits.join("");
 
@@ -108,7 +108,7 @@ export default function LoginPage() {
             activePortal: "LANDLORD",
           })
         );
-        navigate("/", { replace: true });
+        navigate("/dashboard", { replace: true });
       }
     } catch (err) {
       setError(errMsg(err));
@@ -129,7 +129,7 @@ export default function LoginPage() {
     if (portal === "SUPERADMIN") {
       navigate("/superadmin", { replace: true });
     } else {
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     }
   };
 
@@ -340,11 +340,10 @@ export default function LoginPage() {
                         value={digit}
                         onChange={(e) => handleOtpChange(idx, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(idx, e)}
-                        className={`h-12 w-11 sm:w-12 text-center text-xl font-bold rounded-xl border transition-all outline-none ${
-                          digit
+                        className={`h-12 w-11 sm:w-12 text-center text-xl font-bold rounded-xl border transition-all outline-none ${digit
                             ? "border-blue-600 bg-blue-50/30 text-blue-900 ring-2 ring-blue-500/10"
                             : "border-slate-300 text-slate-800 focus:border-blue-600 focus:ring-3 focus:ring-blue-100"
-                        }`}
+                          }`}
                       />
                     ))}
                   </div>
@@ -384,11 +383,10 @@ export default function LoginPage() {
                     type="button"
                     onClick={handleResend}
                     disabled={loading || resendCooldown > 0}
-                    className={`font-semibold transition-colors flex items-center gap-1 ${
-                      resendCooldown > 0
+                    className={`font-semibold transition-colors flex items-center gap-1 ${resendCooldown > 0
                         ? "text-slate-400 cursor-not-allowed"
                         : "text-blue-600 hover:text-blue-800"
-                    }`}
+                      }`}
                   >
                     <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
                     <span>

@@ -35,28 +35,28 @@ export default function ProtectedRoute() {
 
   // If a non-admin tries to access /superadmin, redirect to landlord home
   if (isSuperAdminRoute && !hasAdminPrivileges) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   // Strict RBAC Route Guards for Landlord Workspace
   const pathname = location.pathname;
   if (pathname.startsWith("/properties") && !canAccess(user, "property.read") && !canAccess(user, "property.create")) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   if (pathname.startsWith("/tenants") && !canAccess(user, "tenant.read") && !canAccess(user, "tenant.create")) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   if (pathname.startsWith("/payments") && !canAccess(user, "payment.read") && !canAccess(user, "payment.create")) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   if (pathname.startsWith("/settings/team") && !canAccess(user, "role.assign") && !canAccess(user, "role.read")) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   if (pathname.startsWith("/settings/roles") && !canAccess(user, "role.create") && !canAccess(user, "role.read")) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   if (pathname.startsWith("/settings/billing") && !user.isSuperAdmin && !user.permissions?.includes("*")) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;
