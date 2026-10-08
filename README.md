@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="./public/RentMate%20Smart%20Rentals%20Logo.png" alt="RentMate Smart Rentals Logo" width="240" />
+  <img src="./public/RentMate%20Smart%20Rentals%20Logo.png" alt="RentMate Smart Rentals Logo" width="260" />
 
   <h1>RentMate — Smart Rentals & Property Management</h1>
 
-  <p><strong>Executive property management platform designed for landlords, property owners, and managers.</strong></p>
+  <p><strong>Next-Generation Multi-Tenant Property Management SaaS & Marketing Platform</strong></p>
 
   <p>
     <img src="https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
@@ -17,115 +17,141 @@
 ---
 
 > [!NOTE]
-> **Design Theme**: RentMate utilizes a clean, high-contrast **Light Color Theme** built around the official brand **Royal Blue (`#2563EB`)** and **Teal** palette.
+> **Design Philosophy**: RentMate utilizes an elegant, cohesive **Light Color Theme** built around high-contrast typography, crisp borders, and subtle pastel gradients (`#2563EB` Royal Blue, Slate, and Indigo). Dark backgrounds have been completely phased out in favor of modern, high-readability interfaces.
 
 ---
 
-## 📌 Yeh Project Kya Hai? (About RentMate)
+## 📌 Project Overview (Yeh Project Kya Hai?)
 
-**RentMate** ek modern aur intuitive **Rental & Property Management Dashboard** hai. Yeh platform property owners aur landlords ko unki physical properties, tenants, rental agreements aur payment receipts ko ek simplified, real-time command center me manage karne ki suvidha deta hai.
+**RentMate** ek full-stack, enterprise-grade **Multi-Tenant Rental & Property Management SaaS Platform** hai. 
 
-### Key Highlights:
-- **Zero Clutter**: Saaf-suthra, minimalist aur high-contrast UI jisme sab kuch clear dikhta hai.
-- **Custom Shadcn UI**: Native browser select boxes ki jagah custom animated floating dropdowns.
-- **Mobile First**: Har screen aur table mobile devices ke liye 100% responsive hai.
-
----
-
-## ✨ Mukhya Modules & Features
-
-### 1. 📊 Executive Dashboard (`/`)
-- **Real-Time KPIs**: Total Properties, Occupancy breakdown (Occupied vs. Vacant), Active Leased Tenants, Total Collected Revenue (`₹`), aur Pending/Overdue Dues.
-- **Performance Bars**: Live Portfolio Occupancy Rate (%) aur Payment Collection Efficiency (%) progress indicators.
-- **Activity Feed**: Recent payment records aur portfolio properties status overview.
-
-### 2. 🏢 Property Portfolio (`/properties`)
-- New properties add karna, view karna aur manage karna.
-- **Unit Badges**: Bedrooms count (`BHK`), Monthly rent (`₹`), aur City location.
-- **Live Search & Filter**: Real-time title/city search aur filter tabs (`All`, `Vacant`, `Occupied`).
-
-### 3. 👥 Tenant Directory (`/tenants`)
-- Tenant profiles with direct contact actions (Email & Phone links).
-- **Dynamic Avatars**: Gradient initials badge (e.g. `Rahul Sharma` → `RS`).
-- **Responsive Dual Layout**: Desktop par modern data table aur mobile screens par clean cards.
-
-### 4. 💳 Rent & Payment Records (`/payments`)
-- Billing history tracking with status badges (`PAID`, `PENDING`, `OVERDUE`).
-- **Financial Counters**: Total Collected, Pending Dues, aur Overdue summary.
-- **1-Click Settlement**: Single click "Mark Paid" button with instant update.
-- **Shadcn Month Picker**: Clean formatted billing month selector (no native browser OS popups).
-
-### 5. 🔐 Passwordless Mobile OTP Login (`/login`)
-- **Zero Vertical Scroll**: Viewport ke andar 100vh me perfectly fit hota hai (no scrolling on desktop).
-- **Split-Screen Layout**: Desktop par prominent RentMate logo aur tagline; mobile par compact centered card.
-- **6-Box Pin Input**: Auto-advance cursor, backspace jump, aur paste support.
-- **Dev Mode Toast**: API se aane wale OTP ka floating Toast notification with 1-click **"Auto-fill OTP"** button.
+Yeh frontend application **teen alag-alag layers** ko seamless experience ke saath serve karti hai:
+1. **🌐 Public Marketing Website**: Zero-login visitors ke liye high-converting, dynamic landing pages aur SaaS pricing.
+2. **🏢 Landlord & Property Manager Workspace**: Properties, tenants, leases, rent collections aur team permissions manage karne ke liye dashboard.
+3. **⚡ SuperAdmin Master Control Hub**: Platform-wide organizations, subscription plans, platform users, telemetry aur system audit logs manage karne ke liye enterprise console.
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## 🏛️ Application Architecture & Routing Structure
 
-| Layer | Technology | Purpose |
+```
+RentMate Frontend Routing Tree
+│
+├── 🌐 Public Marketing Website (No Auth Required)
+│   ├── /                         Landing Page (Hero, Stats, Showcase, Plans, CTA)
+│   ├── /features                 Deep-Dive Feature Breakdown & Architecture
+│   ├── /pricing                  Dynamic SaaS Subscription Plans & Pricing Matrix
+│   ├── /about                    Company Vision, Security, Multi-Tenant Architecture
+│   ├── /contact                  Direct Contact Form & Support Details
+│   ├── /faq                      Frequently Asked Questions & Product Guidance
+│   ├── /privacy-policy           Zero-Trust & Data Isolation Privacy Policy
+│   └── /terms-and-conditions     SaaS User Agreement & Service Terms
+│
+├── 🔐 Authentication Onboarding
+│   ├── /login                    Passwordless 6-Digit Mobile OTP Login (with Dev Autofill)
+│   └── /register                 New Organization & Landlord Onboarding
+│
+├── 🏢 Landlord & Staff Workspace (Protected by JWT + Dynamic RBAC)
+│   ├── /dashboard                Executive Real-Time Financial & Portfolio KPIs
+│   ├── /properties               Property Portfolio CRUD, Unit Badges & Audit Dates
+│   ├── /tenants                  Tenant Directory, Leases, Contact Links & Details
+│   ├── /payments                 Rent Ledger, 1-Click Settlement & Month Filters
+│   └── /settings                 Account, Team Members, Custom Roles & Billing
+│       ├── /settings/team        Organization Staff & RBAC Role Assignment
+│       ├── /settings/roles       Custom Permission Matrices (Granular Scopes)
+│       └── /settings/billing     Active Plan Quotas, Usage Meters & Upgrades
+│
+└── ⚡ SuperAdmin Enterprise Portal (Protected by isSuperAdmin Guard)
+    ├── /superadmin               Platform Command Center (Revenue, Tenants, MRR, Health)
+    ├── /superadmin/organizations Full Organization CRUD, Plan Assignment & Deletion
+    ├── /superadmin/plans         SaaS Plan Creation, Pricing (INR), Quota Limits
+    ├── /superadmin/users         Cross-Organization User Management & Role Toggles
+    ├── /superadmin/subscriptions Active SaaS Subscriptions, Expiry Tracking & Statuses
+    ├── /superadmin/telemetry     Real-Time API Latency, Cache Hit Ratios & DB Health
+    ├── /superadmin/audit         System-Wide Immutable Audit Trail Logs
+    └── /superadmin/settings      Platform Maintenance Mode, Security Toggles & Cache Purge
+```
+
+---
+
+## ✨ Core Modules & Feature Highlights
+
+### 1. 🌐 Public Marketing Website (Light Theme)
+- **High-Converting Landing Page (`/`)**: Hero section, real-time platform statistics card, product workflow steps, dynamic subscription cards, aur interactive CTA.
+- **Dynamic Plan Sync with Offline Resilience**: Agar backend server offline bhi ho, to landing aur pricing pages seamless static fallback plans display karte hain bina fail huye.
+- **Support & Company Contact**:
+  - **Email**: `bharatpareek256@gmail.com`
+  - **Phone**: `+91 8003953815`
+  - **Location**: `Jaipur, Rajasthan, India`
+- **100% Light Theme**: Har card, footer aur CTA section soft borders (`border-slate-200`) aur crisp background (`bg-white` / `bg-slate-50`) ke saath calibrated hai.
+
+### 2. 🏢 Landlord & Property Workspace (`/dashboard`)
+- **Executive KPIs**: Total properties, units occupied vs. vacant, total active leases, total collected rent (`₹`), aur pending dues.
+- **Audit Date-Time Tracking**: Har Property, Tenant aur Payment record par exact **Created At** aur **Updated At** timestamp badge display hota hai.
+- **Granular RBAC Permission System**: Sidebar links aur action buttons dynamically check karte hain ki logged-in user ke paas required permission (`property.create`, `payment.read`, etc.) hai ya nahi.
+
+### 3. ⚡ SuperAdmin Master Console (`/superadmin`)
+- **Independent Layout**: Landlord navigation se bilkul separate master administration sidebar.
+- **Organization Management**: Multi-tenant organizations ka live table, new organization modal with custom slug & quota limits.
+- **SaaS Subscription Engine**: SuperAdmin naye plans bana sakta hai (e.g. Starter, Growth, Enterprise) aur organizations ko assign kar sakta hai.
+
+### 4. 🔐 Zero-Trust Passwordless Login (`/login`)
+- **6-Digit Mobile OTP**: Password store kiye bina cryptographic OTP authorization.
+- **Instant Dev Auto-Fill**: Development mode me API se aane wale OTP ka floating Toast display hota hai with a single click **"Auto-fill OTP"** button.
+- **Smart Portal Redirection**: Login ke baad SuperAdmin users automatically `/superadmin` par aur Landlords `/dashboard` par navigate hote hain.
+
+---
+
+## 🛠️ Tech Stack & Tooling
+
+| Category | Technology | Description |
 | :--- | :--- | :--- |
-| **Framework** | **React 18** + **TypeScript** | Scalable, type-safe component hierarchy |
-| **Build System** | **Vite 5** | Lightning-fast development & production build |
-| **Styling** | **Tailwind CSS v4** | Clean utility-first design tokens & variables |
-| **Typography** | **Plus Jakarta Sans** | Google Font for fintech/SaaS dashboards |
-| **State Management** | **Redux Toolkit** | User session & UI state management |
-| **Forms & Schema** | **React Hook Form** + **Zod** | High performance forms with strict schema validation |
-| **API Client** | **Axios** | Interceptors for JWT auth token & 401 handling |
-| **Icons** | **Lucide React** | Sleek, consistent iconography |
+| **Framework** | **React 18.3** + **TypeScript 5.6** | Type-safe, component-driven UI architecture |
+| **Build Tool** | **Vite 5.4** | Ultra-fast HMR and production bundle optimization |
+| **Routing** | **React Router DOM v6** | Data router with route-level layout trees and RBAC guards |
+| **Styling** | **Tailwind CSS v4** | Modern utility-first styling with custom CSS design tokens |
+| **Typography** | **Plus Jakarta Sans** | Modern geometric typography for clean readability |
+| **State Management** | **Redux Toolkit 2.2** | Central store for user authentication, session, and UI states |
+| **Data Fetching** | **Axios** | Interceptor-driven API client with automatic JWT token attachment |
+| **Icons** | **Lucide React** | Consistent, modern vector iconography |
 
 ---
 
-## 🌐 Central API Endpoints Architecture
-
-Frontend ke sabhi backend API routes ek single central file **`src/services/endpoints.ts`** se manage hote hain:
-
-```
-src/services/
-├── endpoints.ts        # 🌟 Central Single Source of Truth for all API endpoints
-├── axios.ts            # Axios instance with baseURL, token interceptor, & 401 handler
-├── auth.service.ts     # Mobile OTP generation, verification, user profile, logout
-├── property.service.ts # CRUD endpoints for rental properties
-├── tenant.service.ts   # CRUD endpoints for tenants & lease assignments
-└── payment.service.ts  # CRUD endpoints for rent payment records
-```
-
-### Endpoints Map:
-- **Authentication**: `POST /auth/send-otp`, `POST /auth/verify-otp`, `GET /auth/me`, `POST /auth/logout`
-- **Properties**: `GET /properties`, `POST /properties`, `GET/PUT/DELETE /properties/:id`
-- **Tenants**: `GET /tenants`, `POST /tenants`, `GET/PUT/DELETE /tenants/:id`
-- **Payments**: `GET /payments`, `POST /payments`, `GET/PUT/DELETE /payments/:id`
-
----
-
-## 📁 Folder Structure
+## 📁 Source Code Structure
 
 ```
 clint/
 ├── public/
 │   ├── RentMate Smart Rentals Logo.png        # Official brand logo
-│   └── Glossy Blue and Teal House-R Icon.png  # Web favicon
+│   └── Glossy Blue and Teal House-R Icon.png  # Application favicon
 ├── src/
-│   ├── app/                    # Redux store & router configuration
+│   ├── app/
+│   │   ├── router.tsx          # 🌟 Central Route Tree (Public, Auth, Landlord, SuperAdmin)
+│   │   └── store.ts           # Redux Toolkit global store configuration
 │   ├── components/
 │   │   ├── layout/             # AppLayout, Navbar, Sidebar
-│   │   └── ui/                 # Custom Shadcn UI (button, card, badge, input, modal, page)
+│   │   └── ui/                 # Reusable UI primitives (Button, Card, Badge, Modal, Input)
 │   ├── features/
-│   │   ├── auth/               # LoginPage, RegisterPage, authSlice
-│   │   ├── dashboard/          # DashboardPage (executive KPI widgets)
-│   │   ├── properties/         # PropertiesPage & modal forms
-│   │   ├── tenants/            # TenantsPage & modal forms
-│   │   ├── payments/           # PaymentsPage & modal forms
-│   │   └── ui/                 # uiSlice (sidebar toggle, theme)
-│   ├── hooks/                  # useApi & custom helper hooks
-│   ├── lib/                    # cn utility & formatting helpers (formatINR, errMsg)
-│   ├── services/               # API service layer & endpoints.ts
-│   ├── types/                  # Global TypeScript interfaces
-│   ├── index.css               # Design system tokens, custom scrollbars
-│   └── main.tsx                # Application root entry point
-├── index.html                  # HTML template with Google Fonts & favicon
+│   │   ├── auth/               # LoginPage, RegisterPage, ProtectedRoute, authSlice
+│   │   ├── dashboard/          # Landlord executive dashboard & analytics cards
+│   │   ├── properties/         # Property listings, create/edit modal forms
+│   │   ├── tenants/            # Tenant directory, lease assignment modals
+│   │   ├── payments/           # Rent payment ledger & instant settlement
+│   │   ├── public/             # 🌟 Public Website (Navbar, Footer, 8 Public Pages)
+│   │   │   ├── components/     # PublicNavbar, PublicFooter
+│   │   │   ├── layouts/        # PublicLayout
+│   │   │   └── pages/          # LandingPage, Features, Pricing, About, Contact, Faq, etc.
+│   │   └── superadmin/         # 🌟 SuperAdmin Master Management Console
+│   │       ├── layouts/        # SuperAdminLayout
+│   │       ├── components/     # PlanModal, OrganizationModal, RoleModal, SubscriptionModal
+│   │       └── pages/          # Overview, Organizations, Plans, Users, Telemetry, AuditLogs
+│   ├── hooks/                  # Custom React hooks (useApi, useDebounce, etc.)
+│   ├── lib/                    # Utility functions (cn, formatINR, date formatting)
+│   ├── services/               # API clients (axios.ts, endpoints.ts, public.service.ts)
+│   ├── types/                  # Global TypeScript interfaces & data contracts
+│   ├── index.css               # Design system tokens & utility classes
+│   └── main.tsx                # React DOM render root
+├── index.html
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
@@ -133,42 +159,47 @@ clint/
 
 ---
 
-## 🚀 Kese Run Karein? (Setup & Installation)
+## 🚀 Setup & Local Development
 
-### 1. Install Dependencies
+### 1. Prerequisites
+- Node.js (v18.x or v20.x recommended)
+- npm or pnpm
+
+### 2. Install Dependencies
 ```bash
+cd clint
 npm install
 ```
 
-### 2. Environment Setup
-Create `.env` file in the `clint` root:
+### 3. Environment Variables
+Create a `.env` file in the `clint` root directory:
 ```env
 VITE_API_URL=http://localhost:5000/api/v1
 ```
 
-### 3. Start Development Server
+### 4. Start Development Server
 ```bash
 npm run dev
 ```
-Open **[http://localhost:5173](http://localhost:5173)** in your browser.
+The app will run locally at **[http://localhost:5173](http://localhost:5173)**.
 
-### 4. Build for Production
+### 5. Production Build & Type Check
 ```bash
 npm run build
 ```
 
 ---
 
-## 👨‍💻 Developer & Credits
+## 👨‍💻 Author & Maintenance
 
 <div align="center">
 
-| Developer | Project | GitHub Profile |
-| :---: | :---: | :---: |
-| **Bharat** | **RentMate Platform** | [**@bharat468**](https://github.com/bharat468) |
+| Author | Contact | Location | GitHub |
+| :---: | :---: | :---: | :---: |
+| **Bharat Pareek** | **bharatpareek256@gmail.com** <br/> `+91 8003953815` | Jaipur, Rajasthan, India | [**@bharat468**](https://github.com/bharat468) |
 
 <br />
 
-<sub>Designed and developed by Bharat. © RentMate. All rights reserved.</sub>
+<sub>RentMate Platform © 2026. All rights reserved.</sub>
 
 </div>
