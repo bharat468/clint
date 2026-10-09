@@ -12,8 +12,13 @@ export function canAccess(user: User | null | undefined, permissionKey: string):
     return true;
   }
 
-  // Owner or universal permission bypass
-  if (user.permissions?.includes("*")) {
+  // Owner, Landlord, or universal permission bypass
+  if (
+    user.role === "OWNER" ||
+    user.role === "LANDLORD" ||
+    user.role === "ADMIN" ||
+    user.permissions?.includes("*")
+  ) {
     return true;
   }
 
