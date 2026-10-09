@@ -12,6 +12,7 @@ import {
 
 const navLinks = [
   { to: "/", label: "Home" },
+  { to: "/rentals", label: "Explore Rentals" },
   { to: "/features", label: "Features" },
   { to: "/pricing", label: "Pricing" },
   { to: "/about", label: "About" },
