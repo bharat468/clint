@@ -118,14 +118,14 @@ export default function SuperAdminOrganizationsPage() {
               <Building2 className="h-4 w-4" />
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Organizations
+              Landlords & Client Organizations
             </h1>
             <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-200/60">
-              {orgs.length} Portfolios
+              {orgs.length} Landlords
             </span>
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            Create and manage client landlord accounts, subscriptions, quotas, and access status.
+            Provision and oversee client landlord accounts, assigned SaaS plans, quotas, and portal access.
           </p>
         </div>
 
@@ -146,7 +146,7 @@ export default function SuperAdminOrganizationsPage() {
             className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs"
           >
             <Plus className="h-4 w-4" />
-            <span>New Organization</span>
+            <span>+ Onboard Landlord</span>
           </Button>
         </div>
       </div>
