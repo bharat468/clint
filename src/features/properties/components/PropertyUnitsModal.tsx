@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import type { Property } from "@/types";
 
 interface Props {
@@ -26,6 +27,8 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
   const canCreateUnit = canAccess(user, "unit.create") || canAccess(user, "property.update");
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
 
   // Add Unit Form State
   const [isAdding, setIsAdding] = useState(false);
@@ -58,6 +61,11 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
       setLoading(false);
     }
   };
+
+  const paginatedUnits = React.useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return units.slice(start, start + pageSize);
+  }, [units, page, pageSize]);
 
   const handleCreateUnit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,64 +288,77 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
           </div>
         ) : (
           <div className="space-y-3">
-            {units.map((u) => {
-              const isOccupied = u.status === "OCCUPIED";
-              const isListed = u.status === "LISTED";
+            <div className="space-y-3">
+              {paginatedUnits.map((u) => {
+                const isOccupied = u.status === "OCCUPIED";
+                const isListed = u.status === "LISTED";
 
-              return (
-                <div
-                  key={u.id}
-                  className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-300 transition"
-                >
-                  <div>
+                return (
+                  <div
+                    key={u.id}
+                    className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-300 transition"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 text-base">Unit {u.unitNumber}</span>
+                        <span className="text-xs text-slate-500">Floor {u.floor}</span>
+                        <Badge
+                          tone={
+                            isOccupied
+                              ? "purple"
+                              : isListed
+                              ? "blue"
+                              : "green"
+                          }
+                        >
+                          {u.status}
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                        <span>Type: <strong className="text-slate-700">{u.type.replace("_", " ")}</strong></span>
+                        <span>Rent: <strong className="text-slate-700">₹{u.rentAmount.toLocaleString()}</strong></span>
+                        <span>Deposit: <strong className="text-slate-700">₹{u.depositAmount.toLocaleString()}</strong></span>
+                      </div>
+                    </div>
+
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-base">Unit {u.unitNumber}</span>
-                      <span className="text-xs text-slate-500">Floor {u.floor}</span>
-                      <Badge
-                        tone={
-                          isOccupied
-                            ? "purple"
-                            : isListed
-                            ? "blue"
-                            : "green"
-                        }
-                      >
-                        {u.status}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                      <span>Type: <strong className="text-slate-700">{u.type.replace("_", " ")}</strong></span>
-                      <span>Rent: <strong className="text-slate-700">₹{u.rentAmount.toLocaleString()}</strong></span>
-                      <span>Deposit: <strong className="text-slate-700">₹{u.depositAmount.toLocaleString()}</strong></span>
+                      {u.status === "VACANT" && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenPublish(u)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5 font-semibold"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span>Publish to Marketplace</span>
+                        </Button>
+                      )}
+                      {isListed && (
+                        <span className="text-xs text-blue-700 font-semibold px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+                          ✓ Active in Marketplace
+                        </span>
+                      )}
+                      {isOccupied && (
+                        <span className="text-xs text-slate-700 font-semibold px-3 py-1 bg-slate-200 rounded-lg">
+                          Occupied by Lease
+                        </span>
+                      )}
                     </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  <div className="flex items-center gap-2">
-                    {u.status === "VACANT" && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleOpenPublish(u)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5 font-semibold"
-                      >
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span>Publish to Marketplace</span>
-                      </Button>
-                    )}
-                    {isListed && (
-                      <span className="text-xs text-blue-700 font-semibold px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
-                        ✓ Active in Marketplace
-                      </span>
-                    )}
-                    {isOccupied && (
-                      <span className="text-xs text-slate-700 font-semibold px-3 py-1 bg-slate-200 rounded-lg">
-                        Occupied by Lease
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            <DataTablePagination
+              currentPage={page}
+              pageSize={pageSize}
+              totalItems={units.length}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={[6, 12, 24, 50]}
+              apiEndpoint={`GET /api/v1/units?propertyId=${property.id}`}
+              className="rounded-2xl border border-slate-200 bg-white mt-3"
+            />
           </div>
         )}
 

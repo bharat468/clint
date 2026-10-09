@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,6 +28,7 @@ import { PageHeader, State } from "@/components/ui/page";
 import { errMsg, formatDateTime } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import type { Property, Tenant } from "@/types";
 
 const schema = z.object({
@@ -53,6 +54,8 @@ export default function TenantsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const {
     register,
@@ -150,6 +153,15 @@ export default function TenantsPage() {
     });
   }, [data, searchTerm, properties]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm]);
+
+  const paginatedTenants = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredTenants.slice(start, start + pageSize);
+  }, [filteredTenants, page, pageSize]);
+
   const getInitials = (name: string) =>
     name
       .split(" ")
@@ -214,7 +226,7 @@ export default function TenantsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-600">
-                  {filteredTenants.map((t) => (
+                  {paginatedTenants.map((t) => (
                     <tr key={t.id} className="hover:bg-slate-50/70 transition-colors">
                       {/* Tenant with Avatar */}
                       <td className="px-5 py-4">
@@ -325,7 +337,7 @@ export default function TenantsPage() {
 
           {/* Mobile Card View (Optimized for Phones) */}
           <div className="grid gap-4 md:hidden">
-            {filteredTenants.map((t) => (
+            {paginatedTenants.map((t) => (
               <Card key={t.id} className="p-4 space-y-3 border-slate-200/80">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -380,6 +392,17 @@ export default function TenantsPage() {
               </Card>
             ))}
           </div>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalItems={filteredTenants.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 20, 50]}
+            apiEndpoint="GET /api/v1/tenants"
+            className="rounded-2xl border border-slate-200 bg-white mt-4"
+          />
         </>
       )}
 

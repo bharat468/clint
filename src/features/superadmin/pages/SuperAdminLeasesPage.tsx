@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FileText,
   Search,
@@ -13,11 +13,14 @@ import { adminService } from "@/services/admin.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 
 export default function SuperAdminLeasesPage() {
   const { data: leases, loading, error, reload } = useApi(adminService.listLeases, [] as any[]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
 
   const filtered = leases.filter((l) => {
     const matchesSearch =
@@ -29,6 +32,12 @@ export default function SuperAdminLeasesPage() {
     const matchesStatus = statusFilter === "ALL" || l.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-6">
@@ -116,8 +125,9 @@ export default function SuperAdminLeasesPage() {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((item) => (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginated.map((item) => (
             <Card
               key={item.id}
               hoverEffect
@@ -179,6 +189,20 @@ export default function SuperAdminLeasesPage() {
               </div>
             </Card>
           ))}
+          </div>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalRecords={filtered.length}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={[6, 9, 18, 36]}
+            apiEndpoint="GET /api/v1/admin/leases"
+          />
         </div>
       )}
     </div>

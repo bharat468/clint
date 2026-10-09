@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search, RefreshCw, Calendar, ShieldAlert, Plus, Pencil, Trash2, Clock, Building2 } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 import { canAccessPlatform } from "@/lib/permissions";
@@ -12,6 +12,7 @@ import { Toast } from "@/components/ui/toast";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import SubscriptionModal from "../components/SubscriptionModal";
 import OrganizationModal from "../components/OrganizationModal";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { formatDateTime } from "@/lib/utils";
 import type { AdminOrganization, Plan } from "@/types";
 
@@ -32,6 +33,8 @@ export default function SuperAdminOrganizationsPage() {
   const [deletingOrg, setDeletingOrg] = useState<AdminOrganization | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const showFeedback = (text: string, type: "success" | "error" = "success") => {
     setFeedback({ text, type });
@@ -85,6 +88,15 @@ export default function SuperAdminOrganizationsPage() {
       o.slug?.toLowerCase().includes(searchOrg.toLowerCase()) ||
       o.owner?.mobile?.includes(searchOrg)
   );
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchOrg]);
+
+  const paginatedOrgs = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredOrgs.slice(start, start + pageSize);
+  }, [filteredOrgs, page, pageSize]);
 
   if (!canManageOrgs) {
     return (
@@ -191,7 +203,7 @@ export default function SuperAdminOrganizationsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredOrgs.map((o) => {
+                    paginatedOrgs.map((o: any) => {
                       const sub = o.subscription;
                       const isExpired = sub?.expiresAt && new Date(sub.expiresAt).getTime() < Date.now();
                       const daysRemaining = sub?.expiresAt
@@ -344,6 +356,17 @@ export default function SuperAdminOrganizationsPage() {
               </table>
             </div>
           </Card>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalItems={filteredOrgs.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50]}
+            apiEndpoint="GET /api/v1/admin/organizations"
+            className="rounded-2xl border border-slate-200 bg-white mt-4"
+          />
         </div>
       )}
 

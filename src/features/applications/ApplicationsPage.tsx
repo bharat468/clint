@@ -14,11 +14,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<RentalApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
 
   // Approval Modal
   const [approveModalOpen, setApproveModalOpen] = useState(false);
@@ -45,6 +48,15 @@ export default function ApplicationsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedStatus]);
+
+  const paginatedApplications = React.useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return applications.slice(start, start + pageSize);
+  }, [applications, page, pageSize]);
 
   const handleOpenApprove = (app: RentalApplication) => {
     setSelectedApp(app);
@@ -138,8 +150,9 @@ export default function ApplicationsPage() {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {applications.map((app) => (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginatedApplications.map((app) => (
             <Card
               key={app.id}
               hoverEffect
@@ -217,6 +230,20 @@ export default function ApplicationsPage() {
               )}
             </Card>
           ))}
+          </div>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalRecords={applications.length}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={[6, 12, 24, 50]}
+            apiEndpoint="GET /api/v1/applications"
+          />
         </div>
       )}
 

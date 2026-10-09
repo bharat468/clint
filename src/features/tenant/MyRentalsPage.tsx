@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 
 export default function MyRentalsPage() {
   const user = useAppSelector((s) => s.auth.user);
@@ -29,6 +30,11 @@ export default function MyRentalsPage() {
   const [maintenanceTickets, setMaintenanceTickets] = useState<MaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"RENTALS" | "MAINTENANCE">("RENTALS");
+
+  const [rentalsPage, setRentalsPage] = useState(1);
+  const [rentalsPageSize, setRentalsPageSize] = useState(3);
+  const [ticketsPage, setTicketsPage] = useState(1);
+  const [ticketsPageSize, setTicketsPageSize] = useState(6);
 
   // Payment Modal
   const [payModalOpen, setPayModalOpen] = useState(false);
@@ -171,7 +177,9 @@ export default function MyRentalsPage() {
             </Card>
           ) : (
             <div className="space-y-6">
-              {leases.map((lease) => (
+              {leases
+                .slice((rentalsPage - 1) * rentalsPageSize, rentalsPage * rentalsPageSize)
+                .map((lease) => (
                 <Card
                   key={lease.id}
                   className="p-6 sm:p-7 bg-white border border-slate-200/90 shadow-xs rounded-2xl"
@@ -365,6 +373,19 @@ export default function MyRentalsPage() {
                   </div>
                 </Card>
               ))}
+
+              <DataTablePagination
+                currentPage={rentalsPage}
+                pageSize={rentalsPageSize}
+                totalRecords={leases.length}
+                onPageChange={setRentalsPage}
+                onPageSizeChange={(newSize) => {
+                  setRentalsPageSize(newSize);
+                  setRentalsPage(1);
+                }}
+                pageSizeOptions={[2, 3, 5, 10]}
+                apiEndpoint="GET /api/v1/leases/my-rentals"
+              />
             </div>
           )}
         </div>
@@ -401,39 +422,56 @@ export default function MyRentalsPage() {
               </p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {maintenanceTickets.map((ticket) => (
-                <Card
-                  key={ticket.id}
-                  hoverEffect
-                  className="p-5 bg-white border border-slate-200/90 shadow-xs"
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <span className="text-xs px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-md font-semibold">
-                      {ticket.category}
-                    </span>
-                    <Badge
-                      tone={
-                        ticket.status === "RESOLVED" || ticket.status === "CLOSED"
-                          ? "green"
-                          : ticket.status === "IN_PROGRESS"
-                          ? "blue"
-                          : "yellow"
-                      }
-                    >
-                      {ticket.status}
-                    </Badge>
-                  </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {maintenanceTickets
+                  .slice((ticketsPage - 1) * ticketsPageSize, ticketsPage * ticketsPageSize)
+                  .map((ticket) => (
+                  <Card
+                    key={ticket.id}
+                    hoverEffect
+                    className="p-5 bg-white border border-slate-200/90 shadow-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="text-xs px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-md font-semibold">
+                        {ticket.category}
+                      </span>
+                      <Badge
+                        tone={
+                          ticket.status === "RESOLVED" || ticket.status === "CLOSED"
+                            ? "green"
+                            : ticket.status === "IN_PROGRESS"
+                            ? "blue"
+                            : "yellow"
+                        }
+                      >
+                        {ticket.status}
+                      </Badge>
+                    </div>
 
-                  <h4 className="text-base font-bold text-slate-900 mt-1">{ticket.title}</h4>
-                  <p className="text-xs text-slate-600 mt-1 line-clamp-2">{ticket.description}</p>
+                    <h4 className="text-base font-bold text-slate-900 mt-1">{ticket.title}</h4>
+                    <p className="text-xs text-slate-600 mt-1 line-clamp-2">{ticket.description}</p>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between items-center">
-                    <span>Property: {ticket.property?.title}</span>
-                    <span>Priority: {ticket.priority}</span>
-                  </div>
-                </Card>
-              ))}
+                    <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between items-center">
+                      <span>Property: {ticket.property?.title}</span>
+                      <span>Priority: {ticket.priority}</span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              <DataTablePagination
+                currentPage={ticketsPage}
+                pageSize={ticketsPageSize}
+                totalRecords={maintenanceTickets.length}
+                onPageChange={setTicketsPage}
+                onPageSizeChange={(newSize) => {
+                  setTicketsPageSize(newSize);
+                  setTicketsPage(1);
+                }}
+                pageSizeOptions={[4, 6, 12, 20]}
+                apiEndpoint="GET /api/v1/maintenance/my"
+              />
             </div>
           )}
         </div>

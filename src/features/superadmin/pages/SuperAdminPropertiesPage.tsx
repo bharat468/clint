@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Building2,
   Search,
@@ -13,11 +13,14 @@ import { adminService } from "@/services/admin.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 
 export default function SuperAdminPropertiesPage() {
   const { data: properties, loading, error, reload } = useApi(adminService.listProperties, [] as any[]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
 
   const filtered = properties.filter((p) => {
     const matchesSearch =
@@ -30,6 +33,12 @@ export default function SuperAdminPropertiesPage() {
     const matchesStatus = statusFilter === "ALL" || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-6">
@@ -117,8 +126,9 @@ export default function SuperAdminPropertiesPage() {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((item) => {
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginated.map((item) => {
             const unitsCount = item.units ? item.units.length : 0;
             const activeLeasesCount = item.leases ? item.leases.length : 0;
 
@@ -177,6 +187,20 @@ export default function SuperAdminPropertiesPage() {
               </Card>
             );
           })}
+          </div>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalRecords={filtered.length}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={[6, 9, 18, 36]}
+            apiEndpoint="GET /api/v1/admin/properties"
+          />
         </div>
       )}
     </div>

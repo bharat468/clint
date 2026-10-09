@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,6 +30,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
 import { errMsg, formatINR, formatDateTime } from "@/lib/utils";
 import { canAccess } from "@/lib/permissions";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import type { Payment, Tenant, Property } from "@/types";
 
 const schema = z.object({
@@ -58,6 +59,8 @@ export default function PaymentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "PAID" | "PENDING" | "OVERDUE">("ALL");
   const [formError, setFormError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const currentMonth = new Date().toISOString().slice(0, 7);
   const {
@@ -214,6 +217,15 @@ export default function PaymentsPage() {
     });
   }, [data, searchTerm, statusFilter, tenants]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const paginatedPayments = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredPayments.slice(start, start + pageSize);
+  }, [filteredPayments, page, pageSize]);
+
   const getInitials = (name: string) =>
     name
       .split(" ")
@@ -352,7 +364,7 @@ export default function PaymentsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-600">
-                  {filteredPayments.map((p) => {
+                  {paginatedPayments.map((p) => {
                     const name = tenantName(p.tenantId);
                     return (
                       <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
@@ -492,7 +504,7 @@ export default function PaymentsPage() {
 
           {/* Mobile Card View (Optimized for Phones) */}
           <div className="grid gap-4 md:hidden">
-            {filteredPayments.map((p) => {
+            {paginatedPayments.map((p) => {
               const name = tenantName(p.tenantId);
               return (
                 <Card key={p.id} className="p-4 space-y-3 border-slate-200/80">
@@ -571,6 +583,17 @@ export default function PaymentsPage() {
               );
             })}
           </div>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalItems={filteredPayments.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 20, 50]}
+            apiEndpoint="GET /api/v1/payments"
+            className="rounded-2xl border border-slate-200 bg-white mt-4"
+          />
         </>
       )}
 

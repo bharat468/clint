@@ -24,6 +24,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { formatINR, errMsg } from "@/lib/utils";
 import type { AdminUser, Role, Permission, Plan, Property } from "@/types";
 
@@ -31,6 +32,14 @@ type AdminTab = "overview" | "users" | "roles" | "plans";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+
+  // Pagination states
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(10);
+  const [rolesPage, setRolesPage] = useState(1);
+  const [rolesPageSize, setRolesPageSize] = useState(6);
+  const [plansPage, setPlansPage] = useState(1);
+  const [plansPageSize, setPlansPageSize] = useState(6);
 
   // Data queries
   const {
@@ -532,7 +541,9 @@ export default function AdminPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((u) => {
+                  filteredUsers
+                    .slice((usersPage - 1) * usersPageSize, usersPage * usersPageSize)
+                    .map((u) => {
                     const primaryRole = u.userRoles?.[0]?.role?.name || "Member";
                     const isSuperAdmin = (u as any).isSuperAdmin || primaryRole === "Owner";
                     const scope = u.userRoles?.[0]?.propertyScope || [];
@@ -587,14 +598,29 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+
+          <DataTablePagination
+            currentPage={usersPage}
+            pageSize={usersPageSize}
+            totalRecords={filteredUsers.length}
+            onPageChange={setUsersPage}
+            onPageSizeChange={(newSize) => {
+              setUsersPageSize(newSize);
+              setUsersPage(1);
+            }}
+            pageSizeOptions={[5, 10, 20, 50]}
+            apiEndpoint="GET /api/v1/admin/users"
+          />
         </div>
       )}
 
       {/* TAB 3: DYNAMIC ROLES & PERMISSIONS */}
       {activeTab === "roles" && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {roles.map((r) => {
+            {roles
+              .slice((rolesPage - 1) * rolesPageSize, rolesPage * rolesPageSize)
+              .map((r) => {
               const permCount = r.permissions?.length || 0;
               return (
                 <Card
@@ -638,14 +664,29 @@ export default function AdminPage() {
               );
             })}
           </div>
+
+          <DataTablePagination
+            currentPage={rolesPage}
+            pageSize={rolesPageSize}
+            totalRecords={roles.length}
+            onPageChange={setRolesPage}
+            onPageSizeChange={(newSize) => {
+              setRolesPageSize(newSize);
+              setRolesPage(1);
+            }}
+            pageSizeOptions={[3, 6, 12, 24]}
+            apiEndpoint="GET /api/v1/roles"
+          />
         </div>
       )}
 
       {/* TAB 4: SAAS PLANS & PRICING */}
       {activeTab === "plans" && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {plans.map((p) => (
+            {plans
+              .slice((plansPage - 1) * plansPageSize, plansPage * plansPageSize)
+              .map((p) => (
               <Card
                 key={p.id}
                 className={`p-6 bg-white border-2 flex flex-col justify-between shadow-xs transition-all ${
@@ -712,6 +753,19 @@ export default function AdminPage() {
               </Card>
             ))}
           </div>
+
+          <DataTablePagination
+            currentPage={plansPage}
+            pageSize={plansPageSize}
+            totalRecords={plans.length}
+            onPageChange={setPlansPage}
+            onPageSizeChange={(newSize) => {
+              setPlansPageSize(newSize);
+              setPlansPage(1);
+            }}
+            pageSizeOptions={[3, 6, 9, 15]}
+            apiEndpoint="GET /api/v1/plans"
+          />
         </div>
       )}
 

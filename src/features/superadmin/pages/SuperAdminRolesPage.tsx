@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { State } from "@/components/ui/page";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Toast } from "@/components/ui/toast";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import RoleModal from "../components/RoleModal";
 import { formatDateTime } from "@/lib/utils";
 import type { SuperAdminRole } from "@/types";
@@ -22,6 +23,8 @@ export default function SuperAdminRolesPage() {
     [] as SuperAdminRole[]
   );
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<SuperAdminRole | null>(null);
   const [deletingRole, setDeletingRole] = useState<SuperAdminRole | null>(null);
@@ -108,70 +111,87 @@ export default function SuperAdminRolesPage() {
       <State loading={loading} error={error} empty={false} />
 
       {!loading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {adminRoles.map((role) => (
-            <Card
-              key={role.id}
-              className="p-5 bg-white border border-slate-200/80 rounded-2xl flex flex-col justify-between shadow-xs hover:border-blue-300 transition-all"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-                      <ShieldCheck className="h-4 w-4" />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {adminRoles
+              .slice((page - 1) * pageSize, page * pageSize)
+              .map((role) => (
+              <Card
+                key={role.id}
+                className="p-5 bg-white border border-slate-200/80 rounded-2xl flex flex-col justify-between shadow-xs hover:border-blue-300 transition-all"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+                        <ShieldCheck className="h-4 w-4" />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-900">{role.name}</h4>
                     </div>
-                    <h4 className="text-sm font-bold text-slate-900">{role.name}</h4>
+                    <span className="text-[10px] font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-bold">
+                      {role.slug}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-bold">
-                    {role.slug}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 min-h-[30px]">
-                  {role.description || "Platform executive management role"}
-                </p>
+                  <p className="text-xs text-slate-500 min-h-[30px]">
+                    {role.description || "Platform executive management role"}
+                  </p>
 
-                <div className="pt-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Granted Privileges ({role.permissions.length}):
-                  </span>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {role.permissions.map((p, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[10px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60"
-                      >
-                        {p.replace("PLATFORM_", "")}
-                      </span>
-                    ))}
+                  <div className="pt-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Granted Privileges ({role.permissions.length}):
+                    </span>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {role.permissions.map((p, idx) => (
+                        <span
+                          key={idx}
+                          className="text-[10px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60"
+                        >
+                          {p.replace("PLATFORM_", "")}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Card Footer with Timestamps, Edit & Delete */}
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                  <Clock className="h-3 w-3 shrink-0" />
-                  <span>{formatDateTime(role.createdAt)}</span>
+                {/* Card Footer with Timestamps, Edit & Delete */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                    <Clock className="h-3 w-3 shrink-0" />
+                    <span>{formatDateTime(role.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenEdit(role)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      title="Edit Role Privileges"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleRequestDelete(role)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      title="Delete Role"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleOpenEdit(role)}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                    title="Edit Role Privileges"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleRequestDelete(role)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                    title="Delete Role"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </div>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalRecords={adminRoles.length}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={[3, 6, 12, 24]}
+            apiEndpoint="GET /api/v1/roles"
+          />
         </div>
       )}
 

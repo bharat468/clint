@@ -30,6 +30,7 @@ import { Toast } from "@/components/ui/toast";
 import { errMsg, formatDateTime } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import CustomRoleModal from "../components/CustomRoleModal";
 import type { Role, Property } from "@/types";
 
@@ -37,6 +38,11 @@ export default function TeamSettingsPage() {
   const user = useAppSelector((s) => s.auth.user);
   const canAssignRoles = canAccess(user, "role.assign");
   const canReadRoles = canAccess(user, "role.read");
+
+  const [staffPage, setStaffPage] = useState(1);
+  const [staffPageSize, setStaffPageSize] = useState(10);
+  const [rolesPage, setRolesPage] = useState(1);
+  const [rolesPageSize, setRolesPageSize] = useState(6);
 
   const { data: orgs } = useApi(organizationService.list, [] as any[]);
   const currentOrg = orgs[0] || { id: "default", name: "Bharat Estates", slug: "bharat-estates" };
@@ -387,7 +393,9 @@ export default function TeamSettingsPage() {
                     </td>
                   </tr>
                 ) : (
-                  members.map((m) => {
+                  members
+                    .slice((staffPage - 1) * staffPageSize, staffPage * staffPageSize)
+                    .map((m) => {
                     const isOwner = m.roleSlug === "owner" || m.role === "Owner";
                     return (
                       <tr key={m.memberId} className="hover:bg-slate-50/60 transition-colors">
@@ -487,6 +495,19 @@ export default function TeamSettingsPage() {
               </tbody>
             </table>
           </div>
+
+          {members.length > 0 && (
+            <DataTablePagination
+              currentPage={staffPage}
+              pageSize={staffPageSize}
+              totalItems={members.length}
+              onPageChange={setStaffPage}
+              onPageSizeChange={setStaffPageSize}
+              pageSizeOptions={[5, 10, 20, 50]}
+              apiEndpoint={`GET /api/v1/organizations/${currentOrg.id}/members`}
+              className="rounded-2xl border border-slate-200 bg-white"
+            />
+          )}
         </div>
       )}
 
@@ -504,7 +525,9 @@ export default function TeamSettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {roles.map((r) => {
+            {roles
+              .slice((rolesPage - 1) * rolesPageSize, rolesPage * rolesPageSize)
+              .map((r) => {
               const permKeys = r.permissions?.map((p) => p.permission?.key).filter(Boolean) || [];
               const isSystem = r.isSystem;
 
@@ -576,6 +599,19 @@ export default function TeamSettingsPage() {
               );
             })}
           </div>
+
+          {roles.length > 0 && (
+            <DataTablePagination
+              currentPage={rolesPage}
+              pageSize={rolesPageSize}
+              totalItems={roles.length}
+              onPageChange={setRolesPage}
+              onPageSizeChange={setRolesPageSize}
+              pageSizeOptions={[6, 12, 24]}
+              apiEndpoint="GET /api/v1/roles"
+              className="rounded-2xl border border-slate-200 bg-white mt-4"
+            />
+          )}
         </div>
       )}
 

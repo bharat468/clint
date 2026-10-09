@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,6 +29,7 @@ import { PageHeader, State } from "@/components/ui/page";
 import { errMsg, formatINR, formatDateTime } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import type { Property } from "@/types";
 
 const schema = z.object({
@@ -57,6 +58,8 @@ export default function PropertiesPage() {
   const [statusFilter, setStatusFilter] = useState<"ALL" | "VACANT" | "OCCUPIED">("ALL");
   const [formError, setFormError] = useState<string | null>(null);
   const [selectedPropertyForUnits, setSelectedPropertyForUnits] = useState<Property | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
 
   const {
     register,
@@ -164,6 +167,15 @@ export default function PropertiesPage() {
     });
   }, [data, searchTerm, statusFilter]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const paginatedData = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredData.slice(start, start + pageSize);
+  }, [filteredData, page, pageSize]);
+
   const vacantCount = data.filter((p) => p.status === "VACANT").length;
   const occupiedCount = data.filter((p) => p.status === "OCCUPIED").length;
 
@@ -226,8 +238,9 @@ export default function PropertiesPage() {
 
       {/* Property Cards Grid */}
       {!loading && !error && (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredData.map((p) => {
+        <div className="space-y-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {paginatedData.map((p) => {
             const isVacant = p.status === "VACANT";
             return (
               <Card
@@ -340,6 +353,20 @@ export default function PropertiesPage() {
               </Card>
             );
           })}
+          </div>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalRecords={filteredData.length}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={[6, 9, 15, 30]}
+            apiEndpoint="GET /api/v1/properties"
+          />
         </div>
       )}
 

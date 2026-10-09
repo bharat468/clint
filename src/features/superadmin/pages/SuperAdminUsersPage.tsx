@@ -24,6 +24,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Toast } from "@/components/ui/toast";
 import { Field } from "@/components/ui/field";
 import { State } from "@/components/ui/page";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import PrivilegeModal from "../components/PrivilegeModal";
 import type { AdminUser, SuperAdminRole } from "@/types";
 
@@ -37,6 +38,8 @@ export default function SuperAdminUsersPage() {
   );
   const { data: adminRoles } = useApi(adminService.listRoles, [] as SuperAdminRole[]);
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [privilegeUser, setPrivilegeUser] = useState<AdminUser | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
@@ -213,7 +216,10 @@ export default function SuperAdminUsersPage() {
         <Input
           placeholder="Search by name, mobile, or email..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setPage(1);
+          }}
           className="pl-10 text-xs"
         />
       </div>
@@ -236,7 +242,9 @@ export default function SuperAdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600">
-                {filteredUsers.map((u) => {
+                {filteredUsers
+                  .slice((page - 1) * pageSize, page * pageSize)
+                  .map((u) => {
                   const isUserSuper =
                     Boolean((u as any).isSuperAdmin) ||
                     (u as any).adminRole === "SUPER_ADMIN";
@@ -374,6 +382,19 @@ export default function SuperAdminUsersPage() {
               </tbody>
             </table>
           </div>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalRecords={filteredUsers.length}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={[5, 10, 25, 50]}
+            apiEndpoint="GET /api/v1/admin/users"
+          />
         </Card>
       )}
 

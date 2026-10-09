@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Toast } from "@/components/ui/toast";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { errMsg } from "@/lib/utils";
 import type { Role, Permission } from "@/types";
 
@@ -26,6 +27,8 @@ export default function RolesSettingsPage() {
   const { data: roles, reload: reloadRoles } = useApi(roleService.listRoles, [] as Role[]);
   const { data: permissions } = useApi(roleService.listPermissions, [] as Permission[]);
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [deletingRole, setDeletingRole] = useState<Role | null>(null);
@@ -166,61 +169,78 @@ export default function RolesSettingsPage() {
       </div>
 
       {/* Roles Cards Grid */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {roles.map((r) => {
-          const permCount = r.permissions?.length || 0;
-          return (
-            <Card
-              key={r.id}
-              className="p-5 bg-white border-slate-200 shadow-2xs flex flex-col justify-between hover:border-indigo-300 transition-all rounded-2xl"
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-slate-900 text-sm">{r.name}</h3>
-                  <Badge tone={r.isSystem ? "blue" : "purple"}>
-                    {r.isSystem ? "System Role" : "Custom Dynamic"}
-                  </Badge>
-                </div>
-                <p className="mt-2 text-xs text-slate-500 min-h-[32px] leading-relaxed">
-                  {r.description || "Operational role for organization staff members"}
-                </p>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {roles
+            .slice((page - 1) * pageSize, page * pageSize)
+            .map((r) => {
+            const permCount = r.permissions?.length || 0;
+            return (
+              <Card
+                key={r.id}
+                className="p-5 bg-white border-slate-200 shadow-2xs flex flex-col justify-between hover:border-indigo-300 transition-all rounded-2xl"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-slate-900 text-sm">{r.name}</h3>
+                    <Badge tone={r.isSystem ? "blue" : "purple"}>
+                      {r.isSystem ? "System Role" : "Custom Dynamic"}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500 min-h-[32px] leading-relaxed">
+                    {r.description || "Operational role for organization staff members"}
+                  </p>
 
-                <div className="mt-4 border-t border-slate-100 pt-3">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
-                    <span>Authorized Capabilities:</span>
-                    <span className="rounded-md bg-indigo-50 text-indigo-700 px-2 py-0.5 font-bold">
-                      {permCount} of {permissions.length}
-                    </span>
+                  <div className="mt-4 border-t border-slate-100 pt-3">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
+                      <span>Authorized Capabilities:</span>
+                      <span className="rounded-md bg-indigo-50 text-indigo-700 px-2 py-0.5 font-bold">
+                        {permCount} of {permissions.length}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                <span>identifier: {r.slug}</span>
-                {r.isSystem ? (
-                  <span className="text-slate-400 font-sans font-medium text-[10px]">Locked System</span>
-                ) : (
-                  <div className="flex items-center gap-1 font-sans">
-                    <button
-                      onClick={() => handleOpenEditRole(r)}
-                      className="text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-indigo-50 transition-colors"
-                      title="Edit Custom Role"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => handleRequestDeleteRole(r)}
-                      className="text-slate-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 transition-colors"
-                      title="Delete Custom Role"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </Card>
-          );
-        })}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                  <span>identifier: {r.slug}</span>
+                  {r.isSystem ? (
+                    <span className="text-slate-400 font-sans font-medium text-[10px]">Locked System</span>
+                  ) : (
+                    <div className="flex items-center gap-1 font-sans">
+                      <button
+                        onClick={() => handleOpenEditRole(r)}
+                        className="text-slate-500 hover:text-indigo-600 p-1 rounded-md hover:bg-indigo-50 transition-colors"
+                        title="Edit Custom Role"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleRequestDeleteRole(r)}
+                        className="text-slate-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 transition-colors"
+                        title="Delete Custom Role"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        <DataTablePagination
+          currentPage={page}
+          pageSize={pageSize}
+          totalRecords={roles.length}
+          onPageChange={setPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setPage(1);
+          }}
+          pageSizeOptions={[3, 6, 12, 24]}
+          apiEndpoint="GET /api/v1/roles"
+        />
       </div>
 
       {/* Modal: Create / Edit Custom Role */}

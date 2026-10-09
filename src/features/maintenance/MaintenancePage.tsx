@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import type { Property } from "@/types";
 
 export default function MaintenancePage() {
@@ -26,6 +27,8 @@ export default function MaintenancePage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Status Modal
   const [statusModalOpen, setStatusModalOpen] = useState(false);
@@ -72,6 +75,15 @@ export default function MaintenancePage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedStatus]);
+
+  const paginatedTickets = React.useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return tickets.slice(start, start + pageSize);
+  }, [tickets, page, pageSize]);
 
   const handleOpenStatusModal = (ticket: MaintenanceRequest) => {
     setSelectedTicket(ticket);
@@ -198,7 +210,7 @@ export default function MaintenancePage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {tickets.map((ticket) => (
+          {paginatedTickets.map((ticket) => (
             <Card
               key={ticket.id}
               hoverEffect
@@ -259,6 +271,17 @@ export default function MaintenancePage() {
               )}
             </Card>
           ))}
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalItems={tickets.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50]}
+            apiEndpoint="GET /api/v1/maintenance"
+            className="rounded-2xl border border-slate-200 bg-white mt-4"
+          />
         </div>
       )}
 

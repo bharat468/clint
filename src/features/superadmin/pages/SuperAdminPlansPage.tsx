@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { State } from "@/components/ui/page";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Toast } from "@/components/ui/toast";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { formatINR, formatDateTime } from "@/lib/utils";
 import PlanModal from "../components/PlanModal";
 import type { Plan } from "@/types";
@@ -22,6 +23,8 @@ export default function SuperAdminPlansPage() {
     [] as Plan[]
   );
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<Plan | null>(null);
@@ -118,116 +121,133 @@ export default function SuperAdminPlansPage() {
       <State loading={loading} error={error} empty={false} />
 
       {!loading && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((p) => (
-            <Card
-              key={p.id}
-              className="p-6 bg-white border border-slate-200/80 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-xs hover:border-blue-300 transition-all"
-            >
-              {p.slug === "growth-plan" && (
-                <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold uppercase px-3 py-0.5 rounded-bl-lg tracking-wider">
-                  Popular
-                </div>
-              )}
-
-              <div>
-                <div className="flex items-center justify-between">
-                  <h4 className="text-lg font-bold text-slate-900">{p.name}</h4>
-                  <span className="text-[10px] font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                    {p.slug}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-500 min-h-[32px]">
-                  {p.description || "Comprehensive property management tier"}
-                </p>
-
-                <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-slate-900">{formatINR(p.priceMonthly)}</span>
-                  <span className="text-xs text-slate-500"> / month</span>
-                  <span className="text-[10px] text-slate-400 ml-2">({formatINR(p.priceYearly)}/yr)</span>
-                </div>
-
-                <div className="mt-4 space-y-2 rounded-xl bg-slate-50/80 p-3.5 text-xs border border-slate-100">
-                  <div className="flex justify-between text-slate-700">
-                    <span className="text-slate-500">Max Properties:</span>
-                    <span className="font-bold text-slate-900">{p.maxProperties} Units</span>
-                  </div>
-                  <div className="flex justify-between text-slate-700">
-                    <span className="text-slate-500">Max Tenants:</span>
-                    <span className="font-bold text-slate-900">{p.maxTenants} Leases</span>
-                  </div>
-                  <div className="flex justify-between text-slate-700">
-                    <span className="text-slate-500">Staff Limit:</span>
-                    <span className="font-bold text-slate-900">{p.maxStaff} Team Members</span>
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-1.5">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Included Features:
-                  </span>
-                  <div className="space-y-1">
-                    {(p.features || []).map((feat, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-                        <span>{feat}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {p.createdAt && (
-                  <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-50 pt-2">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3 text-slate-400" />
-                      Created: {formatDateTime(p.createdAt)}
-                    </span>
-                    {p.updatedAt && p.updatedAt !== p.createdAt && (
-                      <span>Updated: {formatDateTime(p.updatedAt)}</span>
-                    )}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {plans
+              .slice((page - 1) * pageSize, page * pageSize)
+              .map((p) => (
+              <Card
+                key={p.id}
+                className="p-6 bg-white border border-slate-200/80 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-xs hover:border-blue-300 transition-all"
+              >
+                {p.slug === "growth-plan" && (
+                  <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-bold uppercase px-3 py-0.5 rounded-bl-lg tracking-wider">
+                    Popular
                   </div>
                 )}
-              </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => handleToggleActive(p)}
-                  title={`Click to ${p.isActive ? "deactivate" : "activate"} plan tier`}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors cursor-pointer ${
-                    p.isActive
-                      ? "text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
-                      : "text-slate-600 bg-slate-100 border-slate-200 hover:bg-slate-200"
-                  }`}
-                >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      p.isActive ? "bg-emerald-500" : "bg-slate-400"
-                    }`}
-                  />
-                  {p.isActive ? "Active Tier" : "Inactive"}
-                </button>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-bold text-slate-900">{p.name}</h4>
+                    <span className="text-[10px] font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                      {p.slug}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 min-h-[32px]">
+                    {p.description || "Comprehensive property management tier"}
+                  </p>
 
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleOpenEdit(p)}
-                    className="text-xs h-7 px-2.5"
-                  >
-                    Edit Specs
-                  </Button>
-                  <button
-                    onClick={() => handleRequestDelete(p)}
-                    title="Delete Plan Tier"
-                    className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className="text-2xl font-bold text-slate-900">{formatINR(p.priceMonthly)}</span>
+                    <span className="text-xs text-slate-500"> / month</span>
+                    <span className="text-[10px] text-slate-400 ml-2">({formatINR(p.priceYearly)}/yr)</span>
+                  </div>
+
+                  <div className="mt-4 space-y-2 rounded-xl bg-slate-50/80 p-3.5 text-xs border border-slate-100">
+                    <div className="flex justify-between text-slate-700">
+                      <span className="text-slate-500">Max Properties:</span>
+                      <span className="font-bold text-slate-900">{p.maxProperties} Units</span>
+                    </div>
+                    <div className="flex justify-between text-slate-700">
+                      <span className="text-slate-500">Max Tenants:</span>
+                      <span className="font-bold text-slate-900">{p.maxTenants} Leases</span>
+                    </div>
+                    <div className="flex justify-between text-slate-700">
+                      <span className="text-slate-500">Staff Limit:</span>
+                      <span className="font-bold text-slate-900">{p.maxStaff} Team Members</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-1.5">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                      Included Features:
+                    </span>
+                    <div className="space-y-1">
+                      {(p.features || []).map((feat, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-600">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                          <span>{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {p.createdAt && (
+                    <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-50 pt-2">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-slate-400" />
+                        Created: {formatDateTime(p.createdAt)}
+                      </span>
+                      {p.updatedAt && p.updatedAt !== p.createdAt && (
+                        <span>Updated: {formatDateTime(p.updatedAt)}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            </Card>
-          ))}
+
+                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleActive(p)}
+                    title={`Click to ${p.isActive ? "deactivate" : "activate"} plan tier`}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors cursor-pointer ${
+                      p.isActive
+                        ? "text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
+                        : "text-slate-600 bg-slate-100 border-slate-200 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        p.isActive ? "bg-emerald-500" : "bg-slate-400"
+                      }`}
+                    />
+                    {p.isActive ? "Active Tier" : "Inactive"}
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleOpenEdit(p)}
+                      className="text-xs h-7 px-2.5"
+                    >
+                      Edit Specs
+                    </Button>
+                    <button
+                      onClick={() => handleRequestDelete(p)}
+                      title="Delete Plan Tier"
+                      className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalRecords={plans.length}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setPage(1);
+            }}
+            pageSizeOptions={[3, 6, 12, 24]}
+            apiEndpoint="GET /api/v1/plans"
+          />
         </div>
       )}
 
