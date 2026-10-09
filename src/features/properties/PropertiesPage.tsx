@@ -13,7 +13,9 @@ import {
   Search,
   RefreshCw,
   Clock,
+  Layers,
 } from "lucide-react";
+import PropertyUnitsModal from "./components/PropertyUnitsModal";
 import { useApi } from "@/hooks/useApi";
 import { propertyService } from "@/services/property.service";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,8 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
 import { errMsg, formatINR, formatDateTime } from "@/lib/utils";
+import { useAppSelector } from "@/app/hooks";
+import { canAccess } from "@/lib/permissions";
 import type { Property } from "@/types";
 
 const schema = z.object({
@@ -38,7 +42,13 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 export default function PropertiesPage() {
-  const { data, loading, error, reload } = useApi(propertyService.list, [] as Property[]);
+  const user = useAppSelector((s) => s.auth.user);
+  const canCreateProp = canAccess(user, "property.create");
+  const canUpdateProp = canAccess(user, "property.update");
+  const canDeleteProp = canAccess(user, "property.delete");
+  const canViewUnits = canAccess(user, "unit.read") || canAccess(user, "unit.create");
+
+  const { data, setData, loading, error, reload } = useApi(propertyService.list, [] as Property[]);
   const [open, setOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [deletingProperty, setDeletingProperty] = useState<Property | null>(null);
@@ -46,6 +56,7 @@ export default function PropertiesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "VACANT" | "OCCUPIED">("ALL");
   const [formError, setFormError] = useState<string | null>(null);
+  const [selectedPropertyForUnits, setSelectedPropertyForUnits] = useState<Property | null>(null);
 
   const {
     register,
@@ -89,14 +100,24 @@ export default function PropertiesPage() {
     setFormError(null);
     try {
       if (editingProperty) {
-        await propertyService.update(editingProperty.id, v);
+        const updated = await propertyService.update(editingProperty.id, v);
+        reset();
+        setOpen(false);
+        setEditingProperty(null);
+        if (updated) {
+          setData((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+        }
+        await reload();
       } else {
-        await propertyService.create(v);
+        const created = await propertyService.create(v);
+        reset();
+        setOpen(false);
+        setEditingProperty(null);
+        if (created) {
+          setData((prev) => [created, ...prev.filter((p) => p.id !== created.id)]);
+        }
+        await reload();
       }
-      reset();
-      setOpen(false);
-      setEditingProperty(null);
-      reload();
     } catch (e) {
       setFormError(errMsg(e));
     }
@@ -111,8 +132,9 @@ export default function PropertiesPage() {
     setIsDeleting(true);
     try {
       await propertyService.remove(deletingProperty.id);
+      setData((prev) => prev.filter((p) => p.id !== deletingProperty.id));
       setDeletingProperty(null);
-      reload();
+      await reload();
     } catch (e) {
       setFormError(errMsg(e));
     } finally {
@@ -149,12 +171,14 @@ export default function PropertiesPage() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="Properties"
-        subtitle={`Managing ${data.length} registered units (${occupiedCount} occupied, ${vacantCount} vacant)`}
+        title="Properties & Buildings"
+        subtitle={`Managing ${data.length} registered buildings (${occupiedCount} occupied, ${vacantCount} vacant)`}
         action={
-          <Button onClick={handleOpenCreate} className="gap-2">
-            <Plus className="h-4 w-4" /> Add Property
-          </Button>
+          canCreateProp ? (
+            <Button onClick={handleOpenCreate} className="gap-2">
+              <Plus className="h-4 w-4" /> Add Building
+            </Button>
+          ) : undefined
         }
       />
 
@@ -277,25 +301,40 @@ export default function PropertiesPage() {
                   <span className="text-[11px] font-medium text-slate-400">
                     ID: #{p.id.slice(-6)}
                   </span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenEdit(p)}
-                      aria-label="Edit property"
-                      className="text-slate-500 hover:bg-blue-50 hover:text-blue-600 p-1.5 h-8 w-8"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRequestDelete(p)}
-                      aria-label="Delete property"
-                      className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 p-1.5 h-8 w-8"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="flex items-center gap-1.5">
+                    {canViewUnits && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedPropertyForUnits(p)}
+                        className="gap-1.5 text-xs text-indigo-600 border-indigo-200 hover:bg-indigo-50 h-8 px-2.5"
+                      >
+                        <Layers className="h-3.5 w-3.5" />
+                        <span>Flats/Units</span>
+                      </Button>
+                    )}
+                    {canUpdateProp && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenEdit(p)}
+                        aria-label="Edit property"
+                        className="text-slate-500 hover:bg-blue-50 hover:text-blue-600 p-1.5 h-8 w-8"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {canDeleteProp && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRequestDelete(p)}
+                        aria-label="Delete property"
+                        className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 p-1.5 h-8 w-8"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -392,6 +431,17 @@ export default function PropertiesPage() {
         onConfirm={handleConfirmDelete}
         onClose={() => setDeletingProperty(null)}
       />
+
+      {/* Multi-Unit Management Modal */}
+      {selectedPropertyForUnits && (
+        <PropertyUnitsModal
+          property={selectedPropertyForUnits}
+          onClose={() => {
+            setSelectedPropertyForUnits(null);
+            reload();
+          }}
+        />
+      )}
     </div>
   );
 }
