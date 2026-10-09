@@ -100,5 +100,15 @@ export const adminService = {
 
   updateSetting: (key: string, value: string) =>
     api.put(ENDPOINTS.ADMIN.SETTING_UPDATE(key), { value }).then((r) => (r.data?.data ?? r.data) as SystemSetting),
+
+  // Platform Oversight
+  listProperties: () =>
+    api.get(ENDPOINTS.ADMIN.PROPERTIES_LIST).then((r) => (r.data?.data ?? r.data) as any[]),
+
+  listLeases: () =>
+    api.get(ENDPOINTS.ADMIN.LEASES_LIST).then((r) => (r.data?.data ?? r.data) as any[]),
+
+  listMaintenance: () =>
+    api.get(ENDPOINTS.ADMIN.MAINTENANCE_LIST).then((r) => (r.data?.data ?? r.data) as any[]),
 };
 
