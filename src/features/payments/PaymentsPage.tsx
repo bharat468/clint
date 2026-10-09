@@ -12,10 +12,14 @@ import {
   AlertCircle,
   Search,
   RefreshCw,
+  FileDown,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { paymentService } from "@/services/payment.service";
 import { tenantService } from "@/services/tenant.service";
+import { propertyService } from "@/services/property.service";
+import { useAppSelector } from "@/app/hooks";
+import { generateRentInvoicePdf } from "@/lib/rentInvoicePdf";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
@@ -25,7 +29,8 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
 import { errMsg, formatINR, formatDateTime } from "@/lib/utils";
-import type { Payment, Tenant } from "@/types";
+import { canAccess } from "@/lib/permissions";
+import type { Payment, Tenant, Property } from "@/types";
 
 const schema = z.object({
   tenantId: z.string().min(1, "Please select a tenant"),
@@ -38,8 +43,14 @@ type Form = z.infer<typeof schema>;
 const tone = { PAID: "green", PENDING: "yellow", OVERDUE: "red" } as const;
 
 export default function PaymentsPage() {
-  const { data, loading, error, reload } = useApi(paymentService.list, [] as Payment[]);
+  const user = useAppSelector((s) => s.auth.user);
+  const canCreatePayment = canAccess(user, "payment.create");
+  const canUpdatePayment = canAccess(user, "payment.update");
+  const canDeletePayment = canAccess(user, "payment.delete") || canAccess(user, "payment.update");
+
+  const { data, setData, loading, error, reload } = useApi(paymentService.list, [] as Payment[]);
   const { data: tenants } = useApi(tenantService.list, [] as Tenant[]);
+  const { data: properties } = useApi(propertyService.list, [] as Property[]);
   const [open, setOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deletingPayment, setDeletingPayment] = useState<Payment | null>(null);
@@ -73,6 +84,28 @@ export default function PaymentsPage() {
 
   const tenantName = (id: string) => tenants.find((t) => t.id === id)?.name ?? "Tenant";
 
+  const handleDownloadInvoice = (p: Payment) => {
+    const tenant = tenants.find((t) => t.id === p.tenantId);
+    const propId = p.propertyId || tenant?.propertyId;
+    const property = properties.find((pr) => pr.id === propId);
+
+    generateRentInvoicePdf({
+      paymentId: p.id,
+      month: p.month,
+      propertyName: property?.title || "Rental Residence",
+      propertyAddress: property?.address || `${property?.city || "Metro Area"}`,
+      landlordName: user?.name || "Property Owner",
+      landlordPhone: user?.mobile,
+      landlordEmail: user?.email || undefined,
+      tenantName: tenant?.name || "Tenant",
+      tenantPhone: tenant?.phone,
+      tenantEmail: tenant?.email || undefined,
+      amount: p.amount,
+      status: p.status,
+      paidOn: p.paidOn,
+    });
+  };
+
   const handleOpenCreate = () => {
     setEditingPayment(null);
     reset({
@@ -102,22 +135,32 @@ export default function PaymentsPage() {
     const tenant = tenants.find((t) => t.id === v.tenantId);
     try {
       if (editingPayment) {
-        await paymentService.update(editingPayment.id, {
+        const updated = await paymentService.update(editingPayment.id, {
           ...v,
           propertyId: tenant?.propertyId ?? editingPayment.propertyId ?? "",
           paidOn: v.status === "PAID" ? new Date().toISOString().slice(0, 10) : null,
         });
+        reset();
+        setOpen(false);
+        setEditingPayment(null);
+        if (updated) {
+          setData((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+        }
+        await reload();
       } else {
-        await paymentService.create({
+        const created = await paymentService.create({
           ...v,
           propertyId: tenant?.propertyId ?? "",
           paidOn: v.status === "PAID" ? new Date().toISOString().slice(0, 10) : null,
         });
+        reset();
+        setOpen(false);
+        setEditingPayment(null);
+        if (created) {
+          setData((prev) => [created, ...prev.filter((p) => p.id !== created.id)]);
+        }
+        await reload();
       }
-      reset();
-      setOpen(false);
-      setEditingPayment(null);
-      reload();
     } catch (e) {
       setFormError(errMsg(e));
     }
@@ -128,8 +171,9 @@ export default function PaymentsPage() {
     setIsDeleting(true);
     try {
       await paymentService.remove(deletingPayment.id);
+      setData((prev) => prev.filter((p) => p.id !== deletingPayment.id));
       setDeletingPayment(null);
-      reload();
+      await reload();
     } catch (e) {
       alert(errMsg(e));
     } finally {
@@ -139,13 +183,15 @@ export default function PaymentsPage() {
 
   const markStatus = async (id: string, newStatus: "PAID" | "PENDING" | "OVERDUE") => {
     try {
+      setData((prev) => prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p)));
       await paymentService.update(id, {
         status: newStatus,
         paidOn: newStatus === "PAID" ? new Date().toISOString().slice(0, 10) : null,
       });
-      reload();
+      await reload();
     } catch (e) {
       alert(errMsg(e));
+      await reload();
     }
   };
 
@@ -183,9 +229,11 @@ export default function PaymentsPage() {
         title="Rent & Payments"
         subtitle="Track rent invoices, payment statuses, and overdue collections"
         action={
-          <Button onClick={handleOpenCreate} className="gap-2">
-            <Plus className="h-4 w-4" /> Record Payment
-          </Button>
+          canCreatePayment ? (
+            <Button onClick={handleOpenCreate} className="gap-2">
+              <Plus className="h-4 w-4" /> Record Payment
+            </Button>
+          ) : undefined
         }
       />
 
@@ -279,9 +327,11 @@ export default function PaymentsPage() {
         empty={!loading && !error && data.length === 0}
         emptyMessage="No payment records found. Log monthly rental invoices to track payment history."
         emptyAction={
-          <Button onClick={handleOpenCreate} size="sm">
-            <Plus className="h-4 w-4" /> Record Payment
-          </Button>
+          canCreatePayment ? (
+            <Button onClick={handleOpenCreate} size="sm">
+              <Plus className="h-4 w-4" /> Record Payment
+            </Button>
+          ) : undefined
         }
       />
 
@@ -336,27 +386,33 @@ export default function PaymentsPage() {
                           </span>
                         </td>
 
-                        {/* Interactive Status Badge (Click to toggle status) */}
+                        {/* Interactive Status Badge (Click to toggle status if permitted) */}
                         <td className="px-5 py-4">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              markStatus(
-                                p.id,
-                                p.status === "PAID"
-                                  ? "PENDING"
-                                  : p.status === "PENDING"
-                                  ? "OVERDUE"
-                                  : "PAID"
-                              )
-                            }
-                            title="Click to advance status (Paid -> Pending -> Overdue -> Paid)"
-                            className="transition-transform active:scale-95"
-                          >
-                            <Badge tone={tone[p.status]} dot className="cursor-pointer">
+                          {canUpdatePayment ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                markStatus(
+                                  p.id,
+                                  p.status === "PAID"
+                                    ? "PENDING"
+                                    : p.status === "PENDING"
+                                    ? "OVERDUE"
+                                    : "PAID"
+                                )
+                              }
+                              title="Click to advance status (Paid -> Pending -> Overdue -> Paid)"
+                              className="transition-transform active:scale-95"
+                            >
+                              <Badge tone={tone[p.status]} dot className="cursor-pointer">
+                                {p.status}
+                              </Badge>
+                            </button>
+                          ) : (
+                            <Badge tone={tone[p.status]} dot>
                               {p.status}
                             </Badge>
-                          </button>
+                          )}
                         </td>
 
                         {/* Payment Date & Time */}
@@ -378,10 +434,20 @@ export default function PaymentsPage() {
                           )}
                         </td>
 
-                        {/* Actions: Mark Paid + Edit + Delete */}
+                        {/* Actions: Download Bill + Mark Paid + Edit + Delete */}
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {p.status !== "PAID" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownloadInvoice(p)}
+                              title="Download Official Rent Bill / Receipt PDF"
+                              className="gap-1 border-blue-200 text-blue-700 hover:bg-blue-50 h-8 text-xs font-semibold px-2"
+                            >
+                              <FileDown className="h-3.5 w-3.5 text-blue-600" />
+                              <span>Bill PDF</span>
+                            </Button>
+                            {p.status !== "PAID" && canUpdatePayment && (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -392,24 +458,28 @@ export default function PaymentsPage() {
                                 <span>Paid</span>
                               </Button>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenEdit(p)}
-                              aria-label="Edit payment"
-                              className="text-slate-500 hover:bg-blue-50 hover:text-blue-600 h-8 w-8 p-1.5"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeletingPayment(p)}
-                              aria-label="Delete payment"
-                              className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 h-8 w-8 p-1.5"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            {canUpdatePayment && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenEdit(p)}
+                                aria-label="Edit payment"
+                                className="text-slate-500 hover:bg-blue-50 hover:text-blue-600 h-8 w-8 p-1.5"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            {canDeletePayment && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeletingPayment(p)}
+                                aria-label="Delete payment"
+                                className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 h-8 w-8 p-1.5"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -453,7 +523,16 @@ export default function PaymentsPage() {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      {p.status !== "PAID" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadInvoice(p)}
+                        className="gap-1 border-blue-200 text-blue-700 hover:bg-blue-50 h-8 text-xs font-semibold px-2"
+                      >
+                        <FileDown className="h-3.5 w-3.5 text-blue-600" />
+                        <span>PDF</span>
+                      </Button>
+                      {p.status !== "PAID" && canUpdatePayment && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -464,24 +543,28 @@ export default function PaymentsPage() {
                           <span>Paid</span>
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleOpenEdit(p)}
-                        aria-label="Edit payment"
-                        className="text-slate-500 hover:text-blue-600 h-8 w-8 p-1.5"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeletingPayment(p)}
-                        aria-label="Delete payment"
-                        className="text-slate-400 hover:text-rose-600 h-8 w-8 p-1.5"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {canUpdatePayment && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEdit(p)}
+                          aria-label="Edit payment"
+                          className="text-slate-500 hover:text-blue-600 h-8 w-8 p-1.5"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {canDeletePayment && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeletingPayment(p)}
+                          aria-label="Delete payment"
+                          className="text-slate-400 hover:text-rose-600 h-8 w-8 p-1.5"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Card>
