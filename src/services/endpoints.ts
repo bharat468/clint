@@ -74,6 +74,9 @@ export const ENDPOINTS = {
     ORGANIZATION_SUBSCRIPTION: (id: string) => `/admin/organizations/${id}/subscription`,
     SETTINGS_LIST: "/admin/settings",
     SETTING_UPDATE: (key: string) => `/admin/settings/${key}`,
+    PROPERTIES_LIST: "/admin/properties",
+    LEASES_LIST: "/admin/leases",
+    MAINTENANCE_LIST: "/admin/maintenance",
   },
 
   // SaaS Plans & Subscriptions
@@ -83,6 +86,51 @@ export const ENDPOINTS = {
     DETAIL: (id: string) => `/plans/${id}`,
     UPDATE: (id: string) => `/plans/${id}`,
     DELETE: (id: string) => `/plans/${id}`,
+  },
+
+  // Multi-Unit Management
+  UNITS: {
+    LIST: "/units",
+    CREATE: "/units",
+    DETAIL: (id: string) => `/units/${id}`,
+    UPDATE: (id: string) => `/units/${id}`,
+    DELETE: (id: string) => `/units/${id}`,
+  },
+
+  // Rental Listings & Marketplace
+  LISTINGS: {
+    PUBLIC_LIST: "/listings/public",
+    PUBLIC_DETAIL: (id: string) => `/listings/public/${id}`,
+    OWNER_LIST: "/listings",
+    CREATE: "/listings",
+    UPDATE: (id: string) => `/listings/${id}`,
+    DELETE: (id: string) => `/listings/${id}`,
+  },
+
+  // Rental Applications
+  APPLICATIONS: {
+    SUBMIT: "/applications",
+    MY_LIST: "/applications/my",
+    OWNER_LIST: "/applications",
+    APPROVE: (id: string) => `/applications/${id}/approve`,
+    REJECT: (id: string) => `/applications/${id}/reject`,
+  },
+
+  // Leases & Rent Schedules
+  LEASES: {
+    MY_RENTALS: "/leases/my-rentals",
+    OWNER_LIST: "/leases",
+    DETAIL: (id: string) => `/leases/${id}`,
+    PAY_SCHEDULE: (scheduleId: string) => `/leases/schedules/${scheduleId}/pay`,
+  },
+
+  // Maintenance & Complaints
+  MAINTENANCE: {
+    LIST: "/maintenance",
+    MY_LIST: "/maintenance/my",
+    CREATE: "/maintenance",
+    ASSIGN: (id: string) => `/maintenance/${id}/assign`,
+    STATUS: (id: string) => `/maintenance/${id}/status`,
   },
 
   // Organizations
