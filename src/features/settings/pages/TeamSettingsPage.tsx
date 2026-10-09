@@ -30,6 +30,7 @@ import { Toast } from "@/components/ui/toast";
 import { errMsg, formatDateTime } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
+import CustomRoleModal from "../components/CustomRoleModal";
 import type { Role, Property } from "@/types";
 
 export default function TeamSettingsPage() {
@@ -52,8 +53,14 @@ export default function TeamSettingsPage() {
   };
 
   const { data: members, reload: reloadMembers } = useApi(fetchMembers, [] as OrgMember[]);
-  const { data: roles } = useApi(roleService.listRoles, [] as Role[]);
+  const { data: roles, reload: reloadRoles } = useApi(roleService.listRoles, [] as Role[]);
   const { data: properties } = useApi(propertyService.list, [] as Property[]);
+
+  const [activeTab, setActiveTab] = useState<"STAFF" | "ROLES">("STAFF");
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [roleToEdit, setRoleToEdit] = useState<Role | null>(null);
+  const [deletingRole, setDeletingRole] = useState<Role | null>(null);
+  const [isDeletingRole, setIsDeletingRole] = useState(false);
 
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<OrgMember | null>(null);
@@ -229,6 +236,36 @@ export default function TeamSettingsPage() {
     }
   };
 
+  // Role Management Handlers
+  const handleOpenCreateRole = () => {
+    setRoleToEdit(null);
+    setIsRoleModalOpen(true);
+  };
+
+  const handleOpenEditRole = (r: Role) => {
+    setRoleToEdit(r);
+    setIsRoleModalOpen(true);
+  };
+
+  const handleRequestDeleteRole = (r: Role) => {
+    setDeletingRole(r);
+  };
+
+  const handleConfirmDeleteRole = async () => {
+    if (!deletingRole) return;
+    setIsDeletingRole(true);
+    try {
+      await roleService.deleteRole(deletingRole.id);
+      showFeedback(`Custom role "${deletingRole.name}" deleted successfully`);
+      setDeletingRole(null);
+      reloadRoles();
+    } catch (err) {
+      showFeedback(errMsg(err), "error");
+    } finally {
+      setIsDeletingRole(false);
+    }
+  };
+
   if (!canAssignRoles && !canReadRoles) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-xs">
@@ -260,157 +297,287 @@ export default function TeamSettingsPage() {
               <Users className="h-4 w-4" />
             </span>
             <h2 className="text-xl font-bold tracking-tight text-slate-900">
-              Team & Staff Management
+              Team, Staff & Permissions
             </h2>
-            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-200/60">
-              {members.length} Members
-            </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Invite property managers, leasing staff, and assign custom operational roles with property scopes.
+            Onboard property managers, accountants, caretakers, and assign granular CRUD permissions.
           </p>
         </div>
 
-        {canAssignRoles && (
-          <Button onClick={handleOpenAddMember} className="gap-2">
-            <Plus className="h-4 w-4" />
-            <span>Add Staff / Team Member</span>
-          </Button>
-        )}
-      </div>
-
-      {/* Instant Mobile Onboarding Notice Banner */}
-      <div className="rounded-xl bg-blue-50/70 p-4 border border-blue-100 text-xs text-slate-700 flex items-start gap-3">
-        <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-        <div>
-          <p className="font-bold text-blue-900">Instant Mobile Onboarding</p>
-          <p className="mt-0.5 text-slate-600 leading-relaxed">
-            Staff members added here are automatically saved in the database. When they open RentMate and enter their 10-digit mobile number, the platform immediately verifies them and signs them directly into their assigned workspace.
-          </p>
+        <div className="flex items-center gap-2">
+          {canAssignRoles && (
+            <>
+              {activeTab === "STAFF" ? (
+                <Button onClick={handleOpenAddMember} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  <span>Add Staff Member</span>
+                </Button>
+              ) : (
+                <Button onClick={handleOpenCreateRole} className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+                  <Plus className="h-4 w-4" />
+                  <span>Create Custom Role</span>
+                </Button>
+              )}
+            </>
+          )}
         </div>
       </div>
 
-      {/* Team Members Data Table */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-2xs">
-        <table className="w-full text-left text-xs">
-          <thead className="border-b border-slate-100 bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold">
-            <tr>
-              <th className="px-5 py-3.5">Team Member</th>
-              <th className="px-5 py-3.5">Assigned Role</th>
-              <th className="px-5 py-3.5">Property Scope</th>
-              <th className="px-5 py-3.5">Status</th>
-              <th className="px-5 py-3.5">Joined / Onboarded</th>
-              <th className="px-5 py-3.5 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-slate-700">
-            {members.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-12 text-center text-slate-400">
-                  No staff members onboarded yet. Click &quot;Add Staff / Team Member&quot; to invite your first employee.
-                </td>
-              </tr>
-            ) : (
-              members.map((m) => {
-                const isOwner = m.roleSlug === "owner" || m.role === "Owner";
-                return (
-                  <tr key={m.memberId} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-5 py-4">
-                      <div className="font-bold text-slate-900 text-sm">{m.name || "Staff Member"}</div>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
-                        <Phone className="h-3 w-3 text-slate-400" />
-                        <span>{m.mobile}</span>
-                      </div>
-                      {m.email && (
-                        <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
-                          <Mail className="h-3 w-3 text-slate-300" />
-                          <span>{m.email}</span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-4">
-                      <Badge tone={isOwner ? "blue" : "indigo"}>
-                        {m.role}
-                      </Badge>
-                    </td>
-                    <td className="px-5 py-4">
-                      {m.propertyScope.length === 0 ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
-                          <CheckCircle2 className="h-3 w-3" />
-                          All Properties
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100">
-                          {m.propertyScope.length} Assigned Building(s)
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-4">
-                      {isOwner ? (
-                        <Badge tone="green">ACTIVE</Badge>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleToggleMemberStatus(m)}
-                          title="Click to toggle Active / Inactive status"
-                          className="transition-transform active:scale-95"
-                        >
-                          <Badge tone={m.status === "ACTIVE" ? "green" : "red"} className="cursor-pointer">
-                            {m.status}
-                          </Badge>
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-5 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
-                        <Clock className="h-3.5 w-3.5 text-slate-400" />
-                        <span>{formatDateTime(m.joinedAt)}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {!isOwner && canAssignRoles && (
-                          <>
-                            <button
-                              onClick={() => handleToggleMemberStatus(m)}
-                              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
-                                m.status === "ACTIVE"
-                                  ? "text-slate-500 hover:text-amber-600 hover:bg-amber-50"
-                                  : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                              }`}
-                              title={m.status === "ACTIVE" ? "Deactivate Staff Member" : "Activate Staff Member"}
-                            >
-                              {m.status === "ACTIVE" ? (
-                                <UserX className="h-4 w-4 text-amber-500" />
-                              ) : (
-                                <UserCheck className="h-4 w-4 text-emerald-600" />
-                              )}
-                            </button>
-                            <button
-                              onClick={() => handleOpenEditMember(m)}
-                              className="text-slate-500 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-50 transition-colors"
-                              title="Edit Member Role & Scope"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleRequestRemoveMember(m)}
-                              className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                              title="Remove from Organization"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
+      {/* Tabs Navigation */}
+      <div className="flex items-center gap-2 border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab("STAFF")}
+          className={`flex items-center gap-2 pb-3 px-4 text-xs font-bold border-b-2 transition-colors ${
+            activeTab === "STAFF"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          <span>Employees & Staff ({members.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("ROLES")}
+          className={`flex items-center gap-2 pb-3 px-4 text-xs font-bold border-b-2 transition-colors ${
+            activeTab === "ROLES"
+              ? "border-indigo-600 text-indigo-600"
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <ShieldCheck className="h-4 w-4" />
+          <span>Operational Roles & CRUD Matrix ({roles.length})</span>
+        </button>
+      </div>
+
+      {/* TAB 1: EMPLOYEES & STAFF */}
+      {activeTab === "STAFF" && (
+        <div className="space-y-4">
+          {/* Instant Mobile Onboarding Notice Banner */}
+          <div className="rounded-xl bg-blue-50/70 p-4 border border-blue-100 text-xs text-slate-700 flex items-start gap-3">
+            <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-blue-900">Instant Mobile Onboarding</p>
+              <p className="mt-0.5 text-slate-600 leading-relaxed">
+                Staff members added here are automatically saved in the database. When they open RentMate and enter their 10-digit mobile number, the platform immediately verifies them and signs them directly into their assigned workspace.
+              </p>
+            </div>
+          </div>
+
+          {/* Team Members Data Table */}
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-2xs">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-slate-100 bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th className="px-5 py-3.5">Team Member</th>
+                  <th className="px-5 py-3.5">Assigned Role</th>
+                  <th className="px-5 py-3.5">Property Scope</th>
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5">Joined / Onboarded</th>
+                  <th className="px-5 py-3.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {members.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                      No staff members onboarded yet. Click &quot;Add Staff Member&quot; to invite your first employee.
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                ) : (
+                  members.map((m) => {
+                    const isOwner = m.roleSlug === "owner" || m.role === "Owner";
+                    return (
+                      <tr key={m.memberId} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="px-5 py-4">
+                          <div className="font-bold text-slate-900 text-sm">{m.name || "Staff Member"}</div>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono mt-0.5">
+                            <Phone className="h-3 w-3 text-slate-400" />
+                            <span>{m.mobile}</span>
+                          </div>
+                          {m.email && (
+                            <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                              <Mail className="h-3 w-3 text-slate-300" />
+                              <span>{m.email}</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge tone={isOwner ? "blue" : "indigo"}>
+                            {m.role}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-4">
+                          {m.propertyScope.length === 0 ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+                              <CheckCircle2 className="h-3 w-3" />
+                              All Properties
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100">
+                              {m.propertyScope.length} Assigned Building(s)
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          {isOwner ? (
+                            <Badge tone="green">ACTIVE</Badge>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleMemberStatus(m)}
+                              title="Click to toggle Active / Inactive status"
+                              className="transition-transform active:scale-95"
+                            >
+                              <Badge tone={m.status === "ACTIVE" ? "green" : "red"} className="cursor-pointer">
+                                {m.status}
+                              </Badge>
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                            <Clock className="h-3.5 w-3.5 text-slate-400" />
+                            <span>{formatDateTime(m.joinedAt)}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {!isOwner && canAssignRoles && (
+                              <>
+                                <button
+                                  onClick={() => handleToggleMemberStatus(m)}
+                                  className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
+                                    m.status === "ACTIVE"
+                                      ? "text-slate-500 hover:text-amber-600 hover:bg-amber-50"
+                                      : "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                  }`}
+                                  title={m.status === "ACTIVE" ? "Deactivate Staff Member" : "Activate Staff Member"}
+                                >
+                                  {m.status === "ACTIVE" ? (
+                                    <UserX className="h-4 w-4 text-amber-500" />
+                                  ) : (
+                                    <UserCheck className="h-4 w-4 text-emerald-600" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleOpenEditMember(m)}
+                                  className="text-slate-500 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+                                  title="Edit Member Role & Scope"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleRequestRemoveMember(m)}
+                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                  title="Remove from Organization"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: OPERATIONAL ROLES & CRUD PERMISSIONS MATRIX */}
+      {activeTab === "ROLES" && (
+        <div className="space-y-4">
+          <div className="rounded-xl bg-indigo-50/70 p-4 border border-indigo-100 text-xs text-slate-700 flex items-start gap-3">
+            <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-indigo-950">Granular Role-Based Access Control</p>
+              <p className="mt-0.5 text-slate-600 leading-relaxed">
+                Roles allow you to control exactly which CRUD actions (Properties, Units, Tenants, Leases, Payments, Maintenance) your staff members can perform. Predefined system roles provide standard profiles, while custom roles give you 100% fine-grained control.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {roles.map((r) => {
+              const permKeys = r.permissions?.map((p) => p.permission?.key).filter(Boolean) || [];
+              const isSystem = r.isSystem;
+
+              return (
+                <div
+                  key={r.id}
+                  className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:border-slate-300 transition-colors"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-bold text-sm text-slate-900">{r.name}</h3>
+                        <span className="font-mono text-[10px] text-slate-400">slug: {r.slug}</span>
+                      </div>
+                      <Badge tone={isSystem ? "blue" : "indigo"}>
+                        {isSystem ? "SYSTEM" : "CUSTOM"}
+                      </Badge>
+                    </div>
+
+                    <p className="text-xs text-slate-500 min-h-[32px]">
+                      {r.description || "Operational role with customized permissions set"}
+                    </p>
+
+                    <div>
+                      <div className="text-[11px] font-semibold text-slate-600 mb-1.5 flex items-center justify-between">
+                        <span>Granted Permissions:</span>
+                        <span className="font-bold text-indigo-600">{permKeys.length} items</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                        {permKeys.map((k) => (
+                          <span
+                            key={k}
+                            className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono"
+                          >
+                            {k}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-end gap-2">
+                    {!isSystem && canAssignRoles && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenEditRole(r)}
+                          className="h-7 text-xs px-2.5 gap-1 text-slate-700"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          <span>Edit</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRequestDeleteRole(r)}
+                          className="h-7 text-xs px-2 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </>
+                    )}
+                    {isSystem && (
+                      <span className="text-[11px] text-slate-400 italic">Protected System Preset</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Modal: Add Team Member */}
       {isMemberModalOpen && (
@@ -470,10 +637,23 @@ export default function TeamSettingsPage() {
                   <option value="">Select Role...</option>
                   {roles.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.name} ({r.isSystem ? "System" : "Custom"})
+                      {r.name} ({r.isSystem ? "System Preset" : "Custom Organization Role"})
                     </option>
                   ))}
                 </Select>
+                <div className="flex items-center justify-between mt-1 text-[11px]">
+                  <span className="text-slate-500">Need fine-grained CRUD permissions?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMemberModalOpen(false);
+                      handleOpenCreateRole();
+                    }}
+                    className="font-bold text-indigo-600 hover:text-indigo-800 underline"
+                  >
+                    + Create Custom Role
+                  </button>
+                </div>
               </Field>
 
               {/* Property Scope Assignment */}
@@ -598,10 +778,23 @@ export default function TeamSettingsPage() {
                   <option value="">Keep current role ({editingMember?.role})</option>
                   {roles.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.name} ({r.isSystem ? "System" : "Custom"})
+                      {r.name} ({r.isSystem ? "System Preset" : "Custom Organization Role"})
                     </option>
                   ))}
                 </Select>
+                <div className="flex items-center justify-between mt-1 text-[11px]">
+                  <span className="text-slate-500">Need specific custom permissions?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCloseEditModal();
+                      handleOpenCreateRole();
+                    }}
+                    className="font-bold text-indigo-600 hover:text-indigo-800 underline"
+                  >
+                    + Create Custom Role
+                  </button>
+                </div>
               </Field>
 
               {/* Property Scope Assignment */}
@@ -690,6 +883,34 @@ export default function TeamSettingsPage() {
         isLoading={isDeletingMember}
         onConfirm={handleConfirmRemoveMember}
         onClose={() => setDeletingMember(null)}
+      />
+
+      {/* Custom Role Creation & Edit Modal */}
+      <CustomRoleModal
+        open={isRoleModalOpen}
+        roleToEdit={roleToEdit}
+        organizationId={currentOrg.id}
+        onClose={() => setIsRoleModalOpen(false)}
+        onSuccess={(msg) => {
+          showFeedback(msg);
+          reloadRoles();
+        }}
+      />
+
+      {/* Delete Custom Role Confirm Modal */}
+      <ConfirmModal
+        open={Boolean(deletingRole)}
+        title="Delete Operational Role?"
+        description={
+          deletingRole
+            ? `Are you sure you want to delete the custom role "${deletingRole.name}"? Staff members currently assigned this role will need to be reassigned.`
+            : "Are you sure you want to delete this custom role?"
+        }
+        confirmText="Yes, Delete Role"
+        tone="danger"
+        isLoading={isDeletingRole}
+        onConfirm={handleConfirmDeleteRole}
+        onClose={() => setDeletingRole(null)}
       />
     </div>
   );
