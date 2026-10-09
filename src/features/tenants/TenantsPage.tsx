@@ -26,6 +26,8 @@ import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
 import { errMsg, formatDateTime } from "@/lib/utils";
+import { useAppSelector } from "@/app/hooks";
+import { canAccess } from "@/lib/permissions";
 import type { Property, Tenant } from "@/types";
 
 const schema = z.object({
@@ -39,7 +41,11 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 export default function TenantsPage() {
-  const { data, loading, error, reload } = useApi(tenantService.list, [] as Tenant[]);
+  const user = useAppSelector((s) => s.auth.user);
+  const canCreateTenant = canAccess(user, "tenant.create");
+  const canUpdateTenant = canAccess(user, "tenant.update");
+
+  const { data, setData, loading, error, reload } = useApi(tenantService.list, [] as Tenant[]);
   const { data: properties } = useApi(propertyService.list, [] as Property[]);
   const [open, setOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
@@ -90,14 +96,24 @@ export default function TenantsPage() {
     setFormError(null);
     try {
       if (editingTenant) {
-        await tenantService.update(editingTenant.id, { ...v, propertyId: v.propertyId || null });
+        const updated = await tenantService.update(editingTenant.id, { ...v, propertyId: v.propertyId || null });
+        reset();
+        setOpen(false);
+        setEditingTenant(null);
+        if (updated) {
+          setData((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
+        }
+        await reload();
       } else {
-        await tenantService.create({ ...v, propertyId: v.propertyId || null });
+        const created = await tenantService.create({ ...v, propertyId: v.propertyId || null });
+        reset();
+        setOpen(false);
+        setEditingTenant(null);
+        if (created) {
+          setData((prev) => [created, ...prev.filter((t) => t.id !== created.id)]);
+        }
+        await reload();
       }
-      reset();
-      setOpen(false);
-      setEditingTenant(null);
-      reload();
     } catch (e) {
       setFormError(errMsg(e));
     }
@@ -112,8 +128,9 @@ export default function TenantsPage() {
     setIsDeleting(true);
     try {
       await tenantService.remove(deletingTenant.id);
+      setData((prev) => prev.filter((t) => t.id !== deletingTenant.id));
       setDeletingTenant(null);
-      reload();
+      await reload();
     } catch (e) {
       setFormError(errMsg(e));
     } finally {
@@ -148,9 +165,11 @@ export default function TenantsPage() {
         title="Tenants"
         subtitle={`Managing ${data.length} registered tenant profiles`}
         action={
-          <Button onClick={handleOpenCreate} className="gap-2">
-            <Plus className="h-4 w-4" /> Add Tenant
-          </Button>
+          canCreateTenant ? (
+            <Button onClick={handleOpenCreate} className="gap-2">
+              <Plus className="h-4 w-4" /> Add Tenant
+            </Button>
+          ) : undefined
         }
       />
 
@@ -273,24 +292,28 @@ export default function TenantsPage() {
                       {/* Action Buttons: Edit + Delete */}
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenEdit(t)}
-                            aria-label="Edit tenant"
-                            className="text-slate-500 hover:bg-blue-50 hover:text-blue-600 h-8 w-8 p-1.5"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRequestDelete(t)}
-                            aria-label="Remove tenant"
-                            className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 h-8 w-8 p-1.5"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {canUpdateTenant && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenEdit(t)}
+                                aria-label="Edit tenant"
+                                className="text-slate-500 hover:bg-blue-50 hover:text-blue-600 h-8 w-8 p-1.5"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRequestDelete(t)}
+                                aria-label="Remove tenant"
+                                className="text-slate-400 hover:bg-rose-50 hover:text-rose-600 h-8 w-8 p-1.5"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -315,24 +338,28 @@ export default function TenantsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenEdit(t)}
-                      aria-label="Edit tenant"
-                      className="text-slate-500 hover:text-blue-600 p-1.5 h-8 w-8"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRequestDelete(t)}
-                      aria-label="Remove tenant"
-                      className="text-slate-400 hover:text-rose-600 p-1.5 h-8 w-8"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canUpdateTenant && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEdit(t)}
+                          aria-label="Edit tenant"
+                          className="text-slate-500 hover:text-blue-600 p-1.5 h-8 w-8"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRequestDelete(t)}
+                          aria-label="Remove tenant"
+                          className="text-slate-400 hover:text-rose-600 p-1.5 h-8 w-8"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
 
