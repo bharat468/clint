@@ -11,6 +11,9 @@ import {
   ChevronDown,
   ChevronRight,
   Sliders,
+  FileText,
+  Wrench,
+  Home,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSidebar, closeSidebar } from "@/features/ui/uiSlice";
@@ -20,7 +23,10 @@ import { cn } from "@/lib/utils";
 
 const mainNavigationLinks = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/properties", label: "Properties", icon: Building2 },
+  { to: "/properties", label: "Properties & Units", icon: Building2 },
+  { to: "/applications", label: "Applications", icon: FileText },
+  { to: "/maintenance", label: "Maintenance", icon: Wrench },
+  { to: "/tenant/my-rentals", label: "My Rentals (Tenant)", icon: Home },
   { to: "/tenants", label: "Tenants", icon: Users },
   { to: "/payments", label: "Payments", icon: CreditCard },
 ];
@@ -42,12 +48,23 @@ export default function Sidebar() {
   const isSettingsActive = location.pathname.startsWith("/settings");
   const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);
 
-  // Dynamic RBAC Filter: Modules only appear if user has the assigned permission
+  // Dynamic RBAC Filter: Modules only appear if user has the assigned permission or role
+  const isOwnerOrAdmin =
+    Boolean(user?.isSuperAdmin) ||
+    user?.adminRole === "SUPER_ADMIN" ||
+    user?.role === "OWNER" ||
+    user?.role === "LANDLORD" ||
+    user?.role === "ADMIN" ||
+    user?.permissions?.includes("*");
+
   const filteredMainLinks = mainNavigationLinks.filter((link) => {
     if (link.to === "/dashboard") return true;
-    if (link.to === "/properties") return canAccess(user, "property.read") || canAccess(user, "property.create");
-    if (link.to === "/tenants") return canAccess(user, "tenant.read") || canAccess(user, "tenant.create");
-    if (link.to === "/payments") return canAccess(user, "payment.read") || canAccess(user, "payment.create");
+    if (link.to === "/properties") return isOwnerOrAdmin || canAccess(user, "property.read") || canAccess(user, "property.create");
+    if (link.to === "/applications") return isOwnerOrAdmin || canAccess(user, "lease.create") || canAccess(user, "property.update");
+    if (link.to === "/maintenance") return isOwnerOrAdmin || canAccess(user, "maintenance.read") || canAccess(user, "maintenance.create") || user?.role === "TENANT";
+    if (link.to === "/tenant/my-rentals") return user?.role === "TENANT";
+    if (link.to === "/tenants") return isOwnerOrAdmin || canAccess(user, "tenant.read") || canAccess(user, "tenant.create");
+    if (link.to === "/payments") return isOwnerOrAdmin || canAccess(user, "payment.read") || canAccess(user, "payment.create");
     return true;
   });
 

@@ -7,49 +7,55 @@ import DashboardPage from "@/features/dashboard/DashboardPage";
 import PropertiesPage from "@/features/properties/PropertiesPage";
 import TenantsPage from "@/features/tenants/TenantsPage";
 import PaymentsPage from "@/features/payments/PaymentsPage";
+import ApplicationsPage from "@/features/applications/ApplicationsPage";
+import MaintenancePage from "@/features/maintenance/MaintenancePage";
+import MyRentalsPage from "@/features/tenant/MyRentalsPage";
 import SettingsLayout from "@/features/settings/layouts/SettingsLayout";
 import TeamSettingsPage from "@/features/settings/pages/TeamSettingsPage";
 import RolesSettingsPage from "@/features/settings/pages/RolesSettingsPage";
 import OrganizationSettingsPage from "@/features/settings/pages/OrganizationSettingsPage";
 import BillingSettingsPage from "@/features/settings/pages/BillingSettingsPage";
 
-// Public Marketing Website
-import PublicLayout from "@/features/public/layouts/PublicLayout";
-import LandingPage from "@/features/public/pages/LandingPage";
-import FeaturesPage from "@/features/public/pages/FeaturesPage";
-import PricingPage from "@/features/public/pages/PricingPage";
-import AboutPage from "@/features/public/pages/AboutPage";
-import ContactPage from "@/features/public/pages/ContactPage";
-import FaqPage from "@/features/public/pages/FaqPage";
-import PrivacyPolicyPage from "@/features/public/pages/PrivacyPolicyPage";
-import TermsPage from "@/features/public/pages/TermsPage";
-
 // Modular SuperAdmin Platform Architecture
 import SuperAdminLayout from "@/features/superadmin/layouts/SuperAdminLayout";
 import SuperAdminOverviewPage from "@/features/superadmin/pages/SuperAdminOverviewPage";
 import SuperAdminOrganizationsPage from "@/features/superadmin/pages/SuperAdminOrganizationsPage";
+import SuperAdminPropertiesPage from "@/features/superadmin/pages/SuperAdminPropertiesPage";
+import SuperAdminLeasesPage from "@/features/superadmin/pages/SuperAdminLeasesPage";
+import SuperAdminMaintenancePage from "@/features/superadmin/pages/SuperAdminMaintenancePage";
 import SuperAdminPlansPage from "@/features/superadmin/pages/SuperAdminPlansPage";
 import SuperAdminRolesPage from "@/features/superadmin/pages/SuperAdminRolesPage";
 import SuperAdminUsersPage from "@/features/superadmin/pages/SuperAdminUsersPage";
 import SuperAdminSettingsPage from "@/features/superadmin/pages/SuperAdminSettingsPage";
+import { useAppSelector } from "@/app/hooks";
+
+/**
+ * Direct entry dispatcher:
+ * - If unauthenticated -> Redirect to /login
+ * - If SuperAdmin -> Redirect to /superadmin (Admin Dashboard)
+ * - If Landlord/Staff -> Redirect to /dashboard (Landlord Dashboard)
+ */
+function IndexRedirect() {
+  const token = useAppSelector((s) => s.auth.token);
+  const user = useAppSelector((s) => s.auth.user);
+
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (Boolean(user.isSuperAdmin) || Boolean(user.adminRole)) {
+    return <Navigate to="/superadmin" replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
+}
 
 export const router = createBrowserRouter([
   // ============================================================
-  // 1. PUBLIC MARKETING WEBSITE ROUTES (No Auth Required)
+  // 1. ROOT DISPATCHER (Direct SaaS entry - No public marketing)
   // ============================================================
-  {
-    element: <PublicLayout />,
-    children: [
-      { path: "/", element: <LandingPage /> },
-      { path: "/features", element: <FeaturesPage /> },
-      { path: "/pricing", element: <PricingPage /> },
-      { path: "/about", element: <AboutPage /> },
-      { path: "/contact", element: <ContactPage /> },
-      { path: "/faq", element: <FaqPage /> },
-      { path: "/privacy-policy", element: <PrivacyPolicyPage /> },
-      { path: "/terms-and-conditions", element: <TermsPage /> },
-    ],
-  },
+  { path: "/", element: <IndexRedirect /> },
+  { path: "/admin", element: <Navigate to="/superadmin" replace /> },
 
   // ============================================================
   // 2. AUTHENTICATION ONBOARDING
@@ -58,17 +64,20 @@ export const router = createBrowserRouter([
   { path: "/register", element: <RegisterPage /> },
 
   // ============================================================
-  // 3. PROTECTED PLATFORM HUBS
+  // 3. PROTECTED PLATFORM WORKSPACES
   // ============================================================
   {
     element: <ProtectedRoute />,
     children: [
-      // A. Standard Landlord & Staff Workspace
+      // A. Landlord & Property Operations Workspace (Dashboard 1)
       {
         element: <AppLayout />,
         children: [
           { path: "/dashboard", element: <DashboardPage /> },
           { path: "/properties", element: <PropertiesPage /> },
+          { path: "/applications", element: <ApplicationsPage /> },
+          { path: "/maintenance", element: <MaintenancePage /> },
+          { path: "/tenant/my-rentals", element: <MyRentalsPage /> },
           { path: "/tenants", element: <TenantsPage /> },
           { path: "/payments", element: <PaymentsPage /> },
           {
@@ -84,13 +93,16 @@ export const router = createBrowserRouter([
           },
         ],
       },
-      // B. Dedicated Platform SuperAdmin Portal
+      // B. SuperAdmin Platform Control Center (Dashboard 2)
       {
         path: "/superadmin",
         element: <SuperAdminLayout />,
         children: [
           { path: "", element: <SuperAdminOverviewPage /> },
           { path: "organizations", element: <SuperAdminOrganizationsPage /> },
+          { path: "properties", element: <SuperAdminPropertiesPage /> },
+          { path: "leases", element: <SuperAdminLeasesPage /> },
+          { path: "maintenance", element: <SuperAdminMaintenancePage /> },
           { path: "plans", element: <SuperAdminPlansPage /> },
           { path: "roles", element: <SuperAdminRolesPage /> },
           { path: "users", element: <SuperAdminUsersPage /> },
@@ -101,5 +113,5 @@ export const router = createBrowserRouter([
   },
 
   // Catch-all
-  { path: "*", element: <Navigate to="/" replace /> },
+  { path: "*", element: <IndexRedirect /> },
 ]);
