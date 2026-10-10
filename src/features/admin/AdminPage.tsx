@@ -24,6 +24,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Toast } from "@/components/ui/toast";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { formatINR, errMsg } from "@/lib/utils";
 import type { AdminUser, Role, Permission, Plan, Property } from "@/types";
@@ -40,6 +41,14 @@ export default function AdminPage() {
   const [rolesPageSize, setRolesPageSize] = useState(6);
   const [plansPage, setPlansPage] = useState(1);
   const [plansPageSize, setPlansPageSize] = useState(6);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type?: "success" | "error" | "info";
+  }>({
+    show: false,
+    message: "",
+  });
 
   // Data queries
   const {
@@ -173,9 +182,14 @@ export default function AdminPage() {
     const nextStatus = user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
     try {
       await adminService.updateStatus(user.id, nextStatus);
+      setToast({
+        show: true,
+        type: "success",
+        message: `User status changed to ${nextStatus}.`,
+      });
       reloadUsers();
     } catch (err) {
-      alert(errMsg(err));
+      setToast({ show: true, type: "error", message: errMsg(err) });
     }
   };
 
@@ -1175,6 +1189,13 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: "" })}
+      />
     </div>
   );
 }

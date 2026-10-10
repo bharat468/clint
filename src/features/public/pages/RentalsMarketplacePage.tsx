@@ -19,6 +19,7 @@ import {
 } from "@/services/rentalLifecycle.service";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Toast } from "@/components/ui/toast";
 
 export default function RentalsMarketplacePage() {
   const navigate = useNavigate();
@@ -38,6 +39,14 @@ export default function RentalsMarketplacePage() {
   const [applicantMessage, setApplicantMessage] = useState("");
   const [submittingApp, setSubmittingApp] = useState(false);
   const [appSuccess, setAppSuccess] = useState(false);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type?: "success" | "error" | "info";
+  }>({
+    show: false,
+    message: "",
+  });
 
   useEffect(() => {
     fetchListings();
@@ -92,7 +101,11 @@ export default function RentalsMarketplacePage() {
       });
       setAppSuccess(true);
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to submit application");
+      setToast({
+        show: true,
+        type: "error",
+        message: err.response?.data?.message || "Failed to submit application",
+      });
     } finally {
       setSubmittingApp(false);
     }
@@ -414,6 +427,13 @@ export default function RentalsMarketplacePage() {
           </div>
         </div>
       )}
+
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: "" })}
+      />
     </div>
   );
 }
