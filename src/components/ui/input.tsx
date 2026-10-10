@@ -2,6 +2,7 @@ import {
   useState,
   useRef,
   useEffect,
+  useMemo,
   forwardRef,
   Children,
   isValidElement,
@@ -35,13 +36,16 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
 );
 Textarea.displayName = "Textarea";
 
-interface OptionItem {
+export interface SelectOptionItem {
   value: string;
   label: ReactNode;
+  icon?: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
 
-export type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
+export type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "children"> & {
+  children?: ReactNode;
+  options?: SelectOptionItem[];
   placeholder?: string;
 };
 
@@ -50,6 +54,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     {
       className,
       children,
+      options: directOptions,
       value,
       defaultValue,
       onChange,
@@ -64,18 +69,30 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const hiddenSelectRef = useRef<HTMLSelectElement | null>(null);
     const [open, setOpen] = useState(false);
 
-    // Extract option items from children
-    const options: OptionItem[] = [];
-    Children.forEach(children, (child) => {
-      if (isValidElement(child)) {
-        const p = child.props as { value?: string; children?: ReactNode; disabled?: boolean };
-        options.push({
-          value: p.value !== undefined ? String(p.value) : "",
-          label: p.children ?? p.value ?? "",
-          disabled: p.disabled,
-        });
+    // Extract option items from props.options or children
+    const options: SelectOptionItem[] = useMemo(() => {
+      if (directOptions && directOptions.length > 0) {
+        return directOptions;
       }
-    });
+      const extracted: SelectOptionItem[] = [];
+      Children.forEach(children, (child) => {
+        if (isValidElement(child)) {
+          const p = child.props as {
+            value?: string;
+            children?: ReactNode;
+            disabled?: boolean;
+            icon?: React.ComponentType<{ className?: string }>;
+          };
+          extracted.push({
+            value: p.value !== undefined ? String(p.value) : "",
+            label: p.children ?? p.value ?? "",
+            disabled: p.disabled,
+            icon: p.icon,
+          });
+        }
+      });
+      return extracted;
+    }, [directOptions, children]);
 
     const [selectedVal, setSelectedVal] = useState<string>(() => {
       if (value !== undefined) return String(value);
@@ -98,6 +115,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           setOpen(false);
         }
       };
+
       const handleEscape = (e: KeyboardEvent) => {
         if (e.key === "Escape") setOpen(false);
       };
@@ -130,6 +148,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     };
 
     const currentOption = options.find((o) => o.value === selectedVal);
+    const TriggerIcon = currentOption?.icon;
 
     return (
       <div ref={containerRef} className="relative w-full">
@@ -148,10 +167,14 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           aria-hidden="true"
           {...props}
         >
-          {children}
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+              {typeof opt.label === "string" ? opt.label : opt.value}
+            </option>
+          ))}
         </select>
 
-        {/* Custom Shadcn Select Trigger */}
+        {/* Custom Select Trigger */}
         <button
           type="button"
           disabled={disabled}
@@ -164,22 +187,26 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             className
           )}
         >
-          <span className={cn("truncate", !currentOption?.value && "text-slate-400 font-normal")}>
-            {currentOption ? currentOption.label : placeholder || "Select..."}
-          </span>
+          <div className="flex items-center gap-2 truncate min-w-0">
+            {TriggerIcon && <TriggerIcon className="h-4 w-4 text-blue-600 shrink-0" />}
+            <span className={cn("truncate", !currentOption?.value && "text-slate-400 font-normal")}>
+              {currentOption ? currentOption.label : placeholder || "Select..."}
+            </span>
+          </div>
           <ChevronDown
             className={cn(
-              "h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200",
+              "h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200 ml-2",
               open && "rotate-180 text-blue-600"
             )}
           />
         </button>
 
-        {/* Custom Shadcn Dropdown Popover */}
+        {/* Custom Dropdown Popover */}
         {open && (
           <div className="absolute left-0 right-0 top-full mt-1.5 z-50 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl animate-in fade-in zoom-in-95 duration-150">
             {options.map((opt) => {
               const isSelected = opt.value === selectedVal;
+              const OptIcon = opt.icon;
               return (
                 <div
                   key={opt.value}
@@ -192,7 +219,17 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                     opt.disabled && "cursor-not-allowed opacity-40 hover:bg-transparent"
                   )}
                 >
-                  <span className="truncate">{opt.label}</span>
+                  <div className="flex items-center gap-2.5 truncate min-w-0">
+                    {OptIcon && (
+                      <OptIcon
+                        className={cn(
+                          "h-4 w-4 shrink-0 transition-colors",
+                          isSelected ? "text-blue-600" : "text-slate-400"
+                        )}
+                      />
+                    )}
+                    <span className="truncate">{opt.label}</span>
+                  </div>
                   {isSelected && <Check className="h-4 w-4 text-blue-600 shrink-0 ml-2" />}
                 </div>
               );
