@@ -31,6 +31,7 @@ import { errMsg, formatINR, formatDateTime } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
+import { Toast } from "@/components/ui/toast";
 import type { Property } from "@/types";
 
 const schema = z.object({
@@ -59,6 +60,10 @@ export default function PropertiesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "VACANT" | "OCCUPIED">("ALL");
   const [formError, setFormError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ show: boolean; message: string; type?: "success" | "error" | "info" }>({
+    show: false,
+    message: "",
+  });
   const [selectedPropertyForUnits, setSelectedPropertyForUnits] = useState<Property | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(9);
@@ -112,6 +117,7 @@ export default function PropertiesPage() {
         if (updated) {
           setData((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
         }
+        setToast({ show: true, type: "success", message: "Property updated successfully." });
         await reload();
       } else {
         const created = await propertyService.create(v);
@@ -121,10 +127,13 @@ export default function PropertiesPage() {
         if (created) {
           setData((prev) => [created, ...prev.filter((p) => p.id !== created.id)]);
         }
+        setToast({ show: true, type: "success", message: "Property registered successfully." });
         await reload();
       }
     } catch (e) {
-      setFormError(errMsg(e));
+      const err = errMsg(e);
+      setFormError(err);
+      setToast({ show: true, type: "error", message: err });
     }
   };
 
@@ -138,10 +147,14 @@ export default function PropertiesPage() {
     try {
       await propertyService.remove(deletingProperty.id);
       setData((prev) => prev.filter((p) => p.id !== deletingProperty.id));
+      const deletedTitle = deletingProperty.title;
       setDeletingProperty(null);
+      setToast({ show: true, type: "success", message: `Property "${deletedTitle}" removed successfully.` });
       await reload();
     } catch (e) {
-      setFormError(errMsg(e));
+      const err = errMsg(e);
+      setFormError(err);
+      setToast({ show: true, type: "error", message: err });
     } finally {
       setIsDeleting(false);
     }
@@ -151,9 +164,10 @@ export default function PropertiesPage() {
     const newStatus = p.status === "VACANT" ? "OCCUPIED" : "VACANT";
     try {
       await propertyService.update(p.id, { status: newStatus });
+      setToast({ show: true, type: "success", message: `Property marked as ${newStatus}.` });
       reload();
     } catch (e) {
-      alert(errMsg(e));
+      setToast({ show: true, type: "error", message: errMsg(e) });
     }
   };
 
@@ -491,6 +505,13 @@ export default function PropertiesPage() {
           }}
         />
       )}
+
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: "" })}
+      />
     </div>
   );
 }

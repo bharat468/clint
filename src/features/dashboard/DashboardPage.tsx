@@ -39,19 +39,21 @@ const initial = {
 
 export default function DashboardPage() {
   const { data, loading, error } = useApi(fetchAll, initial);
-  const { properties, tenants, payments } = data;
+  const properties = Array.isArray(data?.properties) ? data.properties : [];
+  const tenants = Array.isArray(data?.tenants) ? data.tenants : [];
+  const payments = Array.isArray(data?.payments) ? data.payments : [];
 
   // Financial Calculations
-  const paidPayments = payments.filter((p) => p.status === "PAID");
-  const pendingPayments = payments.filter((p) => p.status === "PENDING");
-  const overduePayments = payments.filter((p) => p.status === "OVERDUE");
+  const paidPayments = payments.filter((p) => p && p.status === "PAID");
+  const pendingPayments = payments.filter((p) => p && p.status === "PENDING");
+  const overduePayments = payments.filter((p) => p && p.status === "OVERDUE");
 
-  const collectedAmount = paidPayments.reduce((a, p) => a + p.amount, 0);
-  const pendingAmount = [...pendingPayments, ...overduePayments].reduce((a, p) => a + p.amount, 0);
+  const collectedAmount = paidPayments.reduce((a, p) => a + Number(p?.amount || 0), 0);
+  const pendingAmount = [...pendingPayments, ...overduePayments].reduce((a, p) => a + Number(p?.amount || 0), 0);
 
   // Occupancy Calculations
-  const occupiedProperties = properties.filter((p) => p.status === "OCCUPIED");
-  const vacantProperties = properties.filter((p) => p.status === "VACANT");
+  const occupiedProperties = properties.filter((p) => p && p.status === "OCCUPIED");
+  const vacantProperties = properties.filter((p) => p && p.status === "VACANT");
   const occupancyRate =
     properties.length > 0 ? Math.round((occupiedProperties.length / properties.length) * 100) : 0;
   const collectionRate =

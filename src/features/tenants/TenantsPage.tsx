@@ -30,6 +30,7 @@ import { errMsg, formatDateTime } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
+import { Toast } from "@/components/ui/toast";
 import type { Property, Tenant } from "@/types";
 
 const schema = z.object({
@@ -56,6 +57,10 @@ export default function TenantsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ show: boolean; message: string; type?: "success" | "error" | "info" }>({
+    show: false,
+    message: "",
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -108,6 +113,7 @@ export default function TenantsPage() {
         if (updated) {
           setData((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
         }
+        setToast({ show: true, type: "success", message: "Tenant details updated successfully." });
         await reload();
       } else {
         const created = await tenantService.create({ ...v, propertyId: v.propertyId || null });
@@ -117,10 +123,13 @@ export default function TenantsPage() {
         if (created) {
           setData((prev) => [created, ...prev.filter((t) => t.id !== created.id)]);
         }
+        setToast({ show: true, type: "success", message: "Tenant registered successfully." });
         await reload();
       }
     } catch (e) {
-      setFormError(errMsg(e));
+      const err = errMsg(e);
+      setFormError(err);
+      setToast({ show: true, type: "error", message: err });
     }
   };
 
@@ -134,10 +143,14 @@ export default function TenantsPage() {
     try {
       await tenantService.remove(deletingTenant.id);
       setData((prev) => prev.filter((t) => t.id !== deletingTenant.id));
+      const deletedName = deletingTenant.name;
       setDeletingTenant(null);
+      setToast({ show: true, type: "success", message: `Tenant "${deletedName}" removed successfully.` });
       await reload();
     } catch (e) {
-      setFormError(errMsg(e));
+      const err = errMsg(e);
+      setFormError(err);
+      setToast({ show: true, type: "error", message: err });
     } finally {
       setIsDeleting(false);
     }
@@ -511,6 +524,13 @@ export default function TenantsPage() {
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
         onClose={() => setDeletingTenant(null)}
+      />
+
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: "" })}
       />
     </div>
   );

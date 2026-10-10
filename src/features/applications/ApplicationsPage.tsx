@@ -15,6 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Toast } from "@/components/ui/toast";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
@@ -32,6 +34,14 @@ export default function ApplicationsPage() {
   const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
+
+  // Toast & Modals
+  const [toast, setToast] = useState<{ show: boolean; message: string; type?: "success" | "error" | "info" }>({
+    show: false,
+    message: "",
+  });
+  const [rejectingAppId, setRejectingAppId] = useState<string | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   // Approval Modal
   const [approveModalOpen, setApproveModalOpen] = useState(false);
@@ -89,24 +99,34 @@ export default function ApplicationsPage() {
         prev.map((a) => (a.id === selectedApp.id ? { ...a, status: "APPROVED" } : a))
       );
       setApproveModalOpen(false);
+      setToast({ show: true, type: "success", message: "Application approved and lease activated successfully." });
       await loadApplications();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to approve application");
+      setToast({ show: true, type: "error", message: err.response?.data?.message || "Failed to approve application" });
     } finally {
       setApproving(false);
     }
   };
 
-  const handleReject = async (appId: string) => {
-    if (!window.confirm("Are you sure you want to reject this rental application?")) return;
+  const handleRequestReject = (appId: string) => {
+    setRejectingAppId(appId);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectingAppId) return;
+    setIsRejecting(true);
     try {
-      await rentalLifecycleService.rejectApplication(appId);
+      await rentalLifecycleService.rejectApplication(rejectingAppId);
       setApplications((prev) =>
-        prev.map((a) => (a.id === appId ? { ...a, status: "REJECTED" } : a))
+        prev.map((a) => (a.id === rejectingAppId ? { ...a, status: "REJECTED" } : a))
       );
+      setRejectingAppId(null);
+      setToast({ show: true, type: "success", message: "Rental application rejected." });
       await loadApplications();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to reject application");
+      setToast({ show: true, type: "error", message: err.response?.data?.message || "Failed to reject application" });
+    } finally {
+      setIsRejecting(false);
     }
   };
 
@@ -247,7 +267,7 @@ export default function ApplicationsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleReject(app.id)}
+                    onClick={() => handleRequestReject(app.id)}
                     className="text-rose-600 hover:bg-rose-50 border-rose-200 text-xs h-8"
                   >
                     Reject
@@ -394,6 +414,25 @@ export default function ApplicationsPage() {
           </div>
         </div>
       )}
+
+      {/* Reject Confirmation Modal */}
+      <ConfirmModal
+        open={Boolean(rejectingAppId)}
+        title="Reject Rental Application?"
+        description="Are you sure you want to reject this applicant? This action will mark the application as REJECTED."
+        confirmText="Yes, Reject Application"
+        tone="danger"
+        isLoading={isRejecting}
+        onConfirm={handleConfirmReject}
+        onClose={() => setRejectingAppId(null)}
+      />
+
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: "" })}
+      />
     </div>
   );
 }
