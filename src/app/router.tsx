@@ -36,10 +36,9 @@ import { useAppSelector } from "@/app/hooks";
  * - If Landlord/Staff -> Redirect to /dashboard (Landlord Dashboard)
  */
 function IndexRedirect() {
-  const token = useAppSelector((s) => s.auth.token);
   const user = useAppSelector((s) => s.auth.user);
 
-  if (!token || !user) {
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 

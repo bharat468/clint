@@ -16,8 +16,8 @@ const load = (): AuthState => {
     const data = JSON.parse(localStorage.getItem(KEY) ?? "");
     return {
       user: data.user ?? null,
-      token: data.token ?? null,
-      refreshToken: data.refreshToken ?? null,
+      token: null, // Secure: tokens stored exclusively in httpOnly cookies
+      refreshToken: null, // Secure: tokens stored exclusively in httpOnly cookies
       activePortal: data.activePortal ?? null,
     };
   } catch {
@@ -27,13 +27,12 @@ const load = (): AuthState => {
 
 const persist = (s: AuthState) => {
   try {
-    if (s.token) {
+    if (s.user) {
+      // Store ONLY non-sensitive user profile and active portal (NO TOKENS IN LOCALSTORAGE)
       localStorage.setItem(
         KEY,
         JSON.stringify({
           user: s.user,
-          token: s.token,
-          refreshToken: s.refreshToken,
           activePortal: s.activePortal,
         })
       );

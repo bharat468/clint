@@ -12,21 +12,21 @@ export default function ProtectedRoute() {
   const location = useLocation();
 
   useEffect(() => {
-    if (token) {
+    if (user) {
       authService
         .me()
         .then((latestUser) => {
           if (latestUser) {
-            dispatch(setCredentials({ user: latestUser, token }));
+            dispatch(setCredentials({ user: latestUser, token: token ?? "" }));
           }
         })
         .catch(() => {
-          // Token expired or network issue
+          // Handled by axios 401 interceptor
         });
     }
-  }, [token, dispatch]);
+  }, [user, dispatch]);
 
-  if (!token || !user) {
+  if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

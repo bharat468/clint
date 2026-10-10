@@ -19,7 +19,7 @@ import type { User } from "@/types";
 export default function LoginPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const token = useAppSelector((s) => s.auth.token);
+  const user = useAppSelector((s) => s.auth.user);
 
   const [step, setStep] = useState<"MOBILE" | "OTP">("MOBILE");
   const [mobile, setMobile] = useState("");
@@ -45,7 +45,7 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  if (token) return <Navigate to="/dashboard" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
 
   const otpValue = otpDigits.join("");
 
