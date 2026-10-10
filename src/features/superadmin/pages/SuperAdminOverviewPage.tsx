@@ -279,13 +279,6 @@ export default function SuperAdminOverviewPage() {
                   })
                 )}
               </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-medium text-slate-500 bg-slate-50 border border-slate-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                  GET /api/v1/admin/organizations?limit=5
-                </span>
-              </div>
             </Card>
 
             {/* Widget 2: Platform Subscription Plans */}
@@ -333,13 +326,6 @@ export default function SuperAdminOverviewPage() {
                     </div>
                   ))
                 )}
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-medium text-slate-500 bg-slate-50 border border-slate-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                  GET /api/v1/plans?limit=5
-                </span>
               </div>
             </Card>
           </div>

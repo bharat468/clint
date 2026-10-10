@@ -1,5 +1,4 @@
-import React from "react";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Network, Copy, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 interface DataTablePaginationProps {
   currentPage: number;
@@ -9,7 +8,7 @@ interface DataTablePaginationProps {
   onPageChange: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
   pageSizeOptions?: number[];
-  apiEndpoint: string;
+  apiEndpoint?: string;
   className?: string;
 }
 
@@ -21,22 +20,14 @@ export function DataTablePagination({
   onPageChange,
   onPageSizeChange,
   pageSizeOptions = [10, 25, 50],
-  apiEndpoint,
   className = "",
 }: DataTablePaginationProps) {
   const count = totalRecords ?? totalItems ?? 0;
-  const [copied, setCopied] = React.useState(false);
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
 
   const startRecord = count === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
   const endRecord = Math.min(safeCurrentPage * pageSize, count);
-
-  const handleCopyApi = () => {
-    navigator.clipboard.writeText(apiEndpoint);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   // Generate page numbers with ellipsis
   const getPageNumbers = () => {
@@ -64,7 +55,7 @@ export function DataTablePagination({
         <span className="font-medium text-slate-600">
           Showing <strong className="font-bold text-slate-900">{startRecord}</strong> to{" "}
           <strong className="font-bold text-slate-900">{endRecord}</strong> of{" "}
-          <strong className="font-bold text-slate-900">{totalItems}</strong> records
+          <strong className="font-bold text-slate-900">{count}</strong> records
         </span>
 
         {onPageSizeChange && (
@@ -86,27 +77,6 @@ export function DataTablePagination({
             </select>
           </div>
         )}
-      </div>
-
-      {/* Center: Live API Endpoint Badge */}
-      <div className="flex items-center gap-1.5 self-start sm:self-auto">
-        <div
-          title="Click to copy API endpoint path"
-          onClick={handleCopyApi}
-          className="group flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200/90 rounded-lg shadow-2xs hover:border-blue-300 hover:bg-blue-50/40 transition cursor-pointer"
-        >
-          <Network className="w-3.5 h-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-mono font-medium text-slate-700">
-            <span className="text-blue-700 font-bold">{apiEndpoint.split(" ")[0]}</span>{" "}
-            <span className="text-slate-600">{apiEndpoint.split(" ").slice(1).join(" ")}</span>
-          </span>
-          <button
-            type="button"
-            className="text-slate-400 group-hover:text-blue-600 ml-1 transition"
-          >
-            {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-          </button>
-        </div>
       </div>
 
       {/* Right: Page Navigation Buttons */}

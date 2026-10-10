@@ -28,6 +28,7 @@ import SuperAdminRolesPage from "@/features/superadmin/pages/SuperAdminRolesPage
 import SuperAdminUsersPage from "@/features/superadmin/pages/SuperAdminUsersPage";
 import SuperAdminSettingsPage from "@/features/superadmin/pages/SuperAdminSettingsPage";
 import { useAppSelector } from "@/app/hooks";
+import { RouteErrorBoundary } from "@/components/ui/RouteErrorBoundary";
 
 /**
  * Direct entry dispatcher:
@@ -53,20 +54,21 @@ export const router = createBrowserRouter([
   // ============================================================
   // 1. ROOT DISPATCHER (Direct SaaS entry - No public marketing)
   // ============================================================
-  { path: "/", element: <IndexRedirect /> },
-  { path: "/admin", element: <Navigate to="/superadmin" replace /> },
+  { path: "/", element: <IndexRedirect />, errorElement: <RouteErrorBoundary /> },
+  { path: "/admin", element: <Navigate to="/superadmin" replace />, errorElement: <RouteErrorBoundary /> },
 
   // ============================================================
   // 2. AUTHENTICATION ONBOARDING
   // ============================================================
-  { path: "/login", element: <LoginPage /> },
-  { path: "/register", element: <RegisterPage /> },
+  { path: "/login", element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
+  { path: "/register", element: <RegisterPage />, errorElement: <RouteErrorBoundary /> },
 
   // ============================================================
   // 3. PROTECTED PLATFORM WORKSPACES
   // ============================================================
   {
     element: <ProtectedRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       // A. Landlord & Property Operations Workspace (Dashboard 1)
       {

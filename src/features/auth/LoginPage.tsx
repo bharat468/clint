@@ -45,8 +45,6 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  if (user) return <Navigate to="/dashboard" replace />;
-
   const otpValue = otpDigits.join("");
 
   const handleSendOtp = async (e: React.FormEvent) => {
@@ -213,6 +211,13 @@ export default function LoginPage() {
     const focusIndex = Math.min(pasted.length, 5);
     inputRefs.current[focusIndex]?.focus();
   };
+
+  if (user) {
+    if (Boolean(user.isSuperAdmin) || Boolean(user.adminRole)) {
+      return <Navigate to="/superadmin" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen w-full flex bg-slate-50 font-sans">

@@ -164,38 +164,38 @@ export const rentalLifecycleService = {
     if (propertyId) params.propertyId = propertyId;
     if (status) params.status = status;
     const res = await api.get(ENDPOINTS.UNITS.LIST, { params });
-    return res.data.data as Unit[];
+    return (res.data?.data ?? res.data) as Unit[];
   },
 
   async createUnit(data: Partial<Unit>) {
     const res = await api.post(ENDPOINTS.UNITS.CREATE, data);
-    return res.data.data as Unit;
+    return (res.data?.data ?? res.data) as Unit;
   },
 
   async updateUnit(id: string, data: Partial<Unit>) {
     const res = await api.patch(ENDPOINTS.UNITS.UPDATE(id), data);
-    return res.data.data as Unit;
+    return (res.data?.data ?? res.data) as Unit;
   },
 
   // Listings
   async listPublicListings(params?: any) {
     const res = await api.get(ENDPOINTS.LISTINGS.PUBLIC_LIST, { params });
-    return res.data.data as RentalListing[];
+    return (res.data?.data ?? res.data) as RentalListing[];
   },
 
   async getPublicListing(id: string) {
     const res = await api.get(ENDPOINTS.LISTINGS.PUBLIC_DETAIL(id));
-    return res.data.data as RentalListing;
+    return (res.data?.data ?? res.data) as RentalListing;
   },
 
   async listOwnerListings(propertyId?: string) {
     const res = await api.get(ENDPOINTS.LISTINGS.OWNER_LIST, { params: { propertyId } });
-    return res.data.data as RentalListing[];
+    return (res.data?.data ?? res.data) as RentalListing[];
   },
 
   async createListing(data: any) {
     const res = await api.post(ENDPOINTS.LISTINGS.CREATE, data);
-    return res.data.data as RentalListing;
+    return (res.data?.data ?? res.data) as RentalListing;
   },
 
   // Applications
@@ -208,54 +208,57 @@ export const rentalLifecycleService = {
     proposedMoveIn?: string;
   }) {
     const res = await api.post(ENDPOINTS.APPLICATIONS.SUBMIT, data);
-    return res.data.data as RentalApplication;
+    return (res.data?.data ?? res.data) as RentalApplication;
   },
 
   async listMyApplications() {
     const res = await api.get(ENDPOINTS.APPLICATIONS.MY_LIST);
-    return res.data.data as RentalApplication[];
+    return (res.data?.data ?? res.data) as RentalApplication[];
   },
 
   async listOwnerApplications(status?: string) {
     const res = await api.get(ENDPOINTS.APPLICATIONS.OWNER_LIST, { params: { status } });
-    return res.data.data as RentalApplication[];
+    return (res.data?.data ?? res.data) as RentalApplication[];
   },
 
   async approveApplication(id: string, rentRule?: any) {
     const res = await api.post(ENDPOINTS.APPLICATIONS.APPROVE(id), { rentRule });
-    return res.data.data;
+    return res.data?.data ?? res.data;
   },
 
   async rejectApplication(id: string, notes?: string) {
     const res = await api.post(ENDPOINTS.APPLICATIONS.REJECT(id), { notes });
-    return res.data.data;
+    return res.data?.data ?? res.data;
   },
 
   // Leases & My Rentals
   async listMyRentals() {
     const res = await api.get(ENDPOINTS.LEASES.MY_RENTALS);
-    return res.data.data as Lease[];
+    return (res.data?.data ?? res.data) as Lease[];
   },
 
   async listOwnerLeases() {
     const res = await api.get(ENDPOINTS.LEASES.OWNER_LIST);
-    return res.data.data as Lease[];
+    return (res.data?.data ?? res.data) as Lease[];
   },
 
   async payRentSchedule(scheduleId: string, amount: number) {
     const res = await api.post(ENDPOINTS.LEASES.PAY_SCHEDULE(scheduleId), { amount });
-    return res.data.data;
+    return res.data?.data ?? res.data;
   },
 
   // Maintenance
   async listMaintenanceTickets(propertyId?: string, status?: string) {
-    const res = await api.get(ENDPOINTS.MAINTENANCE.LIST, { params: { propertyId, status } });
-    return res.data.data as MaintenanceRequest[];
+    const params: any = {};
+    if (propertyId) params.propertyId = propertyId;
+    if (status) params.status = status;
+    const res = await api.get(ENDPOINTS.MAINTENANCE.LIST, { params });
+    return (res.data?.data ?? res.data) as MaintenanceRequest[];
   },
 
   async listMyTenantTickets() {
     const res = await api.get(ENDPOINTS.MAINTENANCE.MY_LIST);
-    return res.data.data as MaintenanceRequest[];
+    return (res.data?.data ?? res.data) as MaintenanceRequest[];
   },
 
   async createMaintenanceTicket(data: {
@@ -267,11 +270,11 @@ export const rentalLifecycleService = {
     priority: string;
   }) {
     const res = await api.post(ENDPOINTS.MAINTENANCE.CREATE, data);
-    return res.data.data as MaintenanceRequest;
+    return (res.data?.data ?? res.data) as MaintenanceRequest;
   },
 
   async updateMaintenanceStatus(id: string, status: string, cost?: number, notes?: string) {
     const res = await api.patch(ENDPOINTS.MAINTENANCE.STATUS(id), { status, cost, notes });
-    return res.data.data as MaintenanceRequest;
+    return (res.data?.data ?? res.data) as MaintenanceRequest;
   },
 };
