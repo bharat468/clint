@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Calendar,
   CreditCard,
@@ -8,8 +8,9 @@ import {
   Plus,
   IndianRupee,
   Home,
-  X,
   FileDown,
+  Building2,
+  Clock,
 } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 import { generateRentInvoicePdf } from "@/lib/rentInvoicePdf";
@@ -22,7 +23,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Modal } from "@/components/ui/modal";
+import { Toast } from "@/components/ui/toast";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
+import { formatINR } from "@/lib/utils";
 
 export default function MyRentalsPage() {
   const user = useAppSelector((s) => s.auth.user);
@@ -35,6 +39,16 @@ export default function MyRentalsPage() {
   const [rentalsPageSize, setRentalsPageSize] = useState(3);
   const [ticketsPage, setTicketsPage] = useState(1);
   const [ticketsPageSize, setTicketsPageSize] = useState(6);
+
+  // Toast
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type?: "success" | "error" | "info";
+  }>({
+    show: false,
+    message: "",
+  });
 
   // Payment Modal
   const [payModalOpen, setPayModalOpen] = useState(false);
@@ -71,6 +85,28 @@ export default function MyRentalsPage() {
     }
   };
 
+  // Tenant KPI stats
+  const tenantKpis = useMemo(() => {
+    const totalRent = leases.reduce((sum, l) => sum + (l.monthlyRent || 0), 0);
+    let pendingDues = 0;
+    leases.forEach((l) => {
+      l.schedules?.forEach((s) => {
+        if (s.status !== "PAID") {
+          pendingDues += s.amount + s.penaltyAmount - s.paidAmount;
+        }
+      });
+    });
+    const activeTickets = maintenanceTickets.filter(
+      (t) => t.status === "OPEN" || t.status === "ASSIGNED" || t.status === "IN_PROGRESS"
+    ).length;
+    return {
+      activeUnits: leases.length,
+      monthlyRent: totalRent,
+      pendingDues,
+      activeTickets,
+    };
+  }, [leases, maintenanceTickets]);
+
   const handleOpenPay = (schedule: RentSchedule) => {
     setSelectedSchedule(schedule);
     const due = schedule.amount + schedule.penaltyAmount - schedule.paidAmount;
@@ -84,11 +120,19 @@ export default function MyRentalsPage() {
     setPaying(true);
     try {
       await rentalLifecycleService.payRentSchedule(selectedSchedule.id, payAmount);
-      alert("Payment recorded successfully!");
       setPayModalOpen(false);
+      setToast({
+        show: true,
+        type: "success",
+        message: `Payment of ₹${payAmount.toLocaleString()} recorded successfully!`,
+      });
       loadData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to record payment");
+      setToast({
+        show: true,
+        type: "error",
+        message: err.response?.data?.message || "Failed to record payment",
+      });
     } finally {
       setPaying(false);
     }
@@ -107,13 +151,21 @@ export default function MyRentalsPage() {
         category: ticketCategory,
         priority: ticketPriority,
       });
-      alert("Maintenance request raised successfully!");
       setTicketModalOpen(false);
       setTicketTitle("");
       setTicketDescription("");
+      setToast({
+        show: true,
+        type: "success",
+        message: "Maintenance request raised successfully! Property staff will contact you.",
+      });
       loadData();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to raise maintenance request");
+      setToast({
+        show: true,
+        type: "error",
+        message: err.response?.data?.message || "Failed to raise maintenance request",
+      });
     } finally {
       setSubmittingTicket(false);
     }
@@ -124,9 +176,14 @@ export default function MyRentalsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-1">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            My Rented Properties
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              My Rented Properties
+            </h1>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+              Tenant Portal
+            </span>
+          </div>
           <p className="mt-1 text-sm text-slate-500">
             View active leases, pay monthly rents, track late penalties, and raise maintenance tickets.
           </p>
@@ -156,6 +213,61 @@ export default function MyRentalsPage() {
         </div>
       </div>
 
+      {/* Tenant KPI Cards */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Card className="p-4 border-slate-200/80 bg-white shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Active Leases
+            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <Home className="h-4.5 w-4.5" />
+            </div>
+          </div>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{tenantKpis.activeUnits}</p>
+          <span className="text-xs text-slate-500">Occupied Units</span>
+        </Card>
+
+        <Card className="p-4 border-slate-200/80 bg-white shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Monthly Rent Due
+            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <IndianRupee className="h-4.5 w-4.5" />
+            </div>
+          </div>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{formatINR(tenantKpis.monthlyRent)}</p>
+          <span className="text-xs text-emerald-600">Active monthly cycle</span>
+        </Card>
+
+        <Card className="p-4 border-slate-200/80 bg-white shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Pending Balance
+            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <Clock className="h-4.5 w-4.5" />
+            </div>
+          </div>
+          <p className="mt-2 text-2xl font-bold text-amber-600">{formatINR(tenantKpis.pendingDues)}</p>
+          <span className="text-xs text-amber-600/80">Unsettled invoices</span>
+        </Card>
+
+        <Card className="p-4 border-slate-200/80 bg-white shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Open Tickets
+            </span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+              <Wrench className="h-4.5 w-4.5" />
+            </div>
+          </div>
+          <p className="mt-2 text-2xl font-bold text-purple-600">{tenantKpis.activeTickets}</p>
+          <span className="text-xs text-purple-600/80">Active requests</span>
+        </Card>
+      </div>
+
       {/* Tab 1: Rentals & Schedules */}
       {activeTab === "RENTALS" && (
         <div>
@@ -166,12 +278,12 @@ export default function MyRentalsPage() {
               ))}
             </div>
           ) : leases.length === 0 ? (
-            <Card className="text-center py-16 p-6">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 mb-3">
+            <Card className="text-center py-16 p-6 border-dashed border-slate-200">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-3">
                 <Home className="h-6 w-6" />
               </div>
               <h3 className="text-base font-bold text-slate-900">No Active Rentals</h3>
-              <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                 You do not have any active leased properties attached to your account yet. Explore available listings on the public marketplace.
               </p>
             </Card>
@@ -188,7 +300,8 @@ export default function MyRentalsPage() {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
                     <div>
                       <div className="flex items-center gap-2.5">
-                        <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-bold">
+                        <span className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-bold flex items-center gap-1">
+                          <Building2 className="w-3.5 h-3.5" />
                           Unit {lease.unit?.unitNumber}
                         </span>
                         <Badge tone="green">Active Lease</Badge>
@@ -223,8 +336,8 @@ export default function MyRentalsPage() {
                       <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                         Monthly Rent
                       </span>
-                      <div className="text-lg font-bold text-slate-900 flex items-center mt-0.5">
-                        <IndianRupee className="w-4 h-4 text-emerald-600" />
+                      <div className="text-base font-bold text-slate-900 flex items-center mt-0.5">
+                        <IndianRupee className="w-4 h-4 text-emerald-600 mr-0.5" />
                         {lease.monthlyRent.toLocaleString()}
                       </div>
                     </div>
@@ -281,7 +394,7 @@ export default function MyRentalsPage() {
                             const isPaid = sched.status === "PAID";
 
                             return (
-                              <tr key={sched.id} className="hover:bg-slate-50/80">
+                              <tr key={sched.id} className="hover:bg-slate-50/80 transition-colors">
                                 <td className="py-3 px-4 font-bold text-slate-900">
                                   {sched.period}
                                 </td>
@@ -395,7 +508,10 @@ export default function MyRentalsPage() {
       {activeTab === "MAINTENANCE" && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-slate-900">My Maintenance Tickets</h3>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">My Maintenance Tickets</h3>
+              <p className="text-xs text-slate-500">Track technician visits and repair status</p>
+            </div>
             {leases.length > 0 && (
               <Button
                 size="sm"
@@ -412,12 +528,12 @@ export default function MyRentalsPage() {
           </div>
 
           {maintenanceTickets.length === 0 ? (
-            <Card className="text-center py-16 p-6">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 mb-3">
+            <Card className="text-center py-16 p-6 border-dashed border-slate-200">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-3">
                 <Wrench className="h-6 w-6" />
               </div>
               <h3 className="text-base font-bold text-slate-900">No Maintenance Tickets</h3>
-              <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                 Everything is working smoothly! If you experience any electrical or plumbing issues, raise a request above.
               </p>
             </Card>
@@ -478,178 +594,173 @@ export default function MyRentalsPage() {
       )}
 
       {/* Pay Modal */}
-      {payModalOpen && selectedSchedule && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 shadow-2xl relative">
-            <button
-              onClick={() => setPayModalOpen(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h3 className="text-xl font-bold text-slate-900 mb-1">Record Rent Payment</h3>
-            <p className="text-xs text-slate-500 mb-5">
-              Installment for <span className="font-semibold text-slate-800">{selectedSchedule.period}</span>
-            </p>
-
-            <form onSubmit={handleConfirmPay} className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
-                <div className="flex justify-between text-slate-600">
-                  <span>Base Rent:</span>
-                  <span className="font-semibold text-slate-900">₹{selectedSchedule.amount}</span>
+      <Modal
+        open={payModalOpen && Boolean(selectedSchedule)}
+        onClose={() => setPayModalOpen(false)}
+        title="Record Rent Payment"
+        subtitle={
+          selectedSchedule
+            ? `Installment for ${selectedSchedule.period}`
+            : undefined
+        }
+      >
+        {selectedSchedule && (
+          <form onSubmit={handleConfirmPay} className="space-y-4">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex justify-between text-slate-600">
+                <span>Base Rent:</span>
+                <span className="font-semibold text-slate-900">₹{selectedSchedule.amount.toLocaleString()}</span>
+              </div>
+              {selectedSchedule.penaltyAmount > 0 && (
+                <div className="flex justify-between text-rose-600 font-medium">
+                  <span>Late Penalty Accrued:</span>
+                  <span className="font-bold">+₹{selectedSchedule.penaltyAmount.toLocaleString()}</span>
                 </div>
-                {selectedSchedule.penaltyAmount > 0 && (
-                  <div className="flex justify-between text-rose-600 font-medium">
-                    <span>Late Penalty Accrued:</span>
-                    <span className="font-bold">+₹{selectedSchedule.penaltyAmount}</span>
-                  </div>
-                )}
-                <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-slate-900">
-                  <span>Total Amount Due:</span>
-                  <span className="text-emerald-700 text-sm">
-                    ₹{selectedSchedule.amount + selectedSchedule.penaltyAmount - selectedSchedule.paidAmount}
-                  </span>
-                </div>
+              )}
+              <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-slate-900">
+                <span>Total Amount Due:</span>
+                <span className="text-emerald-700 text-sm">
+                  ₹{(selectedSchedule.amount + selectedSchedule.penaltyAmount - selectedSchedule.paidAmount).toLocaleString()}
+                </span>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Payment Amount (₹) *
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={payAmount}
-                  onChange={(e) => setPayAmount(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Payment Amount (₹) *
+              </label>
+              <input
+                type="number"
+                required
+                value={payAmount}
+                onChange={(e) => setPayAmount(parseFloat(e.target.value) || 0)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              />
+            </div>
 
-              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setPayModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={paying}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>{paying ? "Processing..." : "Confirm Payment"}</span>
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPayModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={paying}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5 shadow-xs"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>{paying ? "Processing..." : "Confirm Payment"}</span>
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* Raise Maintenance Ticket Modal */}
-      {ticketModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 shadow-2xl relative">
-            <button
-              onClick={() => setTicketModalOpen(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h3 className="text-xl font-bold text-slate-900 mb-1">Raise Maintenance Request</h3>
-            <p className="text-xs text-slate-500 mb-5">
-              The property manager and technician will address this issue promptly.
-            </p>
-
-            <form onSubmit={handleCreateTicket} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Issue Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Geyser leaking water"
-                  value={ticketTitle}
-                  onChange={(e) => setTicketTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={ticketCategory}
-                    onChange={(e) => setTicketCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none"
-                  >
-                    <option value="PLUMBING">Plumbing</option>
-                    <option value="ELECTRICAL">Electrical</option>
-                    <option value="APPLIANCE">Appliance</option>
-                    <option value="CARPENTRY">Carpentry</option>
-                    <option value="PAINTING">Painting</option>
-                    <option value="OTHER">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Priority
-                  </label>
-                  <select
-                    value={ticketPriority}
-                    onChange={(e) => setTicketPriority(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none"
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="URGENT">Urgent</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Description *
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Provide details about the issue..."
-                  value={ticketDescription}
-                  onChange={(e) => setTicketDescription(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setTicketModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={submittingTicket}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold gap-1.5"
-                >
-                  <Wrench className="w-4 h-4" />
-                  <span>{submittingTicket ? "Submitting..." : "Submit Ticket"}</span>
-                </Button>
-              </div>
-            </form>
+      <Modal
+        open={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+        title="Raise Maintenance Request"
+        subtitle="The property manager and technician will address this issue promptly."
+      >
+        <form onSubmit={handleCreateTicket} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Issue Title *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Geyser leaking water or switchboard spark"
+              value={ticketTitle}
+              onChange={(e) => setTicketTitle(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Category
+              </label>
+              <select
+                value={ticketCategory}
+                onChange={(e) => setTicketCategory(e.target.value)}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              >
+                <option value="PLUMBING">Plumbing</option>
+                <option value="ELECTRICAL">Electrical</option>
+                <option value="APPLIANCE">Appliance</option>
+                <option value="CARPENTRY">Carpentry</option>
+                <option value="PAINTING">Painting</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Priority
+              </label>
+              <select
+                value={ticketPriority}
+                onChange={(e) => setTicketPriority(e.target.value)}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              >
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="URGENT">Urgent</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Description *
+            </label>
+            <textarea
+              rows={3}
+              required
+              placeholder="Provide specific details about the issue..."
+              value={ticketDescription}
+              onChange={(e) => setTicketDescription(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+            />
+          </div>
+
+          <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setTicketModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={submittingTicket}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold gap-1.5 shadow-xs"
+            >
+              <Wrench className="w-4 h-4" />
+              <span>{submittingTicket ? "Submitting..." : "Submit Ticket"}</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: "" })}
+      />
     </div>
   );
 }
