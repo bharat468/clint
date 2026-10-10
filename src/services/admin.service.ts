@@ -30,6 +30,8 @@ export interface SystemSetting {
   value: string;
   category: string;
   description?: string;
+  unit?: string;
+  dataType?: "string" | "number" | "boolean" | string;
   updatedAt: string;
 }
 
