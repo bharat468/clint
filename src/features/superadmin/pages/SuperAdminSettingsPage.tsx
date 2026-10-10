@@ -16,7 +16,7 @@ import {
   Clock,
   Sparkles,
   HelpCircle,
-  Filter,
+  Layers,
 } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 import { canAccessPlatform } from "@/lib/permissions";
@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { Select, type SelectOptionItem } from "@/components/ui/input";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { State } from "@/components/ui/page";
 import { Toast } from "@/components/ui/toast";
@@ -69,6 +70,24 @@ const CATEGORY_META: Record<
     bg: "bg-amber-500",
   },
 };
+
+const CATEGORY_FORM_OPTIONS: SelectOptionItem[] = [
+  { value: "AUTH_SECURITY", label: "Auth & Security", icon: Lock },
+  { value: "BILLING_COMMERCE", label: "Billing & Commerce", icon: CreditCard },
+  { value: "PLATFORM_GENERAL", label: "Platform & General", icon: Building2 },
+  { value: "SYSTEM_OPS", label: "System Operations", icon: Sliders },
+];
+
+const DATA_TYPE_OPTIONS: SelectOptionItem[] = [
+  { value: "string", label: "Text / String" },
+  { value: "number", label: "Numeric (Integer / Float)" },
+  { value: "boolean", label: "Boolean (true / false)" },
+];
+
+const BOOLEAN_VALUE_OPTIONS: SelectOptionItem[] = [
+  { value: "true", label: "true (Enabled)" },
+  { value: "false", label: "false (Disabled)" },
+];
 
 const PROTECTED_CORE_KEYS = new Set([
   "jwt_access_expiry_minutes",
@@ -424,20 +443,17 @@ export default function SuperAdminSettingsPage() {
             />
           </div>
 
-          {/* Category Filter Select */}
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-slate-400 shrink-0" />
-            <select
+          {/* Category Filter Custom Select */}
+          <div className="w-56 shrink-0">
+            <Select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-hidden"
-            >
-              <option value="ALL">All Categories ({settings.length})</option>
-              <option value="AUTH_SECURITY">🔒 Auth & Security</option>
-              <option value="BILLING_COMMERCE">💳 Billing & Commerce</option>
-              <option value="PLATFORM_GENERAL">🏢 Platform & General</option>
-              <option value="SYSTEM_OPS">⚙️ System Operations</option>
-            </select>
+              options={[
+                { value: "ALL", label: `All Categories (${settings.length})`, icon: Layers },
+                ...CATEGORY_FORM_OPTIONS,
+              ]}
+              className="h-9.5 text-xs font-semibold"
+            />
           </div>
         </div>
       </Card>
@@ -661,31 +677,24 @@ export default function SuperAdminSettingsPage() {
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Category
               </label>
-              <select
+              <Select
                 value={createForm.category}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, category: e.target.value }))}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
-              >
-                <option value="AUTH_SECURITY">🔒 Auth & Security</option>
-                <option value="BILLING_COMMERCE">💳 Billing & Commerce</option>
-                <option value="PLATFORM_GENERAL">🏢 Platform & General</option>
-                <option value="SYSTEM_OPS">⚙️ System Operations</option>
-              </select>
+                options={CATEGORY_FORM_OPTIONS}
+                className="h-9.5 text-xs font-semibold"
+              />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Data Type
               </label>
-              <select
+              <Select
                 value={createForm.dataType}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, dataType: e.target.value }))}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
-              >
-                <option value="string">Text / String</option>
-                <option value="number">Numeric (Integer / Float)</option>
-                <option value="boolean">Boolean (true / false)</option>
-              </select>
+                options={DATA_TYPE_OPTIONS}
+                className="h-9.5 text-xs font-semibold"
+              />
             </div>
           </div>
 
@@ -694,14 +703,12 @@ export default function SuperAdminSettingsPage() {
               Configured Value <span className="text-rose-500">*</span>
             </label>
             {createForm.dataType === "boolean" ? (
-              <select
+              <Select
                 value={createForm.value}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, value: e.target.value }))}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
-              >
-                <option value="true">true (Enabled)</option>
-                <option value="false">false (Disabled)</option>
-              </select>
+                options={BOOLEAN_VALUE_OPTIONS}
+                className="h-9.5 text-xs font-semibold"
+              />
             ) : createForm.dataType === "number" ? (
               <input
                 type="number"
@@ -796,14 +803,12 @@ export default function SuperAdminSettingsPage() {
                 Configured Value <span className="text-rose-500">*</span>
               </label>
               {editForm.dataType === "boolean" ? (
-                <select
+                <Select
                   value={editForm.value}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, value: e.target.value }))}
-                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
-                >
-                  <option value="true">true (Enabled)</option>
-                  <option value="false">false (Disabled)</option>
-                </select>
+                  options={BOOLEAN_VALUE_OPTIONS}
+                  className="h-9.5 text-xs font-semibold"
+                />
               ) : editForm.dataType === "number" ? (
                 <input
                   type="number"
@@ -828,31 +833,24 @@ export default function SuperAdminSettingsPage() {
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Category
                 </label>
-                <select
+                <Select
                   value={editForm.category}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))}
-                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
-                >
-                  <option value="AUTH_SECURITY">🔒 Auth & Security</option>
-                  <option value="BILLING_COMMERCE">💳 Billing & Commerce</option>
-                  <option value="PLATFORM_GENERAL">🏢 Platform & General</option>
-                  <option value="SYSTEM_OPS">⚙️ System Operations</option>
-                </select>
+                  options={CATEGORY_FORM_OPTIONS}
+                  className="h-9.5 text-xs font-semibold"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Data Type
                 </label>
-                <select
+                <Select
                   value={editForm.dataType}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, dataType: e.target.value }))}
-                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
-                >
-                  <option value="string">Text / String</option>
-                  <option value="number">Numeric (Integer / Float)</option>
-                  <option value="boolean">Boolean (true / false)</option>
-                </select>
+                  options={DATA_TYPE_OPTIONS}
+                  className="h-9.5 text-xs font-semibold"
+                />
               </div>
             </div>
 
