@@ -88,16 +88,22 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
   doc.text(issueDate, margin + 6, yPos + 10.5);
   doc.text(data.month, margin + 50, yPos + 10.5);
 
+  const safeAmount = Number(data.amount || 0);
+  const baseRentVal = Number(data.baseRent ?? data.amount ?? 0);
+  const maintenanceVal = Number(data.maintenanceAmount || 0);
+  const utilityVal = Number(data.utilityAmount || 0);
+  const lateFeeVal = Number(data.lateFee || 0);
+
   if (data.status === "PAID") {
     doc.setTextColor(...emeraldGreen);
-    doc.text("PAID ✓", margin + 105, yPos + 10.5);
+    doc.text("PAID [VERIFIED]", margin + 105, yPos + 10.5);
   } else {
     doc.setTextColor(217, 119, 6); // amber-600
     doc.text("PENDING / DUE", margin + 105, yPos + 10.5);
   }
 
   doc.setTextColor(...primaryColor);
-  doc.text(`INR ${data.amount.toLocaleString("en-IN")}`, pageWidth - margin - 6, yPos + 10.5, { align: "right" });
+  doc.text(`INR ${safeAmount.toLocaleString("en-IN")}`, pageWidth - margin - 6, yPos + 10.5, { align: "right" });
 
   // Two Columns: Landlord (Issuer) & Tenant (Billed To)
   yPos = 62;
@@ -120,7 +126,7 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
   doc.setTextColor(...slateMuted);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.text(`Property: ${data.propertyName}`, margin + 5, yPos + 18);
+  doc.text(`Property: ${data.propertyName || "N/A"}`, margin + 5, yPos + 18);
   if (data.propertyAddress) {
     const splitAddr = doc.splitTextToSize(`Address: ${data.propertyAddress}`, colWidth - 10);
     doc.text(splitAddr, margin + 5, yPos + 23);
@@ -142,7 +148,7 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
 
   doc.setTextColor(...slateDark);
   doc.setFontSize(10);
-  doc.text(data.tenantName, rightColX + 5, yPos + 12);
+  doc.text(data.tenantName || "Tenant", rightColX + 5, yPos + 12);
 
   doc.setTextColor(...slateMuted);
   doc.setFont("helvetica", "normal");
@@ -157,13 +163,9 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
 
   // Rent Breakdown Table
   yPos = 102;
-  const baseRentVal = data.baseRent || data.amount;
-  const maintenanceVal = data.maintenanceAmount || 0;
-  const utilityVal = data.utilityAmount || 0;
-  const lateFeeVal = data.lateFee || 0;
 
   const tableBody = [
-    ["1", `Monthly Residential Rent (${data.month})`, `INR ${baseRentVal.toLocaleString("en-IN")}`],
+    ["1", `Monthly Residential Rent (${data.month || "Billing Month"})`, `INR ${baseRentVal.toLocaleString("en-IN")}`],
   ];
 
   if (maintenanceVal > 0) {
@@ -215,12 +217,12 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
 
   doc.setTextColor(...slateDark);
   doc.setFont("helvetica", "normal");
-  doc.text(`INR ${data.amount.toLocaleString("en-IN")}`, pageWidth - margin - 5, finalY + 11, { align: "right" });
+  doc.text(`INR ${safeAmount.toLocaleString("en-IN")}`, pageWidth - margin - 5, finalY + 11, { align: "right" });
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(...primaryColor);
-  doc.text(`INR ${data.amount.toLocaleString("en-IN")}`, pageWidth - margin - 5, finalY + 19, { align: "right" });
+  doc.text(`INR ${safeAmount.toLocaleString("en-IN")}`, pageWidth - margin - 5, finalY + 19, { align: "right" });
 
   // Transaction Receipt Box
   const txBoxY = finalY + 32;
@@ -261,7 +263,7 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
   doc.setFontSize(8);
   doc.setTextColor(22, 101, 52);
   doc.setFont("helvetica", "bold");
-  doc.text("✓ RENTMATE VERIFIED", margin + 6, footerY + 7);
+  doc.text("RENTMATE VERIFIED", margin + 6, footerY + 7);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   doc.text("Authentic Rental Transaction", margin + 6, footerY + 13);
@@ -284,6 +286,8 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
   );
 
   // Save / Download PDF
-  const filename = `Rent_Receipt_${data.propertyName.replace(/\s+/g, "_")}_${data.month.replace(/\s+/g, "_")}.pdf`;
+  const safeProp = (data.propertyName || "Property").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const safeMonth = (data.month || "Month").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const filename = `Rent_Receipt_${safeProp}_${safeMonth}.pdf`;
   doc.save(filename);
 }
