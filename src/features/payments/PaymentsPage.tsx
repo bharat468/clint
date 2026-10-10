@@ -13,6 +13,7 @@ import {
   Search,
   RefreshCw,
   FileDown,
+  ShieldAlert,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { paymentService } from "@/services/payment.service";
@@ -45,6 +46,7 @@ const tone = { PAID: "green", PENDING: "yellow", OVERDUE: "red" } as const;
 
 export default function PaymentsPage() {
   const user = useAppSelector((s) => s.auth.user);
+  const canReadPayment = canAccess(user, "payment.read");
   const canCreatePayment = canAccess(user, "payment.create");
   const canUpdatePayment = canAccess(user, "payment.update");
   const canDeletePayment = canAccess(user, "payment.delete") || canAccess(user, "payment.update");
@@ -233,6 +235,26 @@ export default function PaymentsPage() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+
+  if (!canReadPayment) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Rent & Payments"
+          subtitle="Track rent invoices, payment statuses, and overdue collections"
+        />
+        <Card className="p-8 text-center max-w-lg mx-auto">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+            <ShieldAlert className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-semibold text-neutral-900">Access Restricted</h3>
+          <p className="mt-2 text-sm text-neutral-600">
+            Your role does not have permission (<code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-800">payment.read</code>) to view the Rent & Payments ledger. Please contact your property administrator to request access.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

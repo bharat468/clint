@@ -6,6 +6,7 @@ import {
   Phone,
   Building2,
   X,
+  ShieldAlert,
 } from "lucide-react";
 import {
   rentalLifecycleService,
@@ -14,9 +15,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useAppSelector } from "@/app/hooks";
+import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
 
 export default function ApplicationsPage() {
+  const user = useAppSelector((s) => s.auth.user);
+  const canReadApps =
+    canAccess(user, "lease.create") ||
+    canAccess(user, "lease.update") ||
+    canAccess(user, "property.update") ||
+    canAccess(user, "tenant.create");
+
   const [applications, setApplications] = useState<RentalApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState("ALL");
@@ -99,6 +109,30 @@ export default function ApplicationsPage() {
       alert(err.response?.data?.message || "Failed to reject application");
     }
   };
+
+  if (!canReadApps) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Rental Applications
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Review applicant profiles, documents, and issue digital leases.
+          </p>
+        </div>
+        <Card className="p-8 text-center max-w-lg mx-auto">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+            <ShieldAlert className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-semibold text-neutral-900">Access Restricted</h3>
+          <p className="mt-2 text-sm text-neutral-600">
+            Your role does not have permission to view or approve tenant applications. Please contact your property administrator.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -8,8 +8,6 @@ import {
   Sliders,
   ChevronRight,
   X,
-  FileText,
-  Wrench,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setActivePortal } from "@/features/auth/authSlice";
@@ -20,9 +18,6 @@ import { cn } from "@/lib/utils";
 const superAdminNavLinks = [
   { to: "/superadmin", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/superadmin/organizations", label: "Landlords & Clients", icon: Building2 },
-  { to: "/superadmin/properties", label: "Properties & Units", icon: Building2 },
-  { to: "/superadmin/leases", label: "Leases & Agreements", icon: FileText },
-  { to: "/superadmin/maintenance", label: "Maintenance", icon: Wrench },
   { to: "/superadmin/plans", label: "Plans & Quotas", icon: Layers },
   { to: "/superadmin/roles", label: "Roles & Permissions", icon: ShieldCheck },
   { to: "/superadmin/users", label: "Global Users", icon: Users },
@@ -39,9 +34,6 @@ export default function SuperAdminSidebar() {
   const filteredSuperAdminNavLinks = superAdminNavLinks.filter((link) => {
     if (link.to === "/superadmin") return canAccessPlatform(user, "PLATFORM_VIEW_VITALS");
     if (link.to === "/superadmin/organizations") return canAccessPlatform(user, "PLATFORM_MANAGE_ORGANIZATIONS");
-    if (link.to === "/superadmin/properties") return canAccessPlatform(user, "PLATFORM_MANAGE_ORGANIZATIONS");
-    if (link.to === "/superadmin/leases") return canAccessPlatform(user, "PLATFORM_MANAGE_ORGANIZATIONS");
-    if (link.to === "/superadmin/maintenance") return canAccessPlatform(user, "PLATFORM_MANAGE_ORGANIZATIONS");
     if (link.to === "/superadmin/plans") return canAccessPlatform(user, "PLATFORM_MANAGE_PLANS");
     if (link.to === "/superadmin/roles") return canAccessPlatform(user, "PLATFORM_MANAGE_ADMIN_ROLES");
     if (link.to === "/superadmin/users") return canAccessPlatform(user, "PLATFORM_MANAGE_USERS");

@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import {
   Building2,
-  IndianRupee,
   Layers,
   ArrowRight,
   TrendingUp,
@@ -9,7 +8,6 @@ import {
   CreditCard,
   RefreshCw,
   Sliders,
-  Users,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { adminService } from "@/services/admin.service";
@@ -138,42 +136,42 @@ export default function SuperAdminOverviewPage() {
               </div>
             </Card>
 
-            {/* Metric 3: Managed Units & Leases */}
+            {/* Metric 3: Active Subscriptions */}
             <Card hoverEffect className="p-5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Units & Tenant Leases
+                  Active Subscriptions
                 </span>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                  <Users className="h-5 w-5" />
+                  <CreditCard className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-3">
                 <div className="text-2xl font-bold text-slate-900">
-                  {overview?.totalProperties ?? 0} <span className="text-sm font-normal text-slate-400">Props</span>
+                  {overview?.activeSubscriptions ?? orgs.filter((o) => o.subscription?.status === "ACTIVE").length}
                 </div>
-                <div className="mt-1.5 text-xs text-slate-500 font-medium">
-                  {overview?.totalTenants ?? 0} active tenant leases
+                <div className="mt-1.5 text-xs text-indigo-700 font-medium">
+                  <span>{expiringOrgs.length > 0 ? `${expiringOrgs.length} expiring within 15 days` : "All client tiers in good standing"}</span>
                 </div>
               </div>
             </Card>
 
-            {/* Metric 4: Gross Settled Rent Volume */}
+            {/* Metric 4: SaaS Monetization Tiers */}
             <Card hoverEffect className="p-5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Gross Settled Rent
+                  SaaS Pricing Plans
                 </span>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                  <IndianRupee className="h-5 w-5" />
+                  <Layers className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-3">
                 <div className="text-2xl font-bold text-purple-700">
-                  {formatINR(overview?.totalCollected ?? 0)}
+                  {overview?.activePlans ?? plans.length}
                 </div>
                 <div className="mt-1.5 flex items-center gap-1 text-xs text-purple-700 font-medium">
-                  <span>{overview?.collectionRate ?? 100}% collection rate</span>
+                  <span>Starter, Pro, Growth & Enterprise</span>
                 </div>
               </div>
             </Card>

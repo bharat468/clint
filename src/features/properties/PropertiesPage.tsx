@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Clock,
   Layers,
+  ShieldAlert,
 } from "lucide-react";
 import PropertyUnitsModal from "./components/PropertyUnitsModal";
 import { useApi } from "@/hooks/useApi";
@@ -44,6 +45,7 @@ type Form = z.infer<typeof schema>;
 
 export default function PropertiesPage() {
   const user = useAppSelector((s) => s.auth.user);
+  const canReadProp = canAccess(user, "property.read");
   const canCreateProp = canAccess(user, "property.create");
   const canUpdateProp = canAccess(user, "property.update");
   const canDeleteProp = canAccess(user, "property.delete");
@@ -178,6 +180,26 @@ export default function PropertiesPage() {
 
   const vacantCount = data.filter((p) => p.status === "VACANT").length;
   const occupiedCount = data.filter((p) => p.status === "OCCUPIED").length;
+
+  if (!canReadProp) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Properties & Buildings"
+          subtitle="Building inventory and residential unit management"
+        />
+        <Card className="p-8 text-center max-w-lg mx-auto">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+            <ShieldAlert className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-semibold text-neutral-900">Access Restricted</h3>
+          <p className="mt-2 text-sm text-neutral-600">
+            Your role does not have permission (<code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-800">property.read</code>) to view property and building assets. Please contact your property administrator.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -4,6 +4,7 @@ import {
   X,
   IndianRupee,
   Plus,
+  ShieldAlert,
 } from "lucide-react";
 import {
   rentalLifecycleService,
@@ -20,6 +21,7 @@ import type { Property } from "@/types";
 
 export default function MaintenancePage() {
   const user = useAppSelector((s) => s.auth.user);
+  const canReadMaintenance = canAccess(user, "maintenance.read") || user?.role === "TENANT" || Boolean(user?.isSuperAdmin);
   const canCreateTicket = canAccess(user, "maintenance.create");
   const canUpdateTicket = canAccess(user, "maintenance.update");
 
@@ -148,6 +150,30 @@ export default function MaintenancePage() {
       setCreatingTicket(false);
     }
   };
+
+  if (!canReadMaintenance) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Maintenance & Complaints
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Track tenant reported plumbing, electrical, and repair tickets across all your units.
+          </p>
+        </div>
+        <Card className="p-8 text-center max-w-lg mx-auto">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+            <ShieldAlert className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-semibold text-neutral-900">Access Restricted</h3>
+          <p className="mt-2 text-sm text-neutral-600">
+            Your role does not have permission (<code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-800">maintenance.read</code>) to view maintenance tickets. Please contact your property administrator.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

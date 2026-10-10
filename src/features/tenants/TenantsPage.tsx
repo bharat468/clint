@@ -13,6 +13,7 @@ import {
   Search,
   RefreshCw,
   Clock,
+  ShieldAlert,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { tenantService } from "@/services/tenant.service";
@@ -43,6 +44,7 @@ type Form = z.infer<typeof schema>;
 
 export default function TenantsPage() {
   const user = useAppSelector((s) => s.auth.user);
+  const canReadTenant = canAccess(user, "tenant.read");
   const canCreateTenant = canAccess(user, "tenant.create");
   const canUpdateTenant = canAccess(user, "tenant.update");
 
@@ -169,6 +171,26 @@ export default function TenantsPage() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+
+  if (!canReadTenant) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Tenants"
+          subtitle="Directory of tenant profiles and lease assignments"
+        />
+        <Card className="p-8 text-center max-w-lg mx-auto">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+            <ShieldAlert className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-semibold text-neutral-900">Access Restricted</h3>
+          <p className="mt-2 text-sm text-neutral-600">
+            Your role does not have permission (<code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-800">tenant.read</code>) to view the tenant directory. Please contact your property administrator.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
