@@ -31,6 +31,7 @@ import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { Toast } from "@/components/ui/toast";
+import { DatePicker } from "@/components/ui/date-picker";
 import type { Property, Tenant } from "@/types";
 
 const schema = z.object({
@@ -68,6 +69,8 @@ export default function TenantsPage() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<Form>({ resolver: zodResolver(schema) });
 
@@ -483,12 +486,20 @@ export default function TenantsPage() {
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Lease Start Date">
-              <Input type="date" {...register("leaseStart")} />
+            <Field label="Lease Start Date" error={errors.leaseStart?.message}>
+              <DatePicker
+                value={watch("leaseStart") || ""}
+                onChange={(d) => setValue("leaseStart", d)}
+                placeholder="Select start date"
+              />
             </Field>
 
-            <Field label="Lease End Date">
-              <Input type="date" {...register("leaseEnd")} />
+            <Field label="Lease End Date" error={errors.leaseEnd?.message}>
+              <DatePicker
+                value={watch("leaseEnd") || ""}
+                onChange={(d) => setValue("leaseEnd", d)}
+                placeholder="Select end date"
+              />
             </Field>
           </div>
 

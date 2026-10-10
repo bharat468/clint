@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { X, Calendar, RefreshCw, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Select } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { formatINR } from "@/lib/utils";
 import type { AdminOrganization, Plan } from "@/types";
 import { adminService } from "@/services/admin.service";
@@ -94,30 +96,30 @@ export default function SubscriptionModal({
         <div className="space-y-4 text-xs">
           <div>
             <label className="block text-slate-700 font-semibold mb-1.5">Assign SaaS Commercial Tier</label>
-            <select
+            <Select
               value={selectedPlanId}
               onChange={(e) => setSelectedPlanId(e.target.value)}
-              className="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-slate-900 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+              className="text-xs"
             >
               {plans.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} ({formatINR(p.priceMonthly)}/mo - Max {p.maxProperties} Props, {p.maxStaff} Staff)
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>
             <label className="block text-slate-700 font-semibold mb-1.5">Subscription Status</label>
-            <select
+            <Select
               value={subStatus}
               onChange={(e) => setSubStatus(e.target.value)}
-              className="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-slate-900 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+              className="text-xs"
             >
               <option value="ACTIVE">ACTIVE (Full access permitted)</option>
               <option value="SUSPENDED">SUSPENDED (Temporarily blocked)</option>
               <option value="EXPIRED">EXPIRED (Forces renewal prompt)</option>
-            </select>
+            </Select>
           </div>
 
           <div>
@@ -161,11 +163,10 @@ export default function SubscriptionModal({
               </Button>
             </div>
 
-            <input
-              type="date"
+            <DatePicker
               value={subExpiryDate}
-              onChange={(e) => setSubExpiryDate(e.target.value)}
-              className="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-slate-900 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
+              onChange={setSubExpiryDate}
+              placeholder="Select expiration date (or leave empty for Lifetime)"
             />
             <p className="text-[11px] text-slate-500 mt-1">
               When expired, operations like adding new properties or staff will be blocked until renewed.
