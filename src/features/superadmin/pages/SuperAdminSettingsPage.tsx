@@ -1,69 +1,82 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Sliders,
   RefreshCw,
-  Save,
+  Plus,
+  Pencil,
+  Trash2,
   ShieldAlert,
   ShieldCheck,
   CreditCard,
   Building2,
   Copy,
   Check,
-  Undo2,
   Search,
-  Sparkles,
   Lock,
   Clock,
+  Sparkles,
   HelpCircle,
+  Filter,
 } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 import { canAccessPlatform } from "@/lib/permissions";
 import { useApi } from "@/hooks/useApi";
-import { adminService, type SystemSetting } from "@/services/admin.service";
+import {
+  adminService,
+  type SystemSetting,
+  type CreateSettingInput,
+} from "@/services/admin.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Modal } from "@/components/ui/modal";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { State } from "@/components/ui/page";
 import { Toast } from "@/components/ui/toast";
 import { formatDateTime } from "@/lib/utils";
 
 const CATEGORY_META: Record<
   string,
-  { label: string; icon: any; color: string; badgeColor: string; bg: string; border: string }
+  { label: string; icon: any; color: string; badgeColor: string; bg: string }
 > = {
   AUTH_SECURITY: {
-    label: "Authentication & Security",
+    label: "Auth & Security",
     icon: Lock,
     color: "text-purple-600",
-    badgeColor: "bg-purple-100 text-purple-700 border-purple-200",
-    bg: "bg-purple-50",
-    border: "border-purple-100",
+    badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
+    bg: "bg-purple-500",
   },
   BILLING_COMMERCE: {
-    label: "Billing & Financials",
+    label: "Billing & Commerce",
     icon: CreditCard,
     color: "text-emerald-600",
-    badgeColor: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    bg: "bg-emerald-50",
-    border: "border-emerald-100",
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    bg: "bg-emerald-500",
   },
   PLATFORM_GENERAL: {
-    label: "Platform & Branding",
+    label: "Platform & General",
     icon: Building2,
     color: "text-blue-600",
-    badgeColor: "bg-blue-100 text-blue-700 border-blue-200",
-    bg: "bg-blue-50",
-    border: "border-blue-100",
+    badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+    bg: "bg-blue-500",
   },
   SYSTEM_OPS: {
     label: "System Operations",
     icon: Sliders,
     color: "text-amber-600",
-    badgeColor: "bg-amber-100 text-amber-700 border-amber-200",
-    bg: "bg-amber-50",
-    border: "border-amber-100",
+    badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
+    bg: "bg-amber-500",
   },
 };
+
+const PROTECTED_CORE_KEYS = new Set([
+  "jwt_access_expiry_minutes",
+  "jwt_refresh_expiry_days",
+  "otp_expiry_minutes",
+  "currency_code",
+  "currency_symbol",
+]);
 
 export default function SuperAdminSettingsPage() {
   const user = useAppSelector((s) => s.auth.user);
@@ -74,63 +87,151 @@ export default function SuperAdminSettingsPage() {
     [] as SystemSetting[]
   );
 
-  const [editValues, setEditValues] = useState<Record<string, string>>({});
-  const [savingKey, setSavingKey] = useState<string | null>(null);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
-  const [feedback, setFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
 
-  const showFeedback = (text: string, type: "success" | "error" = "success") => {
-    setFeedback({ text, type });
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Modals & Actions
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingSetting, setEditingSetting] = useState<SystemSetting | null>(null);
+  const [deletingSetting, setDeletingSetting] = useState<SystemSetting | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form State for Create
+  const [createForm, setCreateForm] = useState<CreateSettingInput>({
+    key: "",
+    value: "",
+    category: "PLATFORM_GENERAL",
+    description: "",
+    unit: "",
+    dataType: "string",
+  });
+
+  // Form State for Edit
+  const [editForm, setEditForm] = useState<{
+    value: string;
+    category: string;
+    description: string;
+    unit: string;
+    dataType: string;
+  }>({
+    value: "",
+    category: "PLATFORM_GENERAL",
+    description: "",
+    unit: "",
+    dataType: "string",
+  });
+
+  // Feedback Toast
+  const [toast, setToast] = useState<{ show: boolean; message: string; type?: "success" | "error" | "info" }>({
+    show: false,
+    message: "",
+  });
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
+    setToast({ show: true, message, type });
   };
 
-  const handleValueChange = (key: string, value: string) => {
-    setEditValues((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleResetValue = (key: string) => {
-    setEditValues((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-  };
-
-  const getCurrentValue = (s: SystemSetting) => {
-    return editValues[s.key] !== undefined ? editValues[s.key] : s.value;
-  };
+  // Reset pagination on search or filter change
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedCategory]);
 
   const handleCopyKey = (key: string) => {
     navigator.clipboard.writeText(key);
     setCopiedKey(key);
+    showToast(`Copied "${key}" to clipboard`, "info");
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const handleSave = async (s: SystemSetting) => {
-    const val = editValues[s.key];
-    if (val === undefined || val === s.value) return;
-    setSavingKey(s.key);
+  // Open Create Modal
+  const handleOpenCreate = () => {
+    setCreateForm({
+      key: "",
+      value: "",
+      category: "PLATFORM_GENERAL",
+      description: "",
+      unit: "",
+      dataType: "string",
+    });
+    setIsCreateOpen(true);
+  };
+
+  // Open Edit Modal
+  const handleOpenEdit = (s: SystemSetting) => {
+    setEditingSetting(s);
+    setEditForm({
+      value: s.value,
+      category: s.category || "PLATFORM_GENERAL",
+      description: s.description || "",
+      unit: s.unit || "",
+      dataType: s.dataType || "string",
+    });
+  };
+
+  // Submit Create
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createForm.key.trim()) {
+      showToast("Variable Key name is required", "error");
+      return;
+    }
+    setIsSubmitting(true);
     try {
-      await adminService.updateSetting(s.key, val);
-      showFeedback(`Parameter "${s.key}" updated to "${val}"`);
-      handleResetValue(s.key);
+      await adminService.createSetting(createForm);
+      showToast(`Setting "${createForm.key}" created successfully!`, "success");
+      setIsCreateOpen(false);
       await reload();
     } catch (err: any) {
-      showFeedback(err?.response?.data?.message || err?.message || "Failed to update setting", "error");
+      showToast(err?.response?.data?.message || err?.message || "Failed to create setting", "error");
     } finally {
-      setSavingKey(null);
+      setIsSubmitting(false);
     }
   };
 
-  // Categories list
-  const availableCategories = useMemo(() => {
-    const set = new Set<string>();
-    settings.forEach((s) => {
-      if (s.category) set.add(s.category);
-    });
-    return Array.from(set);
-  }, [settings]);
+  // Submit Edit
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSetting) return;
+    setIsSubmitting(true);
+    try {
+      await adminService.updateSetting(editingSetting.key, editForm);
+      showToast(`Setting "${editingSetting.key}" updated successfully!`, "success");
+      setEditingSetting(null);
+      await reload();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || err?.message || "Failed to update setting", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Confirm Delete
+  const handleConfirmDelete = async () => {
+    if (!deletingSetting) return;
+    if (PROTECTED_CORE_KEYS.has(deletingSetting.key)) {
+      showToast(`Cannot delete core system variable "${deletingSetting.key}".`, "error");
+      setDeletingSetting(null);
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await adminService.deleteSetting(deletingSetting.key);
+      showToast(`Setting "${deletingSetting.key}" removed successfully.`, "success");
+      setDeletingSetting(null);
+      await reload();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message || err?.message || "Failed to delete setting", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Filtered settings
   const filteredSettings = useMemo(() => {
@@ -146,6 +247,12 @@ export default function SuperAdminSettingsPage() {
       return matchesCategory && matchesSearch;
     });
   }, [settings, selectedCategory, searchQuery]);
+
+  // Paginated records
+  const paginatedSettings = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredSettings.slice(start, start + pageSize);
+  }, [filteredSettings, page, pageSize]);
 
   // Key KPI values
   const tokenAccess = settings.find((s) => s.key === "jwt_access_expiry_minutes")?.value || "15";
@@ -170,13 +277,13 @@ export default function SuperAdminSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl pb-12">
+    <div className="space-y-6 max-w-7xl pb-16">
       {/* Toast Feedback */}
       <Toast
-        show={Boolean(feedback)}
-        message={feedback?.text || ""}
-        type={feedback?.type}
-        onClose={() => setFeedback(null)}
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ show: false, message: "" })}
       />
 
       {/* Header */}
@@ -192,11 +299,11 @@ export default function SuperAdminSettingsPage() {
             </Badge>
           </div>
           <p className="mt-1 text-sm text-slate-500">
-            Control global authentication timeouts, currency units, GST taxation, and maintenance window parameters in real-time.
+            Enterprise parameter registry for session tokens, taxes, commercial billing, and platform runtime flags.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <Button
             variant="outline"
             size="sm"
@@ -205,6 +312,15 @@ export default function SuperAdminSettingsPage() {
           >
             <RefreshCw className={`h-3.5 w-3.5 text-blue-600 ${loading ? "animate-spin" : ""}`} />
             <span>Refresh</span>
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={handleOpenCreate}
+            className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Variable</span>
           </Button>
         </div>
       </div>
@@ -280,7 +396,7 @@ export default function SuperAdminSettingsPage() {
         <Card hoverEffect className="p-4 border-slate-200/80 bg-white shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Active Parameters
+              Registry Count
             </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
               <Sliders className="h-4 w-4" />
@@ -288,241 +404,520 @@ export default function SuperAdminSettingsPage() {
           </div>
           <div className="mt-2">
             <div className="text-lg font-bold text-slate-900">{settings.length} Variables</div>
-            <p className="text-[11px] text-slate-500 mt-0.5">Synced with cache memory</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Active memory cached</p>
           </div>
         </Card>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
-        {/* Category Pills */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            onClick={() => setSelectedCategory("ALL")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all ${
-              selectedCategory === "ALL"
-                ? "bg-slate-900 text-white border-slate-900 shadow-xs"
-                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-            }`}
-          >
-            All Parameters ({settings.length})
-          </button>
-          {availableCategories.map((cat) => {
-            const meta = CATEGORY_META[cat];
-            const isSelected = selectedCategory === cat;
-            const count = settings.filter((s) => s.category === cat).length;
-            return (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all flex items-center gap-1.5 ${
-                  isSelected
-                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                {meta && <meta.icon className="h-3 w-3" />}
-                <span>{meta?.label || cat}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${isSelected ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-500"}`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      {/* Filters & Search Control Bar */}
+      <Card className="p-4 bg-white border border-slate-200 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search variables by key, unit, remark, description, value..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl border border-slate-200 bg-slate-50/50 placeholder:text-slate-400 focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            />
+          </div>
 
-        {/* Search Input */}
-        <div className="relative min-w-[240px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search parameter, unit..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs"
-          />
+          {/* Category Filter Select */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-hidden"
+            >
+              <option value="ALL">All Categories ({settings.length})</option>
+              <option value="AUTH_SECURITY">🔒 Auth & Security</option>
+              <option value="BILLING_COMMERCE">💳 Billing & Commerce</option>
+              <option value="PLATFORM_GENERAL">🏢 Platform & General</option>
+              <option value="SYSTEM_OPS">⚙️ System Operations</option>
+            </select>
+          </div>
         </div>
-      </div>
+      </Card>
 
       <State loading={loading} error={error} empty={filteredSettings.length === 0} />
 
+      {/* Real-World Enterprise Listing Table */}
       {!loading && !error && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {filteredSettings.map((s) => {
-            const isChanged = editValues[s.key] !== undefined && editValues[s.key] !== s.value;
-            const currentValue = getCurrentValue(s);
-            const isBusy = savingKey === s.key;
-            const meta = CATEGORY_META[s.category] || {
-              label: s.category || "General",
-              icon: HelpCircle,
-              color: "text-slate-600",
-              badgeColor: "bg-slate-100 text-slate-700 border-slate-200",
-              bg: "bg-slate-50",
-              border: "border-slate-100",
-            };
+        <Card className="overflow-hidden border border-slate-200 bg-white shadow-xs rounded-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th scope="col" className="px-5 py-3.5">
+                    Variable Key
+                  </th>
+                  <th scope="col" className="px-4 py-3.5">
+                    Category
+                  </th>
+                  <th scope="col" className="px-4 py-3.5">
+                    Current Value
+                  </th>
+                  <th scope="col" className="px-4 py-3.5">
+                    Type & Unit
+                  </th>
+                  <th scope="col" className="px-5 py-3.5">
+                    Description & Remarks
+                  </th>
+                  <th scope="col" className="px-4 py-3.5 text-right">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-normal">
+                {paginatedSettings.map((s) => {
+                  const meta = CATEGORY_META[s.category] || {
+                    label: s.category || "General",
+                    icon: HelpCircle,
+                    color: "text-slate-600",
+                    badgeColor: "bg-slate-50 text-slate-700 border-slate-200",
+                    bg: "bg-slate-500",
+                  };
 
-            const isBoolean = s.dataType === "boolean" || s.value === "true" || s.value === "false";
-            const isNumber = s.dataType === "number";
+                  const isProtected = PROTECTED_CORE_KEYS.has(s.key);
+                  const isBoolean = s.dataType === "boolean" || s.value === "true" || s.value === "false";
 
-            return (
-              <Card
-                key={s.id || s.key}
-                className={`p-5 bg-white rounded-2xl border transition-all duration-200 flex flex-col justify-between ${
-                  isChanged
-                    ? "border-blue-400 shadow-md ring-2 ring-blue-500/10"
-                    : "border-slate-200/90 shadow-xs hover:border-slate-300"
-                }`}
-              >
-                <div>
-                  {/* Top Header: Category & Key */}
-                  <div className="flex items-start justify-between gap-2 pb-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${meta.badgeColor}`}>
-                        <meta.icon className="h-2.5 w-2.5" />
-                        <span>{meta.label}</span>
-                      </span>
-
-                      {s.unit && (
-                        <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                          Unit: {s.unit}
-                        </span>
-                      )}
-
-                      {isChanged && (
-                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 animate-pulse">
-                          ● Unsaved Change
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Copy Key Button */}
-                    <button
-                      onClick={() => handleCopyKey(s.key)}
-                      title="Copy variable key name"
-                      className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                  return (
+                    <tr
+                      key={s.id || s.key}
+                      className="hover:bg-slate-50/60 transition-colors group"
                     >
-                      {copiedKey === s.key ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-600" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  </div>
+                      {/* Column 1: Variable Key */}
+                      <td className="px-5 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs font-mono font-bold text-slate-900 bg-slate-100/80 px-2 py-0.5 rounded-md border border-slate-200 select-all">
+                            {s.key}
+                          </code>
+                          <button
+                            onClick={() => handleCopyKey(s.key)}
+                            title="Copy variable key"
+                            className="text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-200/50 transition-colors"
+                          >
+                            {copiedKey === s.key ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
 
-                  {/* Variable Key */}
-                  <div className="mt-1">
-                    <code className="text-xs font-mono font-bold text-slate-900 bg-slate-50 px-2 py-1 rounded-md border border-slate-200 select-all">
-                      {s.key}
-                    </code>
-                  </div>
-
-                  {/* Description */}
-                  <p className="mt-2 text-xs text-slate-600 leading-relaxed min-h-[36px]">
-                    {s.description || "System runtime parameter configured for platform operations."}
-                  </p>
-                </div>
-
-                {/* Input & Action Bar */}
-                <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                  <div className="flex items-center gap-2">
-                    {/* Control input based on type */}
-                    {isBoolean ? (
-                      <div className="flex items-center gap-1.5 flex-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
-                        <button
-                          type="button"
-                          onClick={() => handleValueChange(s.key, "true")}
-                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                            currentValue === "true"
-                              ? "bg-emerald-600 text-white shadow-xs"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
+                      {/* Column 2: Category */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${meta.badgeColor}`}
                         >
-                          Enabled (true)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleValueChange(s.key, "false")}
-                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                            currentValue === "false"
-                              ? "bg-slate-700 text-white shadow-xs"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                        >
-                          Disabled (false)
-                        </button>
-                      </div>
-                    ) : isNumber ? (
-                      <div className="relative flex-1">
-                        <input
-                          type="number"
-                          value={currentValue}
-                          onChange={(e) => handleValueChange(s.key, e.target.value)}
-                          className="w-full pl-3 pr-14 py-2 text-xs font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-hidden transition-all"
-                        />
-                        {s.unit && (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-400 pointer-events-none">
-                            {s.unit.split(" ")[0]}
+                          <meta.icon className="h-3 w-3" />
+                          <span>{meta.label}</span>
+                        </span>
+                      </td>
+
+                      {/* Column 3: Current Value */}
+                      <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-900">
+                        {isBoolean ? (
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                              s.value === "true"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-slate-100 text-slate-600 border-slate-200"
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                s.value === "true" ? "bg-emerald-500" : "bg-slate-400"
+                              }`}
+                            />
+                            <span>{s.value === "true" ? "Enabled (true)" : "Disabled (false)"}</span>
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-xs text-slate-800 bg-slate-50 px-2 py-1 rounded-md border border-slate-200/80 font-mono">
+                            {s.value}
                           </span>
                         )}
-                      </div>
-                    ) : (
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={currentValue}
-                          onChange={(e) => handleValueChange(s.key, e.target.value)}
-                          className="w-full px-3 py-2 text-xs font-semibold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:outline-hidden transition-all"
-                        />
-                      </div>
-                    )}
+                      </td>
 
-                    {/* Reset Button (If modified) */}
-                    {isChanged && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        title="Discard changes and revert to saved value"
-                        onClick={() => handleResetValue(s.key)}
-                        className="h-9 w-9 p-0 text-slate-400 hover:text-rose-600 border-slate-200 hover:border-rose-200 hover:bg-rose-50"
-                      >
-                        <Undo2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                      {/* Column 4: Type & Unit */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-mono text-[11px] font-semibold text-slate-700 uppercase">
+                            {s.dataType || "string"}
+                          </span>
+                          {s.unit ? (
+                            <span className="text-[10px] text-blue-600 font-semibold">
+                              {s.unit}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">—</span>
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Save Button */}
-                    <Button
-                      size="sm"
-                      disabled={!isChanged || isBusy}
-                      onClick={() => handleSave(s)}
-                      className={`h-9 px-3.5 text-xs font-semibold gap-1.5 transition-all shadow-xs ${
-                        isChanged
-                          ? "bg-blue-600 hover:bg-blue-700 text-white"
-                          : "bg-slate-100 text-slate-400 cursor-not-allowed border-none shadow-none"
-                      }`}
-                    >
-                      {isBusy ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Save className="h-3.5 w-3.5" />
-                      )}
-                      <span>{isBusy ? "Saving..." : "Save"}</span>
-                    </Button>
-                  </div>
+                      {/* Column 5: Description */}
+                      <td className="px-5 py-4 max-w-xs sm:max-w-md">
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                          {s.description || "System runtime configuration variable."}
+                        </p>
+                        <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-1">
+                          <Clock className="h-3 w-3" />
+                          <span>Updated: {s.updatedAt ? formatDateTime(s.updatedAt) : "Default"}</span>
+                        </span>
+                      </td>
 
-                  {/* Last updated footer */}
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span>Updated: {s.updatedAt ? formatDateTime(s.updatedAt) : "Default"}</span>
-                    </span>
-                    <span className="font-mono text-slate-300">ID: {s.id}</span>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                      {/* Column 6: Actions */}
+                      <td className="px-4 py-4 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Edit Button */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenEdit(s)}
+                            className="h-8 px-2.5 text-xs font-semibold gap-1 text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 shadow-2xs"
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-blue-600" />
+                            <span>Edit</span>
+                          </Button>
+
+                          {/* Delete Button */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isProtected}
+                            title={isProtected ? "Protected core parameter cannot be deleted" : "Delete parameter"}
+                            onClick={() => setDeletingSetting(s)}
+                            className={`h-8 px-2 text-xs font-semibold shadow-2xs ${
+                              isProtected
+                                ? "text-slate-300 border-slate-100 cursor-not-allowed opacity-50"
+                                : "text-rose-600 border-slate-200 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                            }`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table Pagination */}
+          <div className="border-t border-slate-100 p-4">
+            <DataTablePagination
+              currentPage={page}
+              pageSize={pageSize}
+              totalRecords={filteredSettings.length}
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => {
+                setPageSize(newSize);
+                setPage(1);
+              }}
+              pageSizeOptions={[10, 20, 50]}
+              apiEndpoint="GET /api/v1/admin/settings"
+            />
+          </div>
+        </Card>
       )}
+
+      {/* CREATE SETTING MODAL */}
+      <Modal
+        open={isCreateOpen}
+        title="Add New System Parameter"
+        subtitle="Define a new dynamic runtime variable in the platform registry"
+        onClose={() => setIsCreateOpen(false)}
+      >
+        <form onSubmit={handleCreateSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Variable Key <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. max_failed_logins, invoice_prefix"
+              value={createForm.key}
+              onChange={(e) =>
+                setCreateForm((prev) => ({
+                  ...prev,
+                  key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"),
+                }))
+              }
+              className="w-full px-3.5 py-2 text-xs font-mono font-bold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-hidden"
+            />
+            <p className="text-[10px] text-slate-400 mt-1">
+              Lowercase letters, numbers, and underscores only.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Category
+              </label>
+              <select
+                value={createForm.category}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, category: e.target.value }))}
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
+              >
+                <option value="AUTH_SECURITY">🔒 Auth & Security</option>
+                <option value="BILLING_COMMERCE">💳 Billing & Commerce</option>
+                <option value="PLATFORM_GENERAL">🏢 Platform & General</option>
+                <option value="SYSTEM_OPS">⚙️ System Operations</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Data Type
+              </label>
+              <select
+                value={createForm.dataType}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, dataType: e.target.value }))}
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
+              >
+                <option value="string">Text / String</option>
+                <option value="number">Numeric (Integer / Float)</option>
+                <option value="boolean">Boolean (true / false)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Configured Value <span className="text-rose-500">*</span>
+            </label>
+            {createForm.dataType === "boolean" ? (
+              <select
+                value={createForm.value}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, value: e.target.value }))}
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
+              >
+                <option value="true">true (Enabled)</option>
+                <option value="false">false (Disabled)</option>
+              </select>
+            ) : createForm.dataType === "number" ? (
+              <input
+                type="number"
+                required
+                placeholder="e.g. 15, 100, 0"
+                value={createForm.value}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, value: e.target.value }))}
+                className="w-full px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-hidden"
+              />
+            ) : (
+              <input
+                type="text"
+                required
+                placeholder="Setting value..."
+                value={createForm.value}
+                onChange={(e) => setCreateForm((prev) => ({ ...prev, value: e.target.value }))}
+                className="w-full px-3.5 py-2 text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-hidden"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Unit / Remark
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Minutes (m), Days (d), Percentage (%), ISO 4217"
+              value={createForm.unit}
+              onChange={(e) => setCreateForm((prev) => ({ ...prev, unit: e.target.value }))}
+              className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-hidden"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Description & Purpose
+            </label>
+            <textarea
+              rows={2}
+              placeholder="Describe what this parameter controls and how it behaves..."
+              value={createForm.description}
+              onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
+              className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-hidden resize-none"
+            />
+          </div>
+
+          <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCreateOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+            >
+              {isSubmitting ? "Creating..." : "Save Variable"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* EDIT SETTING MODAL */}
+      <Modal
+        open={Boolean(editingSetting)}
+        title={`Edit Parameter: ${editingSetting?.key || ""}`}
+        subtitle="Modify value, description, or unit remark for this variable"
+        onClose={() => setEditingSetting(null)}
+      >
+        {editingSetting && (
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Variable Key (Immutable)
+              </label>
+              <input
+                type="text"
+                disabled
+                value={editingSetting.key}
+                className="w-full px-3.5 py-2 text-xs font-mono font-bold rounded-xl border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed select-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Configured Value <span className="text-rose-500">*</span>
+              </label>
+              {editForm.dataType === "boolean" ? (
+                <select
+                  value={editForm.value}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, value: e.target.value }))}
+                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
+                >
+                  <option value="true">true (Enabled)</option>
+                  <option value="false">false (Disabled)</option>
+                </select>
+              ) : editForm.dataType === "number" ? (
+                <input
+                  type="number"
+                  required
+                  value={editForm.value}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, value: e.target.value }))}
+                  className="w-full px-3.5 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-hidden"
+                />
+              ) : (
+                <input
+                  type="text"
+                  required
+                  value={editForm.value}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, value: e.target.value }))}
+                  className="w-full px-3.5 py-2 text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-hidden"
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Category
+                </label>
+                <select
+                  value={editForm.category}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))}
+                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
+                >
+                  <option value="AUTH_SECURITY">🔒 Auth & Security</option>
+                  <option value="BILLING_COMMERCE">💳 Billing & Commerce</option>
+                  <option value="PLATFORM_GENERAL">🏢 Platform & General</option>
+                  <option value="SYSTEM_OPS">⚙️ System Operations</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Data Type
+                </label>
+                <select
+                  value={editForm.dataType}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, dataType: e.target.value }))}
+                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
+                >
+                  <option value="string">Text / String</option>
+                  <option value="number">Numeric (Integer / Float)</option>
+                  <option value="boolean">Boolean (true / false)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Unit / Remark
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Minutes (m), Days (d), Currency Symbol"
+                value={editForm.unit}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, unit: e.target.value }))}
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-hidden"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Description & Purpose
+              </label>
+              <textarea
+                rows={2}
+                value={editForm.description}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-hidden resize-none"
+              />
+            </div>
+
+            <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEditingSetting(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              >
+                {isSubmitting ? "Updating..." : "Update Parameter"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* DELETE SETTING CONFIRMATION MODAL */}
+      <ConfirmModal
+        open={Boolean(deletingSetting)}
+        title="Remove System Parameter?"
+        description={
+          deletingSetting
+            ? `Are you sure you want to delete parameter "${deletingSetting.key}"? This will remove the parameter from database and memory cache.`
+            : "Are you sure you want to remove this variable?"
+        }
+        confirmText="Yes, Delete Variable"
+        tone="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeletingSetting(null)}
+      />
     </div>
   );
 }
