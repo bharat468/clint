@@ -14,6 +14,7 @@ import {
 } from "@/services/rentalLifecycle.service";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Toast } from "@/components/ui/toast";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
@@ -31,6 +32,14 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type?: "success" | "error" | "info";
+  }>({
+    show: false,
+    message: "",
+  });
 
   // Add Unit Form State
   const [isAdding, setIsAdding] = useState(false);
@@ -96,9 +105,10 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
       if (created) {
         setUnits((prev) => [...prev, created]);
       }
+      setToast({ show: true, type: "success", message: `Unit ${unitNumber} added successfully.` });
       await loadUnits();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to create unit");
+      setToast({ show: true, type: "error", message: err.response?.data?.message || "Failed to create unit" });
     } finally {
       setSavingUnit(false);
     }
@@ -107,7 +117,7 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
   const handleBulkCreateUnits = async (e: React.FormEvent) => {
     e.preventDefault();
     if (bulkCount <= 0 || bulkCount > 100) {
-      alert("Please enter a valid flat count between 1 and 100");
+      setToast({ show: true, type: "error", message: "Please enter a valid flat count between 1 and 100" });
       return;
     }
     setSavingUnit(true);
@@ -137,9 +147,10 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
 
       setIsBulkAdding(false);
       setBulkProgress(null);
+      setToast({ show: true, type: "success", message: `Successfully generated ${bulkCount} units in bulk!` });
       await loadUnits();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed during bulk flat creation");
+      setToast({ show: true, type: "error", message: err.response?.data?.message || "Failed during bulk flat creation" });
     } finally {
       setSavingUnit(false);
       setBulkProgress(null);
@@ -169,9 +180,10 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
         prev.map((u) => (u.id === publishingUnit.id ? { ...u, status: "LISTED" } : u))
       );
       setPublishingUnit(null);
+      setToast({ show: true, type: "success", message: "Listing published to marketplace successfully." });
       await loadUnits();
     } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to publish listing");
+      setToast({ show: true, type: "error", message: err.response?.data?.message || "Failed to publish listing" });
     } finally {
       setPublishing(false);
     }
@@ -656,6 +668,13 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
           </div>
         )}
       </div>
+
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: "" })}
+      />
     </div>
   );
 }
