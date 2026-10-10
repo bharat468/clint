@@ -252,27 +252,27 @@ export default function PricingPage() {
               </tr>
               <tr>
                 <td className="p-3 font-medium text-slate-800">Digital Rent Receipts</td>
-                <td className="p-3 text-center text-emerald-600">✓</td>
-                <td className="p-3 text-center text-emerald-600">✓</td>
-                <td className="p-3 text-center text-emerald-600">✓</td>
+                <td className="p-3 text-center text-emerald-600"><Check className="w-4 h-4 mx-auto" /></td>
+                <td className="p-3 text-center text-emerald-600"><Check className="w-4 h-4 mx-auto" /></td>
+                <td className="p-3 text-center text-emerald-600"><Check className="w-4 h-4 mx-auto" /></td>
               </tr>
               <tr>
                 <td className="p-3 font-medium text-slate-800">Zero-Trust Mobile OTP</td>
-                <td className="p-3 text-center text-emerald-600">✓</td>
-                <td className="p-3 text-center text-emerald-600">✓</td>
-                <td className="p-3 text-center text-emerald-600">✓</td>
+                <td className="p-3 text-center text-emerald-600"><Check className="w-4 h-4 mx-auto" /></td>
+                <td className="p-3 text-center text-emerald-600"><Check className="w-4 h-4 mx-auto" /></td>
+                <td className="p-3 text-center text-emerald-600"><Check className="w-4 h-4 mx-auto" /></td>
               </tr>
               <tr>
                 <td className="p-3 font-medium text-slate-800">Staff Role Property Scoping</td>
                 <td className="p-3 text-center text-slate-400">—</td>
-                <td className="p-3 text-center text-emerald-600">✓</td>
-                <td className="p-3 text-center text-emerald-600">✓</td>
+                <td className="p-3 text-center text-emerald-600"><Check className="w-4 h-4 mx-auto" /></td>
+                <td className="p-3 text-center text-emerald-600"><Check className="w-4 h-4 mx-auto" /></td>
               </tr>
               <tr>
                 <td className="p-3 font-medium text-slate-800">Multi-Tenant Boundaries</td>
                 <td className="p-3 text-center text-slate-400">—</td>
                 <td className="p-3 text-center text-slate-400">—</td>
-                <td className="p-3 text-center text-emerald-600">✓</td>
+                <td className="p-3 text-center text-emerald-600"><Check className="w-4 h-4 mx-auto" /></td>
               </tr>
               <tr>
                 <td className="p-3 font-medium text-slate-800">Dedicated Account SLA</td>

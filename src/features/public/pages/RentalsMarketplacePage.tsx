@@ -12,6 +12,7 @@ import {
   Send,
   X,
   Sparkles,
+  Check,
 } from "lucide-react";
 import {
   rentalLifecycleService,
@@ -270,9 +271,10 @@ export default function RentalsMarketplacePage() {
                         {item.amenities.slice(0, 3).map((a, i) => (
                           <span
                             key={i}
-                            className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md font-medium"
+                            className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
                           >
-                            ✓ {a}
+                            <Check className="w-3 h-3 text-blue-600" />
+                            <span>{a}</span>
                           </span>
                         ))}
                       </div>

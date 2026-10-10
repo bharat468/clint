@@ -7,6 +7,8 @@ import {
   Layers,
   Sparkles,
   Loader2,
+  Check,
+  Home,
 } from "lucide-react";
 import {
   rentalLifecycleService,
@@ -15,10 +17,27 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Toast } from "@/components/ui/toast";
+import { Select, type SelectOptionItem } from "@/components/ui/input";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import type { Property } from "@/types";
+
+const UNIT_TYPE_OPTIONS: SelectOptionItem[] = [
+  { value: "FLAT_1BHK", label: "1 BHK Flat", icon: Home },
+  { value: "FLAT_2BHK", label: "2 BHK Flat", icon: Home },
+  { value: "FLAT_3BHK", label: "3 BHK Flat", icon: Home },
+  { value: "STUDIO", label: "Studio Apartment", icon: Building2 },
+  { value: "ROOM", label: "Single Room / PG", icon: Layers },
+  { value: "SHOP", label: "Commercial Shop", icon: Building2 },
+  { value: "OFFICE", label: "Office Space", icon: Building2 },
+];
+
+const FURNISHING_OPTIONS: SelectOptionItem[] = [
+  { value: "UNFURNISHED", label: "Unfurnished" },
+  { value: "SEMI_FURNISHED", label: "Semi-Furnished" },
+  { value: "FULLY_FURNISHED", label: "Fully-Furnished" },
+];
 
 interface Props {
   property: Property;
@@ -285,19 +304,12 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Unit Type</label>
-                <select
+                <Select
                   value={unitType}
                   onChange={(e) => setUnitType(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none"
-                >
-                  <option value="FLAT_1BHK">1 BHK Flat</option>
-                  <option value="FLAT_2BHK">2 BHK Flat</option>
-                  <option value="FLAT_3BHK">3 BHK Flat</option>
-                  <option value="STUDIO">Studio Apartment</option>
-                  <option value="ROOM">Single Room / PG</option>
-                  <option value="SHOP">Commercial Shop</option>
-                  <option value="OFFICE">Office Space</option>
-                </select>
+                  options={UNIT_TYPE_OPTIONS}
+                  className="h-9.5 text-xs font-semibold"
+                />
               </div>
             </div>
 
@@ -329,15 +341,12 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Furnishing</label>
-                <select
+                <Select
                   value={furnishing}
                   onChange={(e) => setFurnishing(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none"
-                >
-                  <option value="UNFURNISHED">Unfurnished</option>
-                  <option value="SEMI_FURNISHED">Semi-Furnished</option>
-                  <option value="FULLY_FURNISHED">Fully-Furnished</option>
-                </select>
+                  options={FURNISHING_OPTIONS}
+                  className="h-9.5 text-xs font-semibold"
+                />
               </div>
             </div>
 
@@ -425,19 +434,12 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Unit Type</label>
-                <select
+                <Select
                   value={unitType}
                   onChange={(e) => setUnitType(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none"
-                >
-                  <option value="FLAT_1BHK">1 BHK Flat</option>
-                  <option value="FLAT_2BHK">2 BHK Flat</option>
-                  <option value="FLAT_3BHK">3 BHK Flat</option>
-                  <option value="STUDIO">Studio Apartment</option>
-                  <option value="ROOM">Single Room / PG</option>
-                  <option value="SHOP">Commercial Shop</option>
-                  <option value="OFFICE">Office Space</option>
-                </select>
+                  options={UNIT_TYPE_OPTIONS}
+                  className="h-9.5 text-xs font-semibold"
+                />
               </div>
 
               <div>
@@ -454,15 +456,12 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Furnishing</label>
-                <select
+                <Select
                   value={furnishing}
                   onChange={(e) => setFurnishing(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none"
-                >
-                  <option value="UNFURNISHED">Unfurnished</option>
-                  <option value="SEMI_FURNISHED">Semi-Furnished</option>
-                  <option value="FULLY_FURNISHED">Fully-Furnished</option>
-                </select>
+                  options={FURNISHING_OPTIONS}
+                  className="h-9.5 text-xs font-semibold"
+                />
               </div>
             </div>
 
@@ -574,8 +573,9 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
                         </Button>
                       )}
                       {isListed && (
-                        <span className="text-xs text-blue-700 font-semibold px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
-                          ✓ Active in Marketplace
+                        <span className="text-xs text-blue-700 font-semibold px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 text-blue-600" />
+                          Active in Marketplace
                         </span>
                       )}
                       {isOccupied && (

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Building2, ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
+import { Building2, ShieldCheck, Sparkles, ArrowRight, Check } from "lucide-react";
 
 export default function AboutPage() {
   return (
@@ -39,7 +39,7 @@ export default function AboutPage() {
         <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50/70 to-indigo-50/40 p-8 space-y-5">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
-              ✓
+              <Check className="w-5 h-5" />
             </div>
             <div>
               <div className="font-bold text-sm text-slate-900">100% Cloud-Native & Secure</div>
@@ -49,7 +49,7 @@ export default function AboutPage() {
 
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold">
-              ✓
+              <Check className="w-5 h-5" />
             </div>
             <div>
               <div className="font-bold text-sm text-slate-900">Zero Password Vulnerability</div>
@@ -59,7 +59,7 @@ export default function AboutPage() {
 
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold">
-              ✓
+              <Check className="w-5 h-5" />
             </div>
             <div>
               <div className="font-bold text-sm text-slate-900">Multi-Tenant Scalability</div>
