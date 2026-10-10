@@ -30,6 +30,7 @@ export default function LoginPage() {
   const [pendingSuperAdminAuth, setPendingSuperAdminAuth] = useState<{
     user: User;
     token: string;
+    refreshToken?: string;
   } | null>(null);
 
   // Input refs for 6 OTP boxes
@@ -98,6 +99,7 @@ export default function LoginPage() {
         setPendingSuperAdminAuth({
           user: { ...result.user, isSuperAdmin: true },
           token: result.token,
+          refreshToken: result.refreshToken,
         });
       } else {
         // Standard users go directly to Landlord & Staff workspace
@@ -105,6 +107,7 @@ export default function LoginPage() {
           setCredentials({
             user: result.user,
             token: result.token,
+            refreshToken: result.refreshToken,
             activePortal: "LANDLORD",
           })
         );
@@ -123,6 +126,7 @@ export default function LoginPage() {
       setCredentials({
         user: pendingSuperAdminAuth.user,
         token: pendingSuperAdminAuth.token,
+        refreshToken: pendingSuperAdminAuth.refreshToken,
         activePortal: portal,
       })
     );

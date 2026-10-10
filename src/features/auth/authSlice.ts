@@ -4,11 +4,12 @@ import type { User } from "@/types";
 interface AuthState {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   activePortal: "LANDLORD" | "SUPERADMIN" | null;
 }
 
 const KEY = "rentmate_auth";
-const empty: AuthState = { user: null, token: null, activePortal: null };
+const empty: AuthState = { user: null, token: null, refreshToken: null, activePortal: null };
 
 const load = (): AuthState => {
   try {
@@ -16,6 +17,7 @@ const load = (): AuthState => {
     return {
       user: data.user ?? null,
       token: data.token ?? null,
+      refreshToken: data.refreshToken ?? null,
       activePortal: data.activePortal ?? null,
     };
   } catch {
@@ -28,7 +30,12 @@ const persist = (s: AuthState) => {
     if (s.token) {
       localStorage.setItem(
         KEY,
-        JSON.stringify({ user: s.user, token: s.token, activePortal: s.activePortal })
+        JSON.stringify({
+          user: s.user,
+          token: s.token,
+          refreshToken: s.refreshToken,
+          activePortal: s.activePortal,
+        })
       );
     } else {
       localStorage.removeItem(KEY);
@@ -44,10 +51,18 @@ const authSlice = createSlice({
   reducers: {
     setCredentials: (
       s,
-      a: PayloadAction<{ user: User; token: string; activePortal?: "LANDLORD" | "SUPERADMIN" | null }>
+      a: PayloadAction<{
+        user: User;
+        token: string;
+        refreshToken?: string | null;
+        activePortal?: "LANDLORD" | "SUPERADMIN" | null;
+      }>
     ) => {
       s.user = a.payload.user;
       s.token = a.payload.token;
+      if (a.payload.refreshToken !== undefined) {
+        s.refreshToken = a.payload.refreshToken;
+      }
       if (a.payload.activePortal !== undefined) {
         s.activePortal = a.payload.activePortal;
       }
@@ -60,6 +75,7 @@ const authSlice = createSlice({
     logout: (s) => {
       s.user = null;
       s.token = null;
+      s.refreshToken = null;
       s.activePortal = null;
       persist(s);
     },
