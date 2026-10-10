@@ -28,6 +28,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { Toast } from "@/components/ui/toast";
 import { PageHeader, State } from "@/components/ui/page";
 import { errMsg, formatINR, formatDateTime } from "@/lib/utils";
 import { canAccess } from "@/lib/permissions";
@@ -63,6 +64,14 @@ export default function PaymentsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type?: "success" | "error" | "info";
+  }>({
+    show: false,
+    message: "",
+  });
 
   const currentMonth = new Date().toISOString().slice(0, 7);
   const {
@@ -151,6 +160,7 @@ export default function PaymentsPage() {
         if (updated) {
           setData((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
         }
+        setToast({ show: true, type: "success", message: "Payment record updated successfully." });
         await reload();
       } else {
         const created = await paymentService.create({
@@ -164,6 +174,7 @@ export default function PaymentsPage() {
         if (created) {
           setData((prev) => [created, ...prev.filter((p) => p.id !== created.id)]);
         }
+        setToast({ show: true, type: "success", message: "Payment record created successfully." });
         await reload();
       }
     } catch (e) {
@@ -178,9 +189,10 @@ export default function PaymentsPage() {
       await paymentService.remove(deletingPayment.id);
       setData((prev) => prev.filter((p) => p.id !== deletingPayment.id));
       setDeletingPayment(null);
+      setToast({ show: true, type: "success", message: "Payment record deleted successfully." });
       await reload();
     } catch (e) {
-      alert(errMsg(e));
+      setToast({ show: true, type: "error", message: errMsg(e) });
     } finally {
       setIsDeleting(false);
     }
@@ -193,9 +205,10 @@ export default function PaymentsPage() {
         status: newStatus,
         paidOn: newStatus === "PAID" ? new Date().toISOString().slice(0, 10) : null,
       });
+      setToast({ show: true, type: "success", message: `Payment status updated to ${newStatus}.` });
       await reload();
     } catch (e) {
-      alert(errMsg(e));
+      setToast({ show: true, type: "error", message: errMsg(e) });
       await reload();
     }
   };
@@ -703,6 +716,13 @@ export default function PaymentsPage() {
         loading={isDeleting}
         onConfirm={handleConfirmDelete}
         onClose={() => setDeletingPayment(null)}
+      />
+
+      <Toast
+        show={toast.show}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: "" })}
       />
     </div>
   );
