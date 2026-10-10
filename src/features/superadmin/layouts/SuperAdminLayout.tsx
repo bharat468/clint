@@ -1,15 +1,15 @@
 import { Outlet } from "react-router-dom";
 import { Lock, LogOut } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { logout } from "@/features/auth/authSlice";
+import { useAppSelector } from "@/app/hooks";
+import { useLogout } from "@/features/auth/useLogout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
 import SuperAdminNavbar from "../components/SuperAdminNavbar";
 
 export default function SuperAdminLayout() {
-  const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
+  const handleLogout = useLogout();
 
   const isSuperAdmin =
     Boolean(user?.isSuperAdmin) ||
@@ -28,7 +28,7 @@ export default function SuperAdminLayout() {
           </p>
           <div className="pt-2">
             <Button
-              onClick={() => dispatch(logout())}
+              onClick={handleLogout}
               className="w-full bg-rose-600 hover:bg-rose-700 text-white gap-2 text-xs"
             >
               <LogOut className="h-4 w-4" />

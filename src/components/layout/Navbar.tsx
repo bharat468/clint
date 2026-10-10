@@ -1,12 +1,13 @@
 import { Bell, LogOut, Menu, Search } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { logout } from "@/features/auth/authSlice";
+import { useLogout } from "@/features/auth/useLogout";
 import { toggleSidebar } from "@/features/ui/uiSlice";
 import { Button } from "@/components/ui/button";
 
 export default function Navbar() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
+  const handleLogout = useLogout();
 
   const getInitials = (name?: string | null) => {
     if (!name) return "RM";
@@ -81,7 +82,7 @@ export default function Navbar() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => dispatch(logout())}
+          onClick={handleLogout}
           className="gap-1.5 text-xs font-semibold text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
         >
           <LogOut className="h-3.5 w-3.5" />

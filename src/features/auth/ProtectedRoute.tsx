@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/authSlice";
@@ -10,9 +10,11 @@ export default function ProtectedRoute() {
   const token = useAppSelector((s) => s.auth.token);
   const user = useAppSelector((s) => s.auth.user);
   const location = useLocation();
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
-    if (user) {
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       authService
         .me()
         .then((latestUser) => {
@@ -24,7 +26,7 @@ export default function ProtectedRoute() {
           // Handled by axios 401 interceptor
         });
     }
-  }, [user, dispatch]);
+  }, [dispatch, token]);
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;

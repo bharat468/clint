@@ -1,19 +1,13 @@
 import { Bell, LogOut, Menu, Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSidebar } from "@/features/ui/uiSlice";
-import { logout } from "@/features/auth/authSlice";
+import { useLogout } from "@/features/auth/useLogout";
 import { Button } from "@/components/ui/button";
 
 export default function SuperAdminNavbar() {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const user = useAppSelector((s) => s.auth.user);
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/login", { replace: true });
-  };
+  const handleLogout = useLogout();
 
   const getInitials = (name?: string | null) => {
     if (!name) return "SA";
