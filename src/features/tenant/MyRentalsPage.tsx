@@ -25,6 +25,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Toast } from "@/components/ui/toast";
+import { Select } from "@/components/ui/input";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { formatINR } from "@/lib/utils";
 
@@ -688,10 +689,9 @@ export default function MyRentalsPage() {
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Category
               </label>
-              <select
+              <Select
                 value={ticketCategory}
                 onChange={(e) => setTicketCategory(e.target.value)}
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
               >
                 <option value="PLUMBING">Plumbing</option>
                 <option value="ELECTRICAL">Electrical</option>
@@ -699,23 +699,22 @@ export default function MyRentalsPage() {
                 <option value="CARPENTRY">Carpentry</option>
                 <option value="PAINTING">Painting</option>
                 <option value="OTHER">Other</option>
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Priority
               </label>
-              <select
+              <Select
                 value={ticketPriority}
                 onChange={(e) => setTicketPriority(e.target.value)}
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
               >
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="HIGH">High</option>
                 <option value="URGENT">Urgent</option>
-              </select>
+              </Select>
             </div>
           </div>
 
