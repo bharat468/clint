@@ -27,6 +27,7 @@ import SuperAdminPlansPage from "@/features/superadmin/pages/SuperAdminPlansPage
 import SuperAdminRolesPage from "@/features/superadmin/pages/SuperAdminRolesPage";
 import SuperAdminUsersPage from "@/features/superadmin/pages/SuperAdminUsersPage";
 import SuperAdminSettingsPage from "@/features/superadmin/pages/SuperAdminSettingsPage";
+import NotFoundPage from "@/features/errors/NotFoundPage";
 import { useAppSelector } from "@/app/hooks";
 import { RouteErrorBoundary } from "@/components/ui/RouteErrorBoundary";
 
@@ -113,6 +114,11 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Catch-all
-  { path: "*", element: <IndexRedirect /> },
+  // ============================================================
+  // 4. NOT FOUND / 404 MODULE
+  // ============================================================
+  { path: "/404", element: <NotFoundPage />, errorElement: <RouteErrorBoundary /> },
+
+  // Catch-all route for any unmapped URL
+  { path: "*", element: <NotFoundPage />, errorElement: <RouteErrorBoundary /> },
 ]);
