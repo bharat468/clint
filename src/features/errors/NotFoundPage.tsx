@@ -82,14 +82,14 @@ export default function NotFoundPage() {
               Page Not Found
             </span>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
-              Yeh Page Maujood Nahi Hai
+              We Couldn't Find That Page
             </h1>
             <p className="text-sm sm:text-base text-slate-600 max-w-lg mx-auto leading-relaxed">
-              Aap jo URL access karne ki koshish kar rahe hain (
+              The link you followed (
               <code className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-800 text-xs font-mono font-semibold border border-slate-200">
                 {location.pathname}
               </code>
-              ) woh ya toh shift ho gaya hai, remove ho chuka hai, ya fir exist nahi karta.
+              ) may be broken, removed, or no longer available.
             </p>
           </div>
 
@@ -101,7 +101,7 @@ export default function NotFoundPage() {
               className="h-11 px-5 rounded-xl border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold gap-2 shadow-2xs"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span>Go Back (Piche Jayein)</span>
+              <span>Go Back</span>
             </Button>
 
             {isAuthenticated ? (
@@ -118,7 +118,7 @@ export default function NotFoundPage() {
                 className="h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold gap-2 shadow-md hover:shadow-lg transition-all"
               >
                 <LogIn className="h-4 w-4" />
-                <span>Go to Login Screen</span>
+                <span>Go to Login</span>
               </Button>
             )}
 
@@ -139,9 +139,9 @@ export default function NotFoundPage() {
                 <ShieldAlert className="h-4 w-4" />
               </div>
               <div className="space-y-1 text-xs">
-                <h2 className="font-bold text-slate-900">Madad Chahiye? (Need Assistance?)</h2>
+                <h2 className="font-bold text-slate-900">Need Assistance?</h2>
                 <p className="text-slate-500 leading-relaxed">
-                  Agar aapko lagta hai ki yeh galat URL hai ya system me koi link break hua hai, toh RentMate platform team se direct sampark karein:
+                  If you think this is a technical issue or need help finding what you were looking for, reach out to our team:
                 </p>
                 <div className="pt-2 flex flex-wrap items-center gap-4 text-xs font-medium text-slate-700">
                   <a

@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   Building2,
@@ -6,11 +6,9 @@ import {
   ShieldCheck,
   Users,
   Sliders,
-  ChevronRight,
   X,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { setActivePortal } from "@/features/auth/authSlice";
 import { toggleSidebar, closeSidebar } from "@/features/ui/uiSlice";
 import { canAccessPlatform } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -26,7 +24,6 @@ const superAdminNavLinks = [
 
 export default function SuperAdminSidebar() {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const open = useAppSelector((s) => s.ui.sidebarOpen);
   const user = useAppSelector((s) => s.auth.user);
 
@@ -49,11 +46,6 @@ export default function SuperAdminSidebar() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
-
-  const handleSwitchToLandlord = () => {
-    dispatch(setActivePortal("LANDLORD"));
-    navigate("/");
   };
 
   const navContent = (
@@ -120,21 +112,8 @@ export default function SuperAdminSidebar() {
         </div>
       </div>
 
-      {/* Bottom Footer Section: Matching Landlord Workspace */}
-      <div className="space-y-2.5 pt-4 border-t border-slate-100">
-        {/* Switch to Landlord Workspace */}
-        <button
-          type="button"
-          onClick={handleSwitchToLandlord}
-          className="flex w-full items-center justify-between rounded-xl bg-blue-50/90 hover:bg-blue-100 px-3 py-2 text-xs font-bold text-blue-700 transition-colors border border-blue-200/60 shadow-2xs group"
-        >
-          <span className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-blue-600 transition-transform group-hover:scale-110" />
-            <span>Landlord Workspace</span>
-          </span>
-          <ChevronRight className="h-3.5 w-3.5 text-blue-500" />
-        </button>
-
+      {/* Bottom Footer Section: User Profile */}
+      <div className="pt-4 border-t border-slate-100">
         {/* User Mini Profile Card */}
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 border border-slate-200/80">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-bold text-xs text-white shadow-xs">

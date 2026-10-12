@@ -6,10 +6,8 @@ import {
   LayoutDashboard,
   Users,
   X,
-  ShieldCheck,
   Settings,
   ChevronDown,
-  ChevronRight,
   Sliders,
   FileText,
   Wrench,
@@ -17,7 +15,6 @@ import {
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSidebar, closeSidebar } from "@/features/ui/uiSlice";
-import { setActivePortal } from "@/features/auth/authSlice";
 import { canAccess } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -83,10 +80,6 @@ export default function Sidebar() {
       setSettingsOpen(true);
     }
   }, [isSettingsActive]);
-
-  const isSuperAdmin =
-    Boolean((user as any)?.isSuperAdmin) ||
-    (user as any)?.adminRole === "SUPER_ADMIN";
 
   const getInitials = (name?: string | null) => {
     if (!name) return "RM";
@@ -235,24 +228,8 @@ export default function Sidebar() {
 
       </div>
 
-      {/* Bottom Footer Section: Clean User Profile & Portal Switcher */}
+      {/* Bottom Footer Section: Clean User Profile */}
       <div className="pt-4 border-t border-slate-100 space-y-2.5">
-        {(isSuperAdmin || Boolean((user as any)?.adminRole)) && (
-          <button
-            type="button"
-            onClick={() => {
-              dispatch(setActivePortal("SUPERADMIN"));
-              navigate("/superadmin");
-            }}
-            className="flex w-full items-center justify-between rounded-xl bg-blue-50/90 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200/60 shadow-2xs group"
-          >
-            <span className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-blue-600 transition-transform group-hover:scale-110" />
-              <span>SuperAdmin Platform</span>
-            </span>
-            <ChevronRight className="h-3.5 w-3.5 text-blue-500" />
-          </button>
-        )}
 
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 border border-slate-200/80">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-bold text-xs text-white shadow-xs">
