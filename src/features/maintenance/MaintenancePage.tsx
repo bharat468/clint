@@ -20,6 +20,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Toast } from "@/components/ui/toast";
+import { Select } from "@/components/ui/input";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
@@ -485,18 +486,17 @@ export default function MaintenancePage() {
             <label className="block text-xs font-bold text-slate-700 mb-1">
               Property <span className="text-rose-500">*</span>
             </label>
-            <select
+            <Select
               value={newPropertyId}
               onChange={(e) => setNewPropertyId(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-hidden"
-              required
+              placeholder="Select property..."
             >
               {properties.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title} ({p.city})
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -504,10 +504,9 @@ export default function MaintenancePage() {
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Category
               </label>
-              <select
+              <Select
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
               >
                 <option value="PLUMBING">Plumbing</option>
                 <option value="ELECTRICAL">Electrical</option>
@@ -515,23 +514,22 @@ export default function MaintenancePage() {
                 <option value="CARPENTRY">Carpentry</option>
                 <option value="HVAC">HVAC / Air Conditioning</option>
                 <option value="OTHER">Other Repair</option>
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Priority Level
               </label>
-              <select
+              <Select
                 value={newPriority}
                 onChange={(e) => setNewPriority(e.target.value)}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
               >
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="HIGH">High</option>
                 <option value="URGENT">Urgent (Emergency)</option>
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -595,16 +593,15 @@ export default function MaintenancePage() {
             <label className="block text-xs font-bold text-slate-700 mb-1">
               Status Progression
             </label>
-            <select
+            <Select
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:border-blue-500 focus:outline-hidden"
             >
               <option value="OPEN">OPEN (Pending Technician)</option>
               <option value="IN_PROGRESS">IN PROGRESS (Work Underway)</option>
               <option value="RESOLVED">RESOLVED (Repairs Completed)</option>
               <option value="CLOSED">CLOSED (Archived)</option>
-            </select>
+            </Select>
           </div>
 
           <div>
