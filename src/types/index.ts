@@ -84,13 +84,16 @@ export interface AdminUser {
   name?: string | null;
   email?: string | null;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
+  isSuperAdmin?: boolean;
+  adminRole?: string;
   createdAt: string;
   updatedAt?: string;
-  organizationMembers: {
+  ownedOrganizations?: { id: string; name: string; slug?: string }[];
+  organizationMembers?: {
     role: string;
     organization: { id: string; name: string };
   }[];
-  userRoles: {
+  userRoles?: {
     propertyScope: string[];
     role: Role;
     organization: { id: string; name: string };

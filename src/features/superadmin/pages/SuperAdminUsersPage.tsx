@@ -9,7 +9,12 @@ import {
   Pencil,
   Trash2,
   ShieldAlert,
-  Clock,
+  Building2,
+  Users as UsersIcon,
+  Crown,
+  Home,
+  User,
+  Filter,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
@@ -26,7 +31,123 @@ import { Field } from "@/components/ui/field";
 import { State } from "@/components/ui/page";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import PrivilegeModal from "../components/PrivilegeModal";
-import type { AdminUser, SuperAdminRole } from "@/types";
+import type { AdminUser, SuperAdminRole, AdminOrganization } from "@/types";
+
+export type UserHierarchyCategory = "ALL" | "SUPERADMIN" | "LANDLORD" | "STAFF" | "TENANT";
+
+export interface UserHierarchyInfo {
+  levelKey: "SUPERADMIN" | "PLATFORM_ADMIN" | "LANDLORD" | "STAFF" | "TENANT" | "STANDARD";
+  levelName: string;
+  badgeColor: string;
+  badgeIcon: any;
+  organizationName: string;
+  organizationRole: string;
+  isPlatformGovernor: boolean;
+}
+
+export function computeUserHierarchy(u: AdminUser): UserHierarchyInfo {
+  const isSuper = Boolean(u.isSuperAdmin) || u.adminRole === "SUPER_ADMIN";
+  if (isSuper) {
+    return {
+      levelKey: "SUPERADMIN",
+      levelName: "Platform SuperAdmin",
+      badgeColor: "bg-purple-50 text-purple-700 border-purple-200",
+      badgeIcon: Crown,
+      organizationName: "Platform Core",
+      organizationRole: "Root Governor",
+      isPlatformGovernor: true,
+    };
+  }
+
+  if (Boolean(u.adminRole)) {
+    return {
+      levelKey: "PLATFORM_ADMIN",
+      levelName: `Platform Executive (${u.adminRole})`,
+      badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
+      badgeIcon: Shield,
+      organizationName: "Platform Core",
+      organizationRole: u.adminRole || "Executive",
+      isPlatformGovernor: true,
+    };
+  }
+
+  const owned = (u as any).ownedOrganizations || [];
+  if (owned.length > 0) {
+    return {
+      levelKey: "LANDLORD",
+      levelName: "Landlord / Owner",
+      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      badgeIcon: Building2,
+      organizationName: owned[0].name,
+      organizationRole: "Organization Owner",
+      isPlatformGovernor: false,
+    };
+  }
+
+  const members = (u as any).organizationMembers || [];
+  const ownerMember = members.find((m: any) => m.role === "OWNER" || m.role === "LANDLORD");
+  if (ownerMember) {
+    return {
+      levelKey: "LANDLORD",
+      levelName: "Landlord / Owner",
+      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      badgeIcon: Building2,
+      organizationName: ownerMember.organization?.name || "Landlord Workspace",
+      organizationRole: "Organization Owner",
+      isPlatformGovernor: false,
+    };
+  }
+
+  const staffMember = members.find((m: any) => m.role !== "OWNER" && m.role !== "LANDLORD" && m.role !== "TENANT");
+  if (staffMember) {
+    return {
+      levelKey: "STAFF",
+      levelName: `Staff (${staffMember.role || "Member"})`,
+      badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
+      badgeIcon: UsersIcon,
+      organizationName: staffMember.organization?.name || "Client Org",
+      organizationRole: staffMember.role || "Staff Member",
+      isPlatformGovernor: false,
+    };
+  }
+
+  const userRoles = (u as any).userRoles || [];
+  if (userRoles.length > 0) {
+    const ur = userRoles[0];
+    return {
+      levelKey: "STAFF",
+      levelName: `Staff (${ur.role?.name || "Assigned"})`,
+      badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
+      badgeIcon: UsersIcon,
+      organizationName: ur.organization?.name || "Client Org",
+      organizationRole: ur.role?.name || "Staff Member",
+      isPlatformGovernor: false,
+    };
+  }
+
+  const tenantMember = members.find((m: any) => m.role === "TENANT");
+  if (tenantMember) {
+    return {
+      levelKey: "TENANT",
+      levelName: "Tenant / Resident",
+      badgeColor: "bg-teal-50 text-teal-700 border-teal-200",
+      badgeIcon: Home,
+      organizationName: tenantMember.organization?.name || "Rented Unit",
+      organizationRole: "Tenant",
+      isPlatformGovernor: false,
+    };
+  }
+
+  return {
+    levelKey: "STANDARD",
+    levelName: "Standard User",
+    badgeColor: "bg-slate-50 text-slate-600 border-slate-200",
+    badgeIcon: User,
+    organizationName: "Direct Account",
+    organizationRole: "User",
+    isPlatformGovernor: false,
+  };
+}
 
 export default function SuperAdminUsersPage() {
   const user = useAppSelector((s) => s.auth.user);
@@ -37,6 +158,7 @@ export default function SuperAdminUsersPage() {
     [] as AdminUser[]
   );
   const { data: adminRoles } = useApi(adminService.listRoles, [] as SuperAdminRole[]);
+  const { data: organizations } = useApi(adminService.listOrganizations, [] as AdminOrganization[]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -45,11 +167,23 @@ export default function SuperAdminUsersPage() {
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [deletingUser, setDeletingUser] = useState<AdminUser | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [newUser, setNewUser] = useState({ mobile: "", name: "", email: "" });
+
+  // Filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [hierarchyFilter, setHierarchyFilter] = useState<UserHierarchyCategory>("ALL");
+  const [selectedOrgFilter, setSelectedOrgFilter] = useState<string>("ALL");
+
+  // Create form state
+  const [newUser, setNewUser] = useState({
+    mobile: "",
+    name: "",
+    email: "",
+    accountType: "CLIENT_USER" as "PLATFORM_ADMIN" | "CLIENT_USER",
+    organizationId: "",
+  });
   const [editForm, setEditForm] = useState({ name: "", email: "", mobile: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
   const [feedback, setFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   const showFeedback = (text: string, type: "success" | "error" = "success") => {
@@ -59,6 +193,11 @@ export default function SuperAdminUsersPage() {
   const handleOpenEditUser = (u: AdminUser) => {
     setEditingUser(u);
     setEditForm({ name: u.name || "", email: u.email || "", mobile: u.mobile });
+  };
+
+  const handleCloseEditModal = () => {
+    setEditingUser(null);
+    setEditForm({ name: "", email: "", mobile: "" });
   };
 
   const handleUpdateUser = async (e: React.FormEvent) => {
@@ -124,10 +263,17 @@ export default function SuperAdminUsersPage() {
         mobile: newUser.mobile,
         name: newUser.name || undefined,
         email: newUser.email || undefined,
+        organizationId: newUser.organizationId || undefined,
       });
       showFeedback("New user registered successfully");
       setCreateModalOpen(false);
-      setNewUser({ mobile: "", name: "", email: "" });
+      setNewUser({
+        mobile: "",
+        name: "",
+        email: "",
+        accountType: "CLIENT_USER",
+        organizationId: "",
+      });
       reloadUsers();
     } catch (err: any) {
       setFormError(err?.message || "Failed to register user");
@@ -138,24 +284,78 @@ export default function SuperAdminUsersPage() {
 
   const handleCloseCreateModal = () => {
     setCreateModalOpen(false);
-    setNewUser({ mobile: "", name: "", email: "" });
+    setNewUser({
+      mobile: "",
+      name: "",
+      email: "",
+      accountType: "CLIENT_USER",
+      organizationId: "",
+    });
     setFormError(null);
   };
 
-  const handleCloseEditModal = () => {
-    setEditingUser(null);
-    setEditForm({ name: "", email: "", mobile: "" });
-  };
+  // Metrics summary
+  const metrics = useMemo(() => {
+    let platformGovernors = 0;
+    let landlords = 0;
+    let staffMembers = 0;
+    let tenants = 0;
 
+    users.forEach((u) => {
+      const h = computeUserHierarchy(u);
+      if (h.isPlatformGovernor) platformGovernors++;
+      else if (h.levelKey === "LANDLORD") landlords++;
+      else if (h.levelKey === "STAFF") staffMembers++;
+      else if (h.levelKey === "TENANT") tenants++;
+    });
+
+    return {
+      total: users.length,
+      platformGovernors,
+      landlords,
+      staffMembers,
+      tenants,
+    };
+  }, [users]);
+
+  // Hierarchical Filtered List
   const filteredUsers = useMemo(() => {
     const q = searchTerm.toLowerCase();
-    return users.filter(
-      (u) =>
+
+    return users.filter((u) => {
+      const h = computeUserHierarchy(u);
+
+      // Search match
+      const matchesSearch =
         u.name?.toLowerCase().includes(q) ||
         u.mobile?.includes(q) ||
-        u.email?.toLowerCase().includes(q)
-    );
-  }, [users, searchTerm]);
+        u.email?.toLowerCase().includes(q) ||
+        h.organizationName.toLowerCase().includes(q) ||
+        h.levelName.toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+
+      // Hierarchy level filter
+      if (hierarchyFilter === "SUPERADMIN" && !h.isPlatformGovernor) return false;
+      if (hierarchyFilter === "LANDLORD" && h.levelKey !== "LANDLORD") return false;
+      if (hierarchyFilter === "STAFF" && h.levelKey !== "STAFF") return false;
+      if (hierarchyFilter === "TENANT" && h.levelKey !== "TENANT") return false;
+
+      // Organization filter
+      if (selectedOrgFilter !== "ALL") {
+        const owned = (u as any).ownedOrganizations || [];
+        const isOwner = owned.some((o: any) => o.id === selectedOrgFilter);
+        const members = (u as any).organizationMembers || [];
+        const isMember = members.some((m: any) => m.organization?.id === selectedOrgFilter);
+        const userRoles = (u as any).userRoles || [];
+        const hasRole = userRoles.some((ur: any) => ur.organization?.id === selectedOrgFilter);
+
+        if (!isOwner && !isMember && !hasRole) return false;
+      }
+
+      return true;
+    });
+  }, [users, searchTerm, hierarchyFilter, selectedOrgFilter]);
 
   if (!canManageUsers) {
     return (
@@ -173,7 +373,7 @@ export default function SuperAdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Bottom Center Toast Feedback */}
+      {/* Toast Feedback */}
       <Toast
         show={Boolean(feedback)}
         message={feedback?.text || ""}
@@ -184,11 +384,16 @@ export default function SuperAdminUsersPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-1">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Users
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              User Directory & Hierarchy
+            </h1>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+              Multi-Tenant Governance
+            </span>
+          </div>
           <p className="mt-1 text-sm text-slate-500">
-            Audit registered platform accounts, activate or suspend accounts, and manage privileges.
+            Audit registered accounts with clear hierarchy separation between Platform Admins, Landlords, Staff, and Tenants.
           </p>
         </div>
 
@@ -198,34 +403,232 @@ export default function SuperAdminUsersPage() {
               setFormError(null);
               setCreateModalOpen(true);
             }}
-            className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+            className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs"
           >
             <Plus className="h-4 w-4" />
             <span>Create User</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => reloadUsers()} className="gap-1.5 text-slate-700 font-semibold border-slate-300">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => reloadUsers()}
+            className="gap-1.5 text-slate-700 font-semibold border-slate-300 shadow-2xs bg-white"
+          >
             <RefreshCw className="h-3.5 w-3.5 text-blue-600" />
             <span>Refresh</span>
           </Button>
         </div>
       </div>
 
-      {/* Search Filter */}
-      <div className="relative max-w-sm w-full">
-        <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-        <Input
-          placeholder="Search by name, mobile, or email..."
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setPage(1);
-          }}
-          className="pl-10 text-xs"
-        />
+      {/* Hierarchy KPI Metric Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div
+          onClick={() => setHierarchyFilter("SUPERADMIN")}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+            hierarchyFilter === "SUPERADMIN"
+              ? "bg-purple-50/70 border-purple-300 ring-2 ring-purple-500/20 shadow-xs"
+              : "bg-white border-slate-200/90 hover:border-purple-200 shadow-2xs"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700">
+              Platform Governors
+            </span>
+            <div className="p-1.5 rounded-lg bg-purple-100 text-purple-700">
+              <Crown className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 mt-2">
+            {metrics.platformGovernors}
+          </div>
+          <p className="text-[11px] text-slate-500 mt-0.5">SuperAdmins & System Execs</p>
+        </div>
+
+        <div
+          onClick={() => setHierarchyFilter("LANDLORD")}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+            hierarchyFilter === "LANDLORD"
+              ? "bg-emerald-50/70 border-emerald-300 ring-2 ring-emerald-500/20 shadow-xs"
+              : "bg-white border-slate-200/90 hover:border-emerald-200 shadow-2xs"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+              Landlords & Owners
+            </span>
+            <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700">
+              <Building2 className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 mt-2">{metrics.landlords}</div>
+          <p className="text-[11px] text-slate-500 mt-0.5">Client Organization Owners</p>
+        </div>
+
+        <div
+          onClick={() => setHierarchyFilter("STAFF")}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+            hierarchyFilter === "STAFF"
+              ? "bg-amber-50/70 border-amber-300 ring-2 ring-amber-500/20 shadow-xs"
+              : "bg-white border-slate-200/90 hover:border-amber-200 shadow-2xs"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
+              Landlord Staff & Team
+            </span>
+            <div className="p-1.5 rounded-lg bg-amber-100 text-amber-700">
+              <UsersIcon className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 mt-2">{metrics.staffMembers}</div>
+          <p className="text-[11px] text-slate-500 mt-0.5">Property Managers & Staff</p>
+        </div>
+
+        <div
+          onClick={() => setHierarchyFilter("ALL")}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+            hierarchyFilter === "ALL"
+              ? "bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20 shadow-xs"
+              : "bg-white border-slate-200/90 hover:border-blue-200 shadow-2xs"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
+              Total Accounts
+            </span>
+            <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700">
+              <User className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 mt-2">{metrics.total}</div>
+          <p className="text-[11px] text-slate-500 mt-0.5">All Registered Profiles</p>
+        </div>
+      </div>
+
+      {/* Filter and Control Bar */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* Hierarchy Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-slate-100/90 border border-slate-200/80 text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => {
+              setHierarchyFilter("ALL");
+              setPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              hierarchyFilter === "ALL"
+                ? "bg-white text-slate-900 shadow-2xs font-bold"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            All ({metrics.total})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setHierarchyFilter("SUPERADMIN");
+              setPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              hierarchyFilter === "SUPERADMIN"
+                ? "bg-white text-purple-700 shadow-2xs font-bold"
+                : "text-slate-600 hover:text-purple-700"
+            }`}
+          >
+            <Crown className="h-3 w-3 text-purple-600" />
+            <span>Platform Admins ({metrics.platformGovernors})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setHierarchyFilter("LANDLORD");
+              setPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              hierarchyFilter === "LANDLORD"
+                ? "bg-white text-emerald-700 shadow-2xs font-bold"
+                : "text-slate-600 hover:text-emerald-700"
+            }`}
+          >
+            <Building2 className="h-3 w-3 text-emerald-600" />
+            <span>Landlords & Owners ({metrics.landlords})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setHierarchyFilter("STAFF");
+              setPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              hierarchyFilter === "STAFF"
+                ? "bg-white text-amber-700 shadow-2xs font-bold"
+                : "text-slate-600 hover:text-amber-700"
+            }`}
+          >
+            <UsersIcon className="h-3 w-3 text-amber-600" />
+            <span>Landlord Staff ({metrics.staffMembers})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setHierarchyFilter("TENANT");
+              setPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              hierarchyFilter === "TENANT"
+                ? "bg-white text-teal-700 shadow-2xs font-bold"
+                : "text-slate-600 hover:text-teal-700"
+            }`}
+          >
+            <Home className="h-3 w-3 text-teal-600" />
+            <span>Tenants ({metrics.tenants})</span>
+          </button>
+        </div>
+
+        {/* Search & Organization Workspace Filter */}
+        <div className="flex items-center gap-2">
+          {/* Organization filter dropdown */}
+          <div className="relative min-w-[200px]">
+            <select
+              value={selectedOrgFilter}
+              onChange={(e) => {
+                setSelectedOrgFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full text-xs font-medium rounded-xl border border-slate-300 bg-white py-2 pl-3 pr-8 text-slate-800 shadow-2xs focus:border-blue-600 focus:outline-hidden"
+            >
+              <option value="ALL">All Workspaces & Orgs</option>
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  🏢 {org.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <Input
+              placeholder="Search user, mobile, org..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(1);
+              }}
+              className="pl-8 text-xs h-9 bg-white shadow-2xs"
+            />
+          </div>
+        </div>
       </div>
 
       <State loading={loading} error={error} empty={false} />
 
+      {/* Main Hierarchy Table */}
       {!loading && !error && (
         <Card className="overflow-hidden border border-slate-200/80 bg-white rounded-2xl shadow-xs">
           <div className="overflow-x-auto">
@@ -233,152 +636,177 @@ export default function SuperAdminUsersPage() {
               <thead className="border-b border-slate-200 bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold">
                 <tr>
                   <th className="px-5 py-3.5">User</th>
+                  <th className="px-5 py-3.5">Hierarchy & Scope</th>
+                  <th className="px-5 py-3.5">Landlord Workspace / Org</th>
                   <th className="px-5 py-3.5">Mobile Contact</th>
-                  <th className="px-5 py-3.5">SuperAdmin Flag</th>
-                  <th className="px-5 py-3.5">Platform Role</th>
-                  <th className="px-5 py-3.5">Registered & Updated</th>
                   <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5">Registered</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600">
-                {filteredUsers
-                  .slice((page - 1) * pageSize, page * pageSize)
-                  .map((u) => {
-                  const isUserSuper =
-                    Boolean((u as any).isSuperAdmin) ||
-                    (u as any).adminRole === "SUPER_ADMIN";
-                  const isActive = u.status === "ACTIVE";
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <Filter className="h-6 w-6 text-slate-300" />
+                        <p className="font-semibold text-slate-600">No users found</p>
+                        <p className="text-xs text-slate-400">
+                          Try adjusting your hierarchy filter or search term.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers
+                    .slice((page - 1) * pageSize, page * pageSize)
+                    .map((u) => {
+                      const h = computeUserHierarchy(u);
+                      const BadgeIcon = h.badgeIcon;
+                      const isActive = u.status === "ACTIVE";
 
-                  return (
-                    <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-xs">
-                            {(u.name || u.mobile || "U").slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-bold text-slate-900 leading-snug">{u.name || "User"}</p>
-                            {u.email && <p className="text-[11px] text-slate-400">{u.email}</p>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5 font-mono text-slate-700">{u.mobile}</td>
-                      <td className="px-5 py-3.5">
-                        {isUserSuper ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
-                            <Shield className="h-3 w-3" />
-                            SUPER_ADMIN
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-slate-400">Standard</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="font-semibold text-slate-800">
-                          {(u as any).adminRole ||
-                            ((u as any).isSuperAdmin ? "SUPER_ADMIN" : "None")}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="space-y-0.5 text-[11px]">
-                          <div className="flex items-center gap-1 text-slate-700">
-                            <Clock className="h-3 w-3 text-slate-400 shrink-0" />
-                            <span>{formatDateTime(u.createdAt)}</span>
-                          </div>
-                          {u.updatedAt && u.updatedAt !== u.createdAt && (
-                            <div className="text-[10px] text-slate-400">
-                              Updated: {formatDateTime(u.updatedAt)}
+                      return (
+                        <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                          {/* User Avatar & Name */}
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-xs">
+                                {(u.name || u.mobile || "U").slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-bold text-slate-900 leading-snug">
+                                  {u.name || "Unnamed User"}
+                                </p>
+                                {u.email ? (
+                                  <p className="text-[11px] text-slate-400 truncate max-w-[180px]">
+                                    {u.email}
+                                  </p>
+                                ) : (
+                                  <p className="text-[10px] text-slate-400 italic">No email</p>
+                                )}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        {/* Interactive Status Badge (Click to toggle Active / Suspended) */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStatus(u)}
-                          title="Click to toggle Active / Suspended status"
-                          className="transition-transform active:scale-95"
-                        >
-                          <span
-                            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border cursor-pointer ${
-                              isActive
-                                ? "text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
-                                : "text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100"
-                            }`}
-                          >
-                            {isActive ? (
-                              <>
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                ACTIVE
-                              </>
-                            ) : (
-                              <>
-                                <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                                SUSPENDED
-                              </>
-                            )}
-                          </span>
-                        </button>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Quick Toggle Status Button */}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleToggleStatus(u)}
-                            className={`text-xs h-7 px-2 ${
-                              isActive
-                                ? "text-rose-600 hover:bg-rose-50"
-                                : "text-emerald-600 hover:bg-emerald-50"
-                            }`}
-                          >
-                            {isActive ? (
-                              <>
-                                <UserX className="h-3.5 w-3.5 mr-1" />
-                                <span>Suspend</span>
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="h-3.5 w-3.5 mr-1" />
-                                <span>Activate</span>
-                              </>
-                            )}
-                          </Button>
+                          </td>
 
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenEditUser(u)}
-                            className="text-xs h-7 px-2"
-                            title="Edit user details"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
+                          {/* Hierarchy Badge */}
+                          <td className="px-5 py-3.5">
+                            <span
+                              className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border shadow-2xs ${h.badgeColor}`}
+                            >
+                              <BadgeIcon className="h-3 w-3" />
+                              <span>{h.levelName}</span>
+                            </span>
+                          </td>
 
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setPrivilegeUser(u)}
-                            className="text-xs h-7"
-                          >
-                            Privileges
-                          </Button>
+                          {/* Landlord Workspace / Organization Column */}
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-2">
+                              {h.isPlatformGovernor ? (
+                                <div className="flex items-center gap-1.5 text-purple-700 bg-purple-50/70 border border-purple-200/60 px-2.5 py-1 rounded-lg font-bold text-[11px]">
+                                  <Shield className="h-3.5 w-3.5 text-purple-600" />
+                                  <span>Platform Governance</span>
+                                </div>
+                              ) : (
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
+                                    <Building2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                    <span>{h.organizationName}</span>
+                                  </div>
+                                  <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded">
+                                    {h.organizationRole}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
 
-                          <button
-                            onClick={() => handleRequestDelete(u)}
-                            className="text-slate-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 transition-colors"
-                            title="Delete user"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                          {/* Mobile Phone */}
+                          <td className="px-5 py-3.5 font-mono text-slate-800 font-medium">
+                            {u.mobile}
+                          </td>
+
+                          {/* Account Status */}
+                          <td className="px-5 py-3.5">
+                            <span
+                              className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                isActive
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : "bg-rose-50 text-rose-700 border-rose-200"
+                              }`}
+                            >
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  isActive ? "bg-emerald-500" : "bg-rose-500"
+                                }`}
+                              />
+                              <span>{u.status}</span>
+                            </span>
+                          </td>
+
+                          {/* Registered Date */}
+                          <td className="px-5 py-3.5 text-[11px] text-slate-500">
+                            {u.createdAt ? formatDateTime(u.createdAt) : "—"}
+                          </td>
+
+                          {/* Action Buttons */}
+                          <td className="px-5 py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Quick Toggle Status */}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleToggleStatus(u)}
+                                className={`text-xs h-7 px-2 ${
+                                  isActive
+                                    ? "text-rose-600 hover:bg-rose-50"
+                                    : "text-emerald-600 hover:bg-emerald-50"
+                                }`}
+                              >
+                                {isActive ? (
+                                  <>
+                                    <UserX className="h-3.5 w-3.5 mr-1" />
+                                    <span>Suspend</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserCheck className="h-3.5 w-3.5 mr-1" />
+                                    <span>Activate</span>
+                                  </>
+                                )}
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenEditUser(u)}
+                                className="text-xs h-7 px-2 border-slate-200"
+                                title="Edit user details"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setPrivilegeUser(u)}
+                                className="text-xs h-7 border-slate-200 font-semibold"
+                              >
+                                Privileges
+                              </Button>
+
+                              <button
+                                onClick={() => handleRequestDelete(u)}
+                                className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors"
+                                title="Delete user"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                )}
               </tbody>
             </table>
           </div>
@@ -398,11 +826,11 @@ export default function SuperAdminUsersPage() {
         </Card>
       )}
 
-      {/* Create User Modal */}
+      {/* Create User Modal with Hierarchy Support */}
       <Modal
         open={createModalOpen}
-        title="Create Pre-Registered User"
-        subtitle="Register user credentials into the platform database"
+        title="Create Platform or Landlord User"
+        subtitle="Register user credentials with explicit hierarchy placement"
         onClose={handleCloseCreateModal}
       >
         <form onSubmit={handleCreateUser} className="space-y-4">
@@ -410,6 +838,78 @@ export default function SuperAdminUsersPage() {
             <div className="rounded-xl bg-rose-50 p-2.5 text-xs text-rose-700 border border-rose-200">
               {formError}
             </div>
+          )}
+
+          {/* Account Hierarchy Placement */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-700">
+              Account Placement Scope *
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label
+                className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                  newUser.accountType === "CLIENT_USER"
+                    ? "bg-blue-50/70 border-blue-500 text-blue-900"
+                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="accountType"
+                  value="CLIENT_USER"
+                  checked={newUser.accountType === "CLIENT_USER"}
+                  onChange={() =>
+                    setNewUser({ ...newUser, accountType: "CLIENT_USER" })
+                  }
+                  className="h-3.5 w-3.5 text-blue-600"
+                />
+                <div>
+                  <div className="font-bold text-xs">Landlord / Client User</div>
+                  <div className="text-[10px] text-slate-500">Under an Organization</div>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
+                  newUser.accountType === "PLATFORM_ADMIN"
+                    ? "bg-purple-50/70 border-purple-500 text-purple-900"
+                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="accountType"
+                  value="PLATFORM_ADMIN"
+                  checked={newUser.accountType === "PLATFORM_ADMIN"}
+                  onChange={() =>
+                    setNewUser({ ...newUser, accountType: "PLATFORM_ADMIN", organizationId: "" })
+                  }
+                  className="h-3.5 w-3.5 text-purple-600"
+                />
+                <div>
+                  <div className="font-bold text-xs">Platform Governance</div>
+                  <div className="text-[10px] text-slate-500">SuperAdmin / Exec</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Organization Picker if Client User */}
+          {newUser.accountType === "CLIENT_USER" && (
+            <Field label="Assign to Landlord Organization (Optional)">
+              <select
+                value={newUser.organizationId}
+                onChange={(e) => setNewUser({ ...newUser, organizationId: e.target.value })}
+                className="w-full text-xs font-medium rounded-xl border border-slate-300 bg-white p-2.5 text-slate-800 shadow-2xs focus:border-blue-600 focus:outline-hidden"
+              >
+                <option value="">None (Independent Direct User)</option>
+                {organizations.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    🏢 {org.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
           )}
 
           <Field label="10-Digit Mobile Number" required>
@@ -444,7 +944,11 @@ export default function SuperAdminUsersPage() {
             <Button type="button" variant="outline" onClick={handleCloseCreateModal}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs"
+            >
               {isSubmitting ? "Creating..." : "Create Account"}
             </Button>
           </div>
@@ -454,25 +958,14 @@ export default function SuperAdminUsersPage() {
       {/* Edit User Modal */}
       <Modal
         open={Boolean(editingUser)}
-        title="Edit User Profile"
-        subtitle={`Update details for ${editingUser?.name || editingUser?.mobile || "user"}`}
+        title="Edit User Details"
+        subtitle={`Updating information for ${editingUser?.name || editingUser?.mobile}`}
         onClose={handleCloseEditModal}
       >
         <form onSubmit={handleUpdateUser} className="space-y-4">
-          <Field label="10-Digit Mobile Number" required>
-            <Input
-              placeholder="e.g. 9876543210"
-              value={editForm.mobile}
-              onChange={(e) =>
-                setEditForm({ ...editForm, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })
-              }
-              required
-            />
-          </Field>
-
           <Field label="Full Name">
             <Input
-              placeholder="e.g. Amit Patel"
+              placeholder="e.g. John Doe"
               value={editForm.name}
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
             />
@@ -481,9 +974,19 @@ export default function SuperAdminUsersPage() {
           <Field label="Email Address">
             <Input
               type="email"
-              placeholder="e.g. amit@example.com"
+              placeholder="e.g. john@example.com"
               value={editForm.email}
               onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+            />
+          </Field>
+
+          <Field label="Mobile Number">
+            <Input
+              placeholder="10-digit mobile"
+              value={editForm.mobile}
+              onChange={(e) =>
+                setEditForm({ ...editForm, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })
+              }
             />
           </Field>
 
@@ -491,7 +994,7 @@ export default function SuperAdminUsersPage() {
             <Button type="button" variant="outline" onClick={handleCloseEditModal}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs">
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </div>
@@ -499,28 +1002,27 @@ export default function SuperAdminUsersPage() {
       </Modal>
 
       {/* Privilege Modal */}
-      <PrivilegeModal
-        user={privilegeUser}
-        adminRoles={adminRoles}
-        onClose={() => setPrivilegeUser(null)}
-        onSuccess={(msg) => {
-          showFeedback(msg);
-          reloadUsers();
-        }}
-      />
+      {privilegeUser && (
+        <PrivilegeModal
+          user={privilegeUser}
+          adminRoles={adminRoles}
+          onClose={() => setPrivilegeUser(null)}
+          onSuccess={(msg) => {
+            showFeedback(msg);
+            setPrivilegeUser(null);
+            reloadUsers();
+          }}
+        />
+      )}
 
-      {/* Delete User Confirm Modal */}
+      {/* Delete Confirmation Modal */}
       <ConfirmModal
         open={Boolean(deletingUser)}
-        title="Delete User Account?"
-        description={
-          deletingUser
-            ? `Are you sure you want to permanently delete user "${deletingUser.name || deletingUser.mobile}"? All credentials, role memberships, and login access will be removed.`
-            : "Are you sure you want to delete this user?"
-        }
-        confirmText="Yes, Delete User"
-        tone="danger"
-        isLoading={isDeleting}
+        title="Delete User Account"
+        description={`Are you sure you want to delete user account "${deletingUser?.name || deletingUser?.mobile}"? This action cannot be undone.`}
+        confirmText="Delete User"
+        loading={isDeleting}
+        variant="danger"
         onConfirm={handleConfirmDelete}
         onClose={() => setDeletingUser(null)}
       />
