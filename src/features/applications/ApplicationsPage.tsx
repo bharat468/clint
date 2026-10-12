@@ -28,6 +28,8 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Toast } from "@/components/ui/toast";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { Select } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
@@ -691,15 +693,14 @@ export default function ApplicationsPage() {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Penalty Rule
                 </label>
-                <select
+                <Select
                   value={penaltyType}
                   onChange={(e) => setPenaltyType(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
                 >
                   <option value="PER_DAY">Per-Day Late Fee (₹/day)</option>
                   <option value="FIXED">Fixed Late Fee (₹)</option>
                   <option value="PERCENTAGE">Percentage (% of rent)</option>
-                </select>
+                </Select>
               </div>
 
               <div>
@@ -767,11 +768,10 @@ export default function ApplicationsPage() {
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Property <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={selectedPropertyId}
                 onChange={(e) => handlePropertyChange(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
-                required
+                placeholder="Select property..."
               >
                 {properties.length === 0 ? (
                   <option value="">No properties available</option>
@@ -782,19 +782,18 @@ export default function ApplicationsPage() {
                     </option>
                   ))
                 )}
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Unit <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={selectedUnitId}
                 onChange={(e) => handleUnitChange(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
                 disabled={loadingUnits}
-                required
+                placeholder={loadingUnits ? "Loading units..." : "Select unit..."}
               >
                 {loadingUnits ? (
                   <option value="">Loading units...</option>
@@ -812,7 +811,7 @@ export default function ApplicationsPage() {
                     </option>
                   ))
                 )}
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -898,11 +897,10 @@ export default function ApplicationsPage() {
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Proposed Move-in Date
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={proposedMoveIn}
-                onChange={(e) => setProposedMoveIn(e.target.value)}
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                onChange={(val) => setProposedMoveIn(val)}
+                placeholder="Select move-in date..."
               />
             </div>
           </div>
