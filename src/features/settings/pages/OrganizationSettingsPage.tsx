@@ -12,6 +12,7 @@ import { organizationService } from "@/services/organization.service";
 import { propertyService } from "@/services/property.service";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/input";
 import { formatINR } from "@/lib/utils";
 import type { Property } from "@/types";
 
@@ -94,17 +95,19 @@ export default function OrganizationSettingsPage() {
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs">
             <Building2 className="h-4 w-4 text-slate-400" />
             <span className="text-xs font-semibold text-slate-600">Workspace:</span>
-            <select
-              value={selectedOrgId || currentOrg?.id || ""}
-              onChange={(e) => setSelectedOrgId(e.target.value)}
-              className="text-xs font-bold text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-            >
-              {orgs.map((o: any) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-48">
+              <Select
+                value={selectedOrgId || currentOrg?.id || ""}
+                onChange={(e) => setSelectedOrgId(e.target.value)}
+                className="h-8.5 text-xs font-bold"
+              >
+                {orgs.map((o: any) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
         )}
       </div>
