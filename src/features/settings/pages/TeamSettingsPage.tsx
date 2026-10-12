@@ -360,7 +360,7 @@ export default function TeamSettingsPage() {
             >
               {orgs.map((o: any) => (
                 <option key={o.id} value={o.id}>
-                  {o.name} {o.owner?.name ? `(${o.owner.name})` : ""}
+                  {o.name}
                 </option>
               ))}
             </select>
@@ -686,7 +686,7 @@ export default function TeamSettingsPage() {
                   >
                     {orgs.map((o: any) => (
                       <option key={o.id} value={o.id}>
-                        {o.name} {o.owner?.name ? `(${o.owner.name})` : ""}
+                        {o.name}
                       </option>
                     ))}
                   </Select>
