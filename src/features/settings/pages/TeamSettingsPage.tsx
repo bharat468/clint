@@ -353,17 +353,19 @@ export default function TeamSettingsPage() {
           <div className="flex items-center gap-2.5">
             <Building2 className="h-4 w-4 text-slate-500 shrink-0" />
             <span className="text-xs font-semibold text-slate-600">Active Workspace:</span>
-            <select
-              value={selectedOrgId || currentOrg?.id || ""}
-              onChange={(e) => setSelectedOrgId(e.target.value)}
-              className="text-xs font-bold text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-2xs"
-            >
-              {orgs.map((o: any) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-52">
+              <Select
+                value={selectedOrgId || currentOrg?.id || ""}
+                onChange={(e) => setSelectedOrgId(e.target.value)}
+                className="h-8.5 text-xs font-bold"
+              >
+                {orgs.map((o: any) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
           <span className="text-[11px] text-slate-500 font-medium">
             Managing members for <strong className="text-slate-800">{currentOrg?.name}</strong>
