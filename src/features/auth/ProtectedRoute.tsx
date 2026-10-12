@@ -57,8 +57,8 @@ export default function ProtectedRoute() {
   if (pathname.startsWith("/settings/roles") && !canAccess(user, "role.create") && !canAccess(user, "role.read")) {
     return <Navigate to="/dashboard" replace />;
   }
-  if (pathname.startsWith("/settings/billing") && !user.isSuperAdmin && !user.permissions?.includes("*")) {
-    return <Navigate to="/dashboard" replace />;
+  if (pathname.startsWith("/settings/billing")) {
+    return <Navigate to="/settings/organization" replace />;
   }
 
   return <Outlet />;

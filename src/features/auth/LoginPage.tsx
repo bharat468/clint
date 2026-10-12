@@ -413,8 +413,16 @@ export default function LoginPage() {
       {/* WORKSPACE SELECTION MODAL                                    */}
       {/* ============================================================ */}
       {pendingSuperAdminAuth && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="max-w-lg w-full bg-white border border-slate-200 p-6 sm:p-8 rounded-2xl shadow-xl space-y-5 animate-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPendingSuperAdminAuth(null);
+          }}
+        >
+          <Card
+            className="max-w-lg w-full bg-white border border-slate-200 p-6 sm:p-8 rounded-2xl shadow-xl space-y-5 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="text-center">
               <img
                 src="/RentMate%20Smart%20Rentals%20Logo.png"

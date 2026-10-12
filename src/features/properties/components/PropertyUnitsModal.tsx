@@ -209,8 +209,16 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl border border-slate-200 max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-3xl border border-slate-200 max-w-3xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={onClose}
           className="absolute top-6 right-6 p-1 text-slate-400 hover:text-slate-700 rounded-lg"
@@ -604,8 +612,16 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
 
         {/* Publish to Marketplace Sub-Modal */}
         {publishingUnit && (
-          <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 shadow-2xl relative">
+          <div
+            className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setPublishingUnit(null);
+            }}
+          >
+            <div
+              className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 shadow-2xl relative animate-in zoom-in-95"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => setPublishingUnit(null)}
                 className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1"

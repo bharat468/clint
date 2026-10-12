@@ -14,7 +14,6 @@ import SettingsLayout from "@/features/settings/layouts/SettingsLayout";
 import TeamSettingsPage from "@/features/settings/pages/TeamSettingsPage";
 import RolesSettingsPage from "@/features/settings/pages/RolesSettingsPage";
 import OrganizationSettingsPage from "@/features/settings/pages/OrganizationSettingsPage";
-import BillingSettingsPage from "@/features/settings/pages/BillingSettingsPage";
 
 // Modular SuperAdmin Platform Architecture
 import SuperAdminLayout from "@/features/superadmin/layouts/SuperAdminLayout";
@@ -90,7 +89,7 @@ export const router = createBrowserRouter([
               { path: "team", element: <TeamSettingsPage /> },
               { path: "roles", element: <RolesSettingsPage /> },
               { path: "organization", element: <OrganizationSettingsPage /> },
-              { path: "billing", element: <BillingSettingsPage /> },
+              { path: "billing", element: <Navigate to="/settings/organization" replace /> },
             ],
           },
         ],

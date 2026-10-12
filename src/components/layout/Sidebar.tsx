@@ -31,8 +31,7 @@ const mainNavigationLinks = [
 const settingsModules = [
   { to: "/settings/team", label: "Team & Staff", icon: Users },
   { to: "/settings/roles", label: "Roles & Permissions", icon: Sliders },
-  { to: "/settings/organization", label: "Organization Profile", icon: Building2 },
-  { to: "/settings/billing", label: "Plan & Quotas", icon: CreditCard },
+  { to: "/settings/organization", label: "Organization & Plan", icon: Building2 },
 ];
 
 export default function Sidebar() {
@@ -68,8 +67,7 @@ export default function Sidebar() {
   const filteredSettingsModules = settingsModules.filter((sub) => {
     if (sub.to === "/settings/team") return canAccess(user, "role.assign") || canAccess(user, "role.read");
     if (sub.to === "/settings/roles") return canAccess(user, "role.create") || canAccess(user, "role.read");
-    if (sub.to === "/settings/organization") return canAccess(user, "role.assign") || user?.isSuperAdmin || user?.permissions?.includes("*");
-    if (sub.to === "/settings/billing") return user?.isSuperAdmin || user?.permissions?.includes("*");
+    if (sub.to === "/settings/organization") return isOwnerOrAdmin || canAccess(user, "role.assign") || user?.isSuperAdmin || user?.permissions?.includes("*");
     return true;
   });
 

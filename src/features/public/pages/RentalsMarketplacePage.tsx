@@ -304,8 +304,16 @@ export default function RentalsMarketplacePage() {
 
       {/* Apply Modal */}
       {applyModalOpen && selectedListing && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 sm:p-7 shadow-2xl relative">
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setApplyModalOpen(false);
+          }}
+        >
+          <div
+            className="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 sm:p-7 shadow-2xl relative animate-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setApplyModalOpen(false)}
               className="absolute top-5 right-5 p-1 text-slate-400 hover:text-slate-700 rounded-lg"
