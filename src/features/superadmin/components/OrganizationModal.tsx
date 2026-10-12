@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { X, Building2, RefreshCw, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { adminService } from "@/services/admin.service";
 import type { AdminOrganization, Plan } from "@/types";
@@ -190,17 +190,16 @@ export default function OrganizationModal({
 
           {!orgToEdit && (
             <Field label="Assign Initial SaaS Subscription Plan">
-              <select
+              <Select
                 value={selectedPlanId}
                 onChange={(e) => setSelectedPlanId(e.target.value)}
-                className="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-slate-900 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
               >
                 {plans.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} ({p.maxProperties} properties, {p.maxStaff} staff)
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
           )}
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X, UserCheck, RefreshCw, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Select } from "@/components/ui/input";
 import type { AdminUser, SuperAdminRole } from "@/types";
 import { adminService } from "@/services/admin.service";
 
@@ -106,10 +107,9 @@ export default function PrivilegeModal({
           {targetIsSuperAdmin && (
             <div>
               <label className="block text-slate-700 font-semibold mb-1.5">Assigned Platform Role</label>
-              <select
+              <Select
                 value={targetAdminRole}
                 onChange={(e) => setTargetAdminRole(e.target.value)}
-                className="w-full rounded-xl bg-white border border-slate-200 px-3 py-2 text-slate-900 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
               >
                 <option value="SUPER_ADMIN">SUPER_ADMIN (Full Platform Master)</option>
                 {adminRoles.map((r) => (
@@ -117,7 +117,7 @@ export default function PrivilegeModal({
                     {r.name} ({r.slug})
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           )}
         </div>
