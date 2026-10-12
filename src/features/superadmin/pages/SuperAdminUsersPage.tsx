@@ -23,7 +23,7 @@ import { useApi } from "@/hooks/useApi";
 import { adminService } from "@/services/admin.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Toast } from "@/components/ui/toast";
@@ -593,13 +593,13 @@ export default function SuperAdminUsersPage() {
         <div className="flex items-center gap-2">
           {/* Organization filter dropdown */}
           <div className="relative min-w-[200px]">
-            <select
+            <Select
               value={selectedOrgFilter}
               onChange={(e) => {
                 setSelectedOrgFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full text-xs font-medium rounded-xl border border-slate-300 bg-white py-2 pl-3 pr-8 text-slate-800 shadow-2xs focus:border-blue-600 focus:outline-hidden"
+              className="h-9.5 text-xs font-medium"
             >
               <option value="ALL">All Workspaces & Orgs</option>
               {organizations.map((org) => (
@@ -607,7 +607,7 @@ export default function SuperAdminUsersPage() {
                   🏢 {org.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {/* Search Box */}
@@ -897,10 +897,10 @@ export default function SuperAdminUsersPage() {
           {/* Organization Picker if Client User */}
           {newUser.accountType === "CLIENT_USER" && (
             <Field label="Assign to Landlord Organization (Optional)">
-              <select
+              <Select
                 value={newUser.organizationId}
                 onChange={(e) => setNewUser({ ...newUser, organizationId: e.target.value })}
-                className="w-full text-xs font-medium rounded-xl border border-slate-300 bg-white p-2.5 text-slate-800 shadow-2xs focus:border-blue-600 focus:outline-hidden"
+                placeholder="None (Independent Direct User)"
               >
                 <option value="">None (Independent Direct User)</option>
                 {organizations.map((org) => (
@@ -908,7 +908,7 @@ export default function SuperAdminUsersPage() {
                     🏢 {org.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
           )}
 
