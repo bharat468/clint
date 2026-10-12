@@ -230,7 +230,7 @@ export function DatePicker({
   };
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className={cn("relative w-full", open && "z-30")}>
       {/* Hidden input for form integration */}
       <input
         ref={hiddenInputRef}

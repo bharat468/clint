@@ -151,7 +151,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const TriggerIcon = currentOption?.icon;
 
     return (
-      <div ref={containerRef} className="relative w-full">
+      <div ref={containerRef} className={cn("relative w-full", open && "z-30")}>
         {/* Hidden select for React Hook Form integration */}
         <select
           ref={(el) => {
