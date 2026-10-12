@@ -200,12 +200,16 @@ export const rentalLifecycleService = {
 
   // Applications
   async submitApplication(data: {
-    listingId: string;
+    listingId?: string;
+    unitId?: string;
     name: string;
     phone: string;
+    email?: string;
     occupation?: string;
     message?: string;
     proposedMoveIn?: string;
+    monthlyRent?: number;
+    securityDeposit?: number;
   }) {
     const res = await api.post(ENDPOINTS.APPLICATIONS.SUBMIT, data);
     return (res.data?.data ?? res.data) as RentalApplication;

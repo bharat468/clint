@@ -13,11 +13,15 @@ import {
   Briefcase,
   MessageSquare,
   Sparkles,
+  Plus,
 } from "lucide-react";
 import {
   rentalLifecycleService,
   RentalApplication,
+  Unit,
 } from "@/services/rentalLifecycle.service";
+import { propertyService } from "@/services/property.service";
+import { Property } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +40,12 @@ export default function ApplicationsPage() {
     canAccess(user, "lease.update") ||
     canAccess(user, "property.update") ||
     canAccess(user, "tenant.create");
+
+  const canCreateApp =
+    canAccess(user, "lease.create") ||
+    canAccess(user, "tenant.create") ||
+    user?.role === "SUPERADMIN" ||
+    (user as any)?.isSuperAdmin;
 
   const [applications, setApplications] = useState<RentalApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +75,24 @@ export default function ApplicationsPage() {
   const [penaltyAmount, setPenaltyAmount] = useState(100);
   const [maxPenaltyCap, setMaxPenaltyCap] = useState(2000);
   const [approving, setApproving] = useState(false);
+
+  // Record Application Modal State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState("");
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [loadingUnits, setLoadingUnits] = useState(false);
+  const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [applicantName, setApplicantName] = useState("");
+  const [applicantPhone, setApplicantPhone] = useState("");
+  const [applicantEmail, setApplicantEmail] = useState("");
+  const [applicantOccupation, setApplicantOccupation] = useState("");
+  const [monthlyRent, setMonthlyRent] = useState<number | string>("");
+  const [proposedMoveIn, setProposedMoveIn] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [applicantNotes, setApplicantNotes] = useState("");
+  const [submittingApp, setSubmittingApp] = useState(false);
 
   useEffect(() => {
     loadApplications();
@@ -188,6 +216,130 @@ export default function ApplicationsPage() {
     }
   };
 
+  const handleOpenCreateModal = async () => {
+    setIsCreateModalOpen(true);
+    try {
+      const props = await propertyService.list();
+      setProperties(props);
+      if (props.length > 0) {
+        const firstPropId = props[0].id;
+        setSelectedPropertyId(firstPropId);
+        await loadUnitsForProperty(firstPropId);
+      } else {
+        setSelectedPropertyId("");
+        setUnits([]);
+        setSelectedUnitId("");
+        setMonthlyRent("");
+      }
+    } catch (err) {
+      console.error("Failed to load properties", err);
+    }
+  };
+
+  const loadUnitsForProperty = async (propId: string) => {
+    if (!propId) {
+      setUnits([]);
+      setSelectedUnitId("");
+      return;
+    }
+    setLoadingUnits(true);
+    try {
+      const uList = await rentalLifecycleService.listUnits(propId);
+      setUnits(uList);
+      const vacantOrListed = uList.find((u) => u.status === "VACANT" || u.status === "LISTED");
+      if (vacantOrListed) {
+        setSelectedUnitId(vacantOrListed.id);
+        setMonthlyRent(vacantOrListed.rentAmount || "");
+      } else if (uList.length > 0) {
+        setSelectedUnitId(uList[0].id);
+        setMonthlyRent(uList[0].rentAmount || "");
+      } else {
+        setSelectedUnitId("");
+        setMonthlyRent("");
+      }
+    } catch (err) {
+      console.error("Failed to load units", err);
+    } finally {
+      setLoadingUnits(false);
+    }
+  };
+
+  const handlePropertyChange = async (propId: string) => {
+    setSelectedPropertyId(propId);
+    await loadUnitsForProperty(propId);
+  };
+
+  const handleUnitChange = (unitId: string) => {
+    setSelectedUnitId(unitId);
+    const chosen = units.find((u) => u.id === unitId);
+    if (chosen) {
+      setMonthlyRent(chosen.rentAmount || "");
+    }
+  };
+
+  const handleCreateApplication = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUnitId) {
+      setToast({
+        show: true,
+        type: "error",
+        message: "Please select an available unit.",
+      });
+      return;
+    }
+    if (!applicantName.trim()) {
+      setToast({
+        show: true,
+        type: "error",
+        message: "Please enter applicant full name.",
+      });
+      return;
+    }
+    if (applicantPhone.trim().length !== 10) {
+      setToast({
+        show: true,
+        type: "error",
+        message: "Please enter a valid 10-digit mobile number.",
+      });
+      return;
+    }
+
+    setSubmittingApp(true);
+    try {
+      await rentalLifecycleService.submitApplication({
+        unitId: selectedUnitId,
+        name: applicantName.trim(),
+        phone: applicantPhone.trim(),
+        email: applicantEmail.trim() || undefined,
+        occupation: applicantOccupation.trim() || undefined,
+        monthlyRent: Number(monthlyRent) || undefined,
+        proposedMoveIn: proposedMoveIn || undefined,
+        message: applicantNotes.trim() || undefined,
+      });
+
+      setIsCreateModalOpen(false);
+      setApplicantName("");
+      setApplicantPhone("");
+      setApplicantEmail("");
+      setApplicantOccupation("");
+      setApplicantNotes("");
+      setToast({
+        show: true,
+        type: "success",
+        message: "Rental application recorded successfully in pipeline.",
+      });
+      await loadApplications();
+    } catch (err: any) {
+      setToast({
+        show: true,
+        type: "error",
+        message: err.response?.data?.message || "Failed to record application",
+      });
+    } finally {
+      setSubmittingApp(false);
+    }
+  };
+
   if (!canReadApps) {
     return (
       <div className="space-y-6">
@@ -229,6 +381,16 @@ export default function ApplicationsPage() {
             Review incoming prospective tenant applications and execute lease agreements.
           </p>
         </div>
+
+        {canCreateApp && (
+          <Button
+            onClick={handleOpenCreateModal}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-9 px-3.5 rounded-xl shadow-xs gap-1.5 shrink-0 self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Record Application</span>
+          </Button>
+        )}
       </div>
 
       {/* KPI Cards Row */}
@@ -339,9 +501,9 @@ export default function ApplicationsPage() {
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
             {searchQuery
               ? `No applicants matched "${searchQuery}". Clear your search query or change status filter.`
-              : "When prospective tenants submit an application from the public marketplace, they appear here."}
+              : "When prospective tenants submit an application from the public marketplace, or when you record an application manually, they appear here."}
           </p>
-          {searchQuery && (
+          {searchQuery ? (
             <Button
               variant="outline"
               size="sm"
@@ -350,7 +512,16 @@ export default function ApplicationsPage() {
             >
               Clear Search
             </Button>
-          )}
+          ) : canCreateApp ? (
+            <Button
+              size="sm"
+              onClick={handleOpenCreateModal}
+              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl gap-1.5 shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Record Walk-in Application</span>
+            </Button>
+          ) : null}
         </Card>
       ) : (
         <div className="space-y-4">
@@ -577,6 +748,198 @@ export default function ApplicationsPage() {
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* Record Application Modal */}
+      <Modal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Record Rental Application"
+        subtitle="Register an application for a walk-in or prospective tenant"
+      >
+        <form onSubmit={handleCreateApplication} className="space-y-4">
+          <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 leading-relaxed">
+            Record applicant details for an available unit. Once verified, you can approve the application to instantly activate a digital lease and rent schedule.
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Property <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedPropertyId}
+                onChange={(e) => handlePropertyChange(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                required
+              >
+                {properties.length === 0 ? (
+                  <option value="">No properties available</option>
+                ) : (
+                  properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title} ({p.city})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Unit <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedUnitId}
+                onChange={(e) => handleUnitChange(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                disabled={loadingUnits}
+                required
+              >
+                {loadingUnits ? (
+                  <option value="">Loading units...</option>
+                ) : units.length === 0 ? (
+                  <option value="">No units under this property</option>
+                ) : (
+                  units.map((u) => (
+                    <option
+                      key={u.id}
+                      value={u.id}
+                      disabled={u.status === "OCCUPIED"}
+                    >
+                      Unit {u.unitNumber} - {u.type} ({u.status})
+                      {u.status === "OCCUPIED" ? " - Occupied" : ""}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Applicant Full Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={applicantName}
+                onChange={(e) => setApplicantName(e.target.value)}
+                placeholder="e.g. Rahul Sharma"
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Mobile Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                maxLength={10}
+                value={applicantPhone}
+                onChange={(e) =>
+                  setApplicantPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                }
+                placeholder="10-digit mobile number"
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                required
+              />
+              <span className="text-[10px] text-slate-500">
+                Strictly 10 digits without prefix
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Email Address (Optional)
+              </label>
+              <input
+                type="email"
+                value={applicantEmail}
+                onChange={(e) => setApplicantEmail(e.target.value)}
+                placeholder="e.g. rahul@example.com"
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Occupation / Employer (Optional)
+              </label>
+              <input
+                type="text"
+                value={applicantOccupation}
+                onChange={(e) => setApplicantOccupation(e.target.value)}
+                placeholder="e.g. Software Engineer, TCS"
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Proposed Monthly Rent (₹)
+              </label>
+              <input
+                type="number"
+                value={monthlyRent}
+                onChange={(e) => setMonthlyRent(e.target.value)}
+                placeholder="e.g. 15000"
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Proposed Move-in Date
+              </label>
+              <input
+                type="date"
+                value={proposedMoveIn}
+                onChange={(e) => setProposedMoveIn(e.target.value)}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Notes / Message (Optional)
+            </label>
+            <textarea
+              rows={2}
+              value={applicantNotes}
+              onChange={(e) => setApplicantNotes(e.target.value)}
+              placeholder="Any specific terms, ID proofs submitted, or reference details..."
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition resize-none"
+            />
+          </div>
+
+          <div className="pt-4 flex justify-end gap-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCreateModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={submittingApp}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold gap-1.5 shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{submittingApp ? "Recording..." : "Record Application"}</span>
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {/* Reject Confirmation Modal */}
