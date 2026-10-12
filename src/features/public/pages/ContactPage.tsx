@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Select } from "@/components/ui/input";
 import { Mail, Phone, MapPin, Send, CheckCircle2 } from "lucide-react";
 
 export default function ContactPage() {
@@ -160,16 +161,15 @@ export default function ContactPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Portfolio Size</label>
-                    <select
+                    <Select
                       value={form.units}
                       onChange={(e) => setForm({ ...form, units: e.target.value })}
-                      className="w-full h-11 px-3 text-xs rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
                     >
                       <option value="1-5">1 - 5 Units (Individual)</option>
                       <option value="5-25">5 - 25 Units (Pro)</option>
                       <option value="25-100">25 - 100 Units (Commercial/PG)</option>
                       <option value="100+">100+ Units (Enterprise)</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
 
