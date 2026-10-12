@@ -652,15 +652,14 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
-                  <select
+                  <Select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none"
                   >
                     <option value="RESIDENTIAL">Residential (Flats/PG)</option>
                     <option value="COMMERCIAL">Commercial (Shops/Offices)</option>
                     <option value="INDUSTRIAL">Industrial / Warehouse</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
