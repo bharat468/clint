@@ -132,9 +132,15 @@ export default function ContactPage() {
                     <input
                       type="tel"
                       required
+                      maxLength={10}
                       placeholder="e.g. 9876543210"
                       value={form.mobile}
-                      onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          mobile: e.target.value.replace(/\D/g, "").slice(0, 10),
+                        })
+                      }
                       className="w-full h-11 px-3 text-xs rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
                     />
                   </div>

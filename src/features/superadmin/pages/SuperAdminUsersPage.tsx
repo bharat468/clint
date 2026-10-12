@@ -914,6 +914,7 @@ export default function SuperAdminUsersPage() {
 
           <Field label="10-Digit Mobile Number" required>
             <Input
+              maxLength={10}
               placeholder="e.g. 9876543210"
               value={newUser.mobile}
               onChange={(e) =>
@@ -982,6 +983,7 @@ export default function SuperAdminUsersPage() {
 
           <Field label="Mobile Number">
             <Input
+              maxLength={10}
               placeholder="10-digit mobile"
               value={editForm.mobile}
               onChange={(e) =>

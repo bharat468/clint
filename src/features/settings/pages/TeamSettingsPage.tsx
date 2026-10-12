@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Users,
   Plus,
@@ -12,6 +12,7 @@ import {
   UserCheck,
   UserX,
   Clock,
+  Building2,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import {
@@ -44,23 +45,38 @@ export default function TeamSettingsPage() {
   const [rolesPage, setRolesPage] = useState(1);
   const [rolesPageSize, setRolesPageSize] = useState(6);
 
-  const { data: orgs } = useApi(organizationService.list, [] as any[]);
-  const currentOrg = orgs[0] || { id: "default", name: "Bharat Estates", slug: "bharat-estates" };
+  const { data: orgs, reload: reloadOrgs } = useApi(organizationService.list, [] as any[]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
+  const currentOrg =
+    (selectedOrgId ? orgs.find((o: any) => o.id === selectedOrgId) : orgs[0]) || {
+      id: "default",
+      name: "Bharat Estates",
+      slug: "bharat-estates",
+    };
 
   const fetchMembers = async () => {
-    if (!currentOrg?.id || currentOrg.id === "default") {
+    let orgId = selectedOrgId || currentOrg?.id;
+    if (!orgId || orgId === "default") {
       const list = await organizationService.list();
       if (list && list.length > 0) {
-        return organizationService.listMembers(list[0].id);
+        orgId = list[0].id;
       }
-      return [];
     }
-    return organizationService.listMembers(currentOrg.id);
+    if (orgId && orgId !== "default") {
+      return organizationService.listMembers(orgId);
+    }
+    return [];
   };
 
   const { data: members, reload: reloadMembers } = useApi(fetchMembers, [] as OrgMember[]);
   const { data: roles, reload: reloadRoles } = useApi(roleService.listRoles, [] as Role[]);
   const { data: properties } = useApi(propertyService.list, [] as Property[]);
+
+  useEffect(() => {
+    if (selectedOrgId) {
+      reloadMembers();
+    }
+  }, [selectedOrgId]);
 
   const [activeTab, setActiveTab] = useState<"STAFF" | "ROLES">("STAFF");
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
@@ -135,6 +151,9 @@ export default function TeamSettingsPage() {
   };
 
   const getEffectiveOrgId = async () => {
+    if (selectedOrgId && selectedOrgId !== "default") {
+      return selectedOrgId;
+    }
     if (currentOrg?.id && currentOrg.id !== "default") {
       return currentOrg.id;
     }
@@ -142,7 +161,7 @@ export default function TeamSettingsPage() {
     if (list && list.length > 0) {
       return list[0].id;
     }
-    return null;
+    return "default";
   };
 
   const handleToggleMemberStatus = async (m: OrgMember) => {
@@ -153,7 +172,6 @@ export default function TeamSettingsPage() {
     const nextStatus = m.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     try {
       const orgId = await getEffectiveOrgId();
-      if (!orgId) throw new Error("No organization found");
       await organizationService.updateMember(orgId, m.userId, { status: nextStatus });
       showFeedback(`Staff status updated to ${nextStatus}`);
       reloadMembers();
@@ -169,7 +187,6 @@ export default function TeamSettingsPage() {
     setIsSubmittingMember(true);
     try {
       const orgId = await getEffectiveOrgId();
-      if (!orgId) throw new Error("No organization found. Please reload.");
       await organizationService.updateMember(orgId, editingMember.userId, {
         name: editMemberForm.name,
         email: editMemberForm.email,
@@ -191,23 +208,23 @@ export default function TeamSettingsPage() {
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     setMemberFormError(null);
-    if (!/^\d{10}$/.test(memberForm.mobile)) {
+    const sanitizedMobile = memberForm.mobile.replace(/\D/g, "").slice(0, 10);
+    if (!/^\d{10}$/.test(sanitizedMobile)) {
       setMemberFormError("Please enter a valid 10-digit mobile number");
       return;
     }
     setIsSubmittingMember(true);
     try {
       const orgId = await getEffectiveOrgId();
-      if (!orgId) {
-        throw new Error("No organization found. Please create or select an organization.");
-      }
       await organizationService.addMember(orgId, {
         ...memberForm,
+        mobile: sanitizedMobile,
         propertyScope: scopeMode === "ALL" ? [] : memberForm.propertyScope,
       });
       handleCloseAddModal();
       showFeedback("New team member added successfully");
       reloadMembers();
+      reloadOrgs();
     } catch (err) {
       const msg = errMsg(err);
       setMemberFormError(msg);
@@ -329,6 +346,30 @@ export default function TeamSettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Multi-organization selector if user has access to multiple organizations */}
+      {orgs.length > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
+          <div className="flex items-center gap-2.5">
+            <Building2 className="h-4 w-4 text-slate-500 shrink-0" />
+            <span className="text-xs font-semibold text-slate-600">Active Workspace:</span>
+            <select
+              value={selectedOrgId || currentOrg?.id || ""}
+              onChange={(e) => setSelectedOrgId(e.target.value)}
+              className="text-xs font-bold text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-2xs"
+            >
+              {orgs.map((o: any) => (
+                <option key={o.id} value={o.id}>
+                  {o.name} {o.owner?.name ? `(${o.owner.name})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <span className="text-[11px] text-slate-500 font-medium">
+            Managing members for <strong className="text-slate-800">{currentOrg?.name}</strong>
+          </span>
+        </div>
+      )}
 
       {/* Tabs Navigation */}
       <div className="flex items-center gap-2 border-b border-slate-200">
@@ -636,14 +677,68 @@ export default function TeamSettingsPage() {
                 </div>
               )}
 
+              {orgs.length > 1 && (
+                <Field label="Assign to Organization / Workspace">
+                  <Select
+                    value={selectedOrgId || currentOrg?.id || ""}
+                    onChange={(e) => setSelectedOrgId(e.target.value)}
+                    required
+                  >
+                    {orgs.map((o: any) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name} {o.owner?.name ? `(${o.owner.name})` : ""}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+
               <Field label="10-Digit Mobile Number (Required for Login)">
-                <Input
-                  type="tel"
-                  placeholder="e.g. 9876543211"
-                  value={memberForm.mobile}
-                  onChange={(e) => setMemberForm({ ...memberForm, mobile: e.target.value })}
-                  required
-                />
+                <div className="space-y-1">
+                  <Input
+                    type="tel"
+                    maxLength={10}
+                    placeholder="e.g. 9876543211"
+                    value={memberForm.mobile}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setMemberForm({ ...memberForm, mobile: val });
+                      if (memberFormError && val.length === 10) {
+                        setMemberFormError(null);
+                      }
+                    }}
+                    required
+                    className={
+                      memberForm.mobile.length === 10
+                        ? "border-emerald-500 focus:border-emerald-600 focus:ring-emerald-200"
+                        : memberForm.mobile.length > 0
+                        ? "border-amber-400 focus:border-amber-500 focus:ring-amber-200"
+                        : ""
+                    }
+                  />
+                  <div className="flex items-center justify-between text-[11px] px-0.5">
+                    <span
+                      className={
+                        memberForm.mobile.length === 10
+                          ? "text-emerald-600 font-semibold flex items-center gap-1"
+                          : "text-slate-400"
+                      }
+                    >
+                      {memberForm.mobile.length === 10
+                        ? "✓ Valid 10-digit mobile number"
+                        : "Must be exactly 10 numeric digits"}
+                    </span>
+                    <span
+                      className={`font-mono text-xs ${
+                        memberForm.mobile.length === 10
+                          ? "text-emerald-600 font-bold"
+                          : "text-slate-400"
+                      }`}
+                    >
+                      {memberForm.mobile.length}/10
+                    </span>
+                  </div>
+                </div>
               </Field>
 
               <Field label="Full Name">

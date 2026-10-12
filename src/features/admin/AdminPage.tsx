@@ -807,9 +807,15 @@ export default function AdminPage() {
               <Field label="10-Digit Mobile Number (Required)">
                 <Input
                   type="tel"
+                  maxLength={10}
                   placeholder="e.g. 9876500001"
                   value={userForm.mobile}
-                  onChange={(e) => setUserForm({ ...userForm, mobile: e.target.value })}
+                  onChange={(e) =>
+                    setUserForm({
+                      ...userForm,
+                      mobile: e.target.value.replace(/\D/g, "").slice(0, 10),
+                    })
+                  }
                   required
                 />
               </Field>
