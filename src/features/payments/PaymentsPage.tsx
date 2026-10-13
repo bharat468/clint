@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,6 +14,7 @@ import {
   Search,
   RefreshCw,
   FileDown,
+  FileSpreadsheet,
   ShieldAlert,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
@@ -33,6 +35,7 @@ import { PageHeader, State } from "@/components/ui/page";
 import { errMsg, formatINR, formatDateTime } from "@/lib/utils";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
+import { ReportsModal } from "@/features/reports/ReportsModal";
 import type { Payment, Tenant, Property } from "@/types";
 
 const schema = z.object({
@@ -46,6 +49,7 @@ type Form = z.infer<typeof schema>;
 const tone = { PAID: "green", PENDING: "yellow", OVERDUE: "red" } as const;
 
 export default function PaymentsPage() {
+  const [searchParams] = useSearchParams();
   const user = useAppSelector((s) => s.auth.user);
   const canReadPayment = canAccess(user, "payment.read");
   const canCreatePayment = canAccess(user, "payment.create");
@@ -56,11 +60,27 @@ export default function PaymentsPage() {
   const { data: tenants } = useApi(tenantService.list, [] as Tenant[]);
   const { data: properties } = useApi(propertyService.list, [] as Property[]);
   const [open, setOpen] = useState(false);
+  const [reportsOpen, setReportsOpen] = useState(false);
+  const [reportTab, setReportTab] = useState<"collections" | "defaulters" | "pnl">("collections");
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deletingPayment, setDeletingPayment] = useState<Payment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "PAID" | "PENDING" | "OVERDUE">("ALL");
+
+  const urlStatus = searchParams.get("status")?.toUpperCase();
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "PAID" | "PENDING" | "OVERDUE">(
+    urlStatus === "PAID" || urlStatus === "PENDING" || urlStatus === "OVERDUE" ? urlStatus : "ALL"
+  );
+
+  useEffect(() => {
+    const s = searchParams.get("status")?.toUpperCase();
+    if (s === "PAID" || s === "PENDING" || s === "OVERDUE") {
+      setStatusFilter(s);
+    } else if (s === "ALL") {
+      setStatusFilter("ALL");
+    }
+  }, [searchParams]);
+
   const [formError, setFormError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -276,11 +296,24 @@ export default function PaymentsPage() {
         title="Rent & Payments"
         subtitle="Track rent invoices, payment statuses, and overdue collections"
         action={
-          canCreatePayment ? (
-            <Button onClick={handleOpenCreate} className="gap-2">
-              <Plus className="h-4 w-4" /> Record Payment
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReportTab("collections");
+                setReportsOpen(true);
+              }}
+              className="gap-2 text-slate-700 font-semibold border-slate-300 hover:bg-slate-50"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              <span>Export Reports</span>
             </Button>
-          ) : undefined
+            {canCreatePayment && (
+              <Button onClick={handleOpenCreate} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                <Plus className="h-4 w-4" /> Record Payment
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -723,6 +756,13 @@ export default function PaymentsPage() {
         type={toast.type}
         message={toast.message}
         onClose={() => setToast({ show: false, message: "" })}
+      />
+
+      {/* Financial & Operational Reports Modal (BRD Sec 25) */}
+      <ReportsModal
+        open={reportsOpen}
+        onClose={() => setReportsOpen(false)}
+        defaultTab={reportTab}
       />
     </div>
   );

@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Building2,
   CreditCard,
@@ -10,6 +11,7 @@ import {
   Plus,
   Home,
   ChevronRight,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { propertyService } from "@/services/property.service";
@@ -20,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { State } from "@/components/ui/page";
 import { formatINR } from "@/lib/utils";
+import { ReportsModal } from "@/features/reports/ReportsModal";
 import type { Payment, Property, Tenant } from "@/types";
 
 const fetchAll = async () => {
@@ -38,6 +41,9 @@ const initial = {
 };
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  const [reportsOpen, setReportsOpen] = useState(false);
+  const [reportTab, setReportTab] = useState<"collections" | "defaulters" | "pnl">("collections");
   const { data, loading, error } = useApi(fetchAll, initial);
   const properties = Array.isArray(data?.properties) ? data.properties : [];
   const tenants = Array.isArray(data?.tenants) ? data.tenants : [];
@@ -75,6 +81,18 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setReportTab("collections");
+              setReportsOpen(true);
+            }}
+            className="gap-2 text-slate-700 font-semibold border-slate-300 hover:bg-slate-50 shadow-xs"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            <span>Export Reports</span>
+          </Button>
           <Link to="/properties">
             <Button variant="outline" size="sm" className="gap-2 text-slate-700 font-semibold border-slate-300">
               <Home className="h-4 w-4 text-blue-600" />
@@ -94,20 +112,26 @@ export default function DashboardPage() {
 
       {!loading && !error && (
         <>
-          {/* Top 4 KPI Metrics */}
+          {/* Top 4 KPI Metrics (Clickable Navigation to Modules) */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Metric 1: Properties */}
-            <Card hoverEffect className="p-5">
+            {/* Metric 1: Properties -> /properties */}
+            <Card
+              hoverEffect
+              onClick={() => navigate("/properties")}
+              className="p-5 cursor-pointer transition-all duration-200 hover:border-blue-400 hover:shadow-md group active:scale-[0.99]"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-blue-600 transition-colors">
                   Total Properties
                 </span>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-xs">
                   <Building2 className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <div className="text-2xl font-bold text-slate-900">{properties.length}</div>
+                <div className="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  {properties.length}
+                </div>
                 <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-500">
                   <span className="inline-flex items-center gap-1 font-medium text-emerald-600">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {occupiedProperties.length} Occupied
@@ -118,18 +142,24 @@ export default function DashboardPage() {
               </div>
             </Card>
 
-            {/* Metric 2: Active Tenants */}
-            <Card hoverEffect className="p-5">
+            {/* Metric 2: Active Tenants -> /tenants */}
+            <Card
+              hoverEffect
+              onClick={() => navigate("/tenants")}
+              className="p-5 cursor-pointer transition-all duration-200 hover:border-cyan-400 hover:shadow-md group active:scale-[0.99]"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-cyan-600 transition-colors">
                   Active Tenants
                 </span>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 group-hover:bg-cyan-600 group-hover:text-white transition-all shadow-xs">
                   <Users className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <div className="text-2xl font-bold text-slate-900">{tenants.length}</div>
+                <div className="text-2xl font-bold text-slate-900 group-hover:text-cyan-600 transition-colors">
+                  {tenants.length}
+                </div>
                 <div className="mt-1.5 flex items-center gap-1 text-xs text-cyan-700 font-medium">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span>Assigned to rental leases</span>
@@ -137,18 +167,24 @@ export default function DashboardPage() {
               </div>
             </Card>
 
-            {/* Metric 3: Rent Collected */}
-            <Card hoverEffect className="p-5">
+            {/* Metric 3: Rent Collected -> /payments?status=PAID */}
+            <Card
+              hoverEffect
+              onClick={() => navigate("/payments?status=PAID")}
+              className="p-5 cursor-pointer transition-all duration-200 hover:border-emerald-400 hover:shadow-md group active:scale-[0.99]"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-emerald-600 transition-colors">
                   Rent Collected
                 </span>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-xs">
                   <IndianRupee className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <div className="text-2xl font-bold text-emerald-700">{formatINR(collectedAmount)}</div>
+                <div className="text-2xl font-bold text-emerald-700 group-hover:text-emerald-800 transition-colors">
+                  {formatINR(collectedAmount)}
+                </div>
                 <div className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   <span>{paidPayments.length} payments completed</span>
@@ -156,18 +192,22 @@ export default function DashboardPage() {
               </div>
             </Card>
 
-            {/* Metric 4: Pending / Overdue */}
-            <Card hoverEffect className="p-5">
+            {/* Metric 4: Pending / Overdue -> /payments?status=PENDING */}
+            <Card
+              hoverEffect
+              onClick={() => navigate("/payments?status=PENDING")}
+              className="p-5 cursor-pointer transition-all duration-200 hover:border-amber-400 hover:shadow-md group active:scale-[0.99]"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-amber-600 transition-colors">
                   Pending Dues
                 </span>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all shadow-xs">
                   <CreditCard className="h-5 w-5" />
                 </div>
               </div>
               <div className="mt-3">
-                <div className="text-2xl font-bold text-amber-600">
+                <div className="text-2xl font-bold text-amber-600 group-hover:text-amber-700 transition-colors">
                   {formatINR(pendingAmount)}
                 </div>
                 <div className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-700 font-medium">
@@ -315,6 +355,13 @@ export default function DashboardPage() {
           </div>
         </>
       )}
+
+      {/* Financial & Operational Reports Modal (BRD Sec 25) */}
+      <ReportsModal
+        open={reportsOpen}
+        onClose={() => setReportsOpen(false)}
+        defaultTab={reportTab}
+      />
     </div>
   );
 }
