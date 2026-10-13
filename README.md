@@ -18,6 +18,8 @@
 
 > [!NOTE]
 > **Design Philosophy**: RentMate utilizes an elegant, cohesive **Light Color Theme** built around high-contrast typography, crisp borders, and subtle pastel gradients (`#2563EB` Royal Blue, Slate, and Indigo). Dark backgrounds have been completely phased out in favor of modern, high-readability interfaces.
+> 
+> 📘 **Full Developer Setup & Handover Guide**: See [RENTMATE_FULL_SETUP_AND_HANDOVER_GUIDE.md](./RENTMATE_FULL_SETUP_AND_HANDOVER_GUIDE.md) for complete end-to-end instructions.
 
 ---
 
