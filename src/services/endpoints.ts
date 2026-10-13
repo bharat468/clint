@@ -145,6 +145,13 @@ export const ENDPOINTS = {
     MEMBER_UPDATE: (orgId: string, userId: string) => `/organizations/${orgId}/members/${userId}`,
     MEMBER_REMOVE: (orgId: string, userId: string) => `/organizations/${orgId}/members/${userId}`,
   },
+
+  // Exportable Financial & Operational Reports (BRD Sec 25)
+  REPORTS: {
+    MONTHLY_COLLECTIONS: "/reports/monthly-collections",
+    DEFAULTERS: "/reports/defaulters",
+    PROPERTY_PNL: "/reports/property-pnl",
+  },
 } as const;
 
 export default ENDPOINTS;
