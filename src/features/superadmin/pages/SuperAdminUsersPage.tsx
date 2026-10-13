@@ -604,7 +604,7 @@ export default function SuperAdminUsersPage() {
               <option value="ALL">All Workspaces & Orgs</option>
               {organizations.map((org) => (
                 <option key={org.id} value={org.id}>
-                  🏢 {org.name}
+                  {org.name}
                 </option>
               ))}
             </Select>
@@ -905,7 +905,7 @@ export default function SuperAdminUsersPage() {
                 <option value="">None (Independent Direct User)</option>
                 {organizations.map((org) => (
                   <option key={org.id} value={org.id}>
-                    🏢 {org.name}
+                    {org.name}
                   </option>
                 ))}
               </Select>

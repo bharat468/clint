@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Select } from "@/components/ui/input";
 
 interface DataTablePaginationProps {
   currentPage: number;
@@ -61,20 +62,22 @@ export function DataTablePagination({
         {onPageSizeChange && (
           <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
             <span className="text-slate-500">Per page:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                onPageSizeChange(Number(e.target.value));
-                onPageChange(1);
-              }}
-              className="bg-white border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-800 shadow-2xs hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              {pageSizeOptions.map((sz) => (
-                <option key={sz} value={sz}>
-                  {sz}
-                </option>
-              ))}
-            </select>
+            <div className="w-20">
+              <Select
+                value={String(pageSize)}
+                onChange={(e) => {
+                  onPageSizeChange(Number(e.target.value));
+                  onPageChange(1);
+                }}
+                className="h-8 text-xs font-semibold py-0"
+              >
+                {pageSizeOptions.map((sz) => (
+                  <option key={sz} value={String(sz)}>
+                    {sz}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
         )}
       </div>

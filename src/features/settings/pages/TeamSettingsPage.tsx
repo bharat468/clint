@@ -735,7 +735,7 @@ export default function TeamSettingsPage() {
                       }
                     >
                       {memberForm.mobile.length === 10
-                        ? "✓ Valid 10-digit mobile number"
+                        ? "Valid 10-digit mobile number"
                         : "Must be exactly 10 numeric digits"}
                     </span>
                     <span

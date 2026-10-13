@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -66,8 +67,13 @@ export function DatePicker({
   id,
 }: DatePickerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const hiddenInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number; placeAbove?: boolean }>({
+    top: 0,
+    left: 0,
+  });
 
   const [selectedDate, setSelectedDate] = useState<string>(
     value ?? defaultValue ?? ""
@@ -102,13 +108,39 @@ export function DatePicker({
     }
   }, [open, selectedDate]);
 
-  // Click outside listener
+  const updateCoords = () => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const popoverWidth = 288;
+    const popoverHeight = 330;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const placeAbove = spaceBelow < popoverHeight && rect.top > popoverHeight;
+
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 12) {
+      left = window.innerWidth - popoverWidth - 12;
+    }
+    if (left < 12) left = 12;
+
+    setCoords({
+      top: placeAbove ? rect.top - 6 : rect.bottom + 6,
+      left,
+      placeAbove,
+    });
+  };
+
+  // Click outside and scroll listener
   useEffect(() => {
     if (!open) return;
+    updateCoords();
+
     const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        !containerRef.current.contains(target) &&
+        popoverRef.current &&
+        !popoverRef.current.contains(target)
       ) {
         setOpen(false);
       }
@@ -117,11 +149,20 @@ export function DatePicker({
       if (e.key === "Escape") setOpen(false);
     };
 
+    const handleScroll = () => {
+      updateCoords();
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleScroll);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll);
     };
   }, [open]);
 
@@ -244,7 +285,12 @@ export function DatePicker({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          if (!disabled) {
+            updateCoords();
+            setOpen((prev) => !prev);
+          }
+        }}
         className={cn(
           "h-10.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 transition-all outline-hidden flex items-center justify-between text-left select-none",
           "hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10",
@@ -289,102 +335,115 @@ export function DatePicker({
         )}
       </button>
 
-      {/* Calendar Popover */}
-      {open && (
-        <div className="absolute left-0 mt-1.5 z-50 w-72 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xl animate-in fade-in zoom-in-95 duration-150">
-          {/* Header Controls */}
-          <div className="flex items-center justify-between mb-3 px-1">
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-
-            <span className="text-xs font-bold text-slate-800">
-              {MONTH_NAMES[viewMonth]} {viewYear}
-            </span>
-
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Weekday Names */}
-          <div className="grid grid-cols-7 gap-1 text-center mb-1">
-            {WEEKDAY_NAMES.map((d) => (
-              <span
-                key={d}
-                className="text-[11px] font-semibold text-slate-400 uppercase py-1"
-              >
-                {d}
-              </span>
-            ))}
-          </div>
-
-          {/* Days Grid */}
-          <div className="grid grid-cols-7 gap-1">
-            {/* Blank offset days */}
-            {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-              <div key={`blank-${i}`} className="h-8" />
-            ))}
-
-            {/* Month Days */}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1;
-              const selected = isSelected(day);
-              const today = isToday(day);
-              const disabledDay = isDateDisabled(day);
-
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  disabled={disabledDay}
-                  onClick={() => handleSelectDay(day)}
-                  className={cn(
-                    "h-8 w-8 mx-auto rounded-xl text-xs font-semibold flex items-center justify-center transition-all",
-                    selected
-                      ? "bg-blue-600 text-white shadow-xs font-bold"
-                      : today
-                      ? "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
-                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
-                    disabledDay &&
-                      "opacity-25 cursor-not-allowed hover:bg-transparent text-slate-400"
-                  )}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Footer Quick Selection */}
-          <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
-            <button
-              type="button"
-              onClick={handleToday}
-              className="px-2.5 py-1 font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
-            >
-              Today
-            </button>
-            {selectedDate && (
+      {/* Calendar Popover Rendered via Portal to Document Body (Always on Top) */}
+      {open &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            style={{
+              position: "fixed",
+              top: coords.placeAbove ? undefined : coords.top,
+              bottom: coords.placeAbove ? window.innerHeight - coords.top : undefined,
+              left: coords.left,
+              width: 288,
+              zIndex: 99999,
+            }}
+            className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+          >
+            {/* Header Controls */}
+            <div className="flex items-center justify-between mb-3 px-1">
               <button
                 type="button"
-                onClick={handleClear}
-                className="px-2.5 py-1 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition"
+                onClick={handlePrevMonth}
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
               >
-                Clear
+                <ChevronLeft className="h-4 w-4" />
               </button>
-            )}
-          </div>
-        </div>
-      )}
+
+              <span className="text-xs font-bold text-slate-800">
+                {MONTH_NAMES[viewMonth]} {viewYear}
+              </span>
+
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Weekday Names */}
+            <div className="grid grid-cols-7 gap-1 text-center mb-1">
+              {WEEKDAY_NAMES.map((d) => (
+                <span
+                  key={d}
+                  className="text-[11px] font-semibold text-slate-400 uppercase py-1"
+                >
+                  {d}
+                </span>
+              ))}
+            </div>
+
+            {/* Days Grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {/* Blank offset days */}
+              {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                <div key={`blank-${i}`} className="h-8" />
+              ))}
+
+              {/* Month Days */}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const selected = isSelected(day);
+                const today = isToday(day);
+                const disabledDay = isDateDisabled(day);
+
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    disabled={disabledDay}
+                    onClick={() => handleSelectDay(day)}
+                    className={cn(
+                      "h-8 w-8 mx-auto rounded-xl text-xs font-semibold flex items-center justify-center transition-all",
+                      selected
+                        ? "bg-blue-600 text-white shadow-xs font-bold"
+                        : today
+                        ? "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
+                        : "text-slate-700 hover:bg-slate-100 hover:text-slate-900",
+                      disabledDay &&
+                        "opacity-25 cursor-not-allowed hover:bg-transparent text-slate-400"
+                    )}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Footer Quick Selection */}
+            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+              <button
+                type="button"
+                onClick={handleToday}
+                className="px-2.5 py-1 font-semibold text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
+              >
+                Today
+              </button>
+              {selectedDate && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="px-2.5 py-1 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-lg transition"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

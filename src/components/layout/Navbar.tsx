@@ -1,13 +1,28 @@
+import { useState, useEffect } from "react";
 import { Bell, LogOut, Menu, Search } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useLogout } from "@/features/auth/useLogout";
 import { toggleSidebar } from "@/features/ui/uiSlice";
 import { Button } from "@/components/ui/button";
+import GlobalSearchModal from "./GlobalSearchModal";
 
 export default function Navbar() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
   const handleLogout = useLogout();
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Keyboard shortcut listener: Cmd+K / Ctrl+K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const getInitials = (name?: string | null) => {
     if (!name) return "RM";
@@ -20,38 +35,53 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/85 px-4 backdrop-blur-md transition-all sm:px-6">
-      {/* Left side: Menu Toggle, Mobile Logo & Quick Context */}
-      <div className="flex items-center gap-2.5 sm:gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => dispatch(toggleSidebar())}
-          aria-label="Toggle sidebar"
-          className="text-slate-600 hover:text-slate-900"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
+    <>
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/85 px-4 backdrop-blur-md transition-all sm:px-6">
+        {/* Left side: Menu Toggle, Mobile Logo & Quick Context */}
+        <div className="flex items-center gap-2.5 sm:gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => dispatch(toggleSidebar())}
+            aria-label="Toggle sidebar"
+            className="text-slate-600 hover:text-slate-900"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
 
-        {/* Mobile / Tablet Logo */}
-        <img
-          src="/RentMate%20Smart%20Rentals%20Logo.png"
-          alt="RentMate Logo"
-          className="h-10 w-auto md:hidden object-contain"
-        />
+          {/* Mobile / Tablet Logo */}
+          <img
+            src="/RentMate%20Smart%20Rentals%20Logo.png"
+            alt="RentMate Logo"
+            className="h-10 w-auto md:hidden object-contain"
+          />
 
-        {/* Search Bar Display */}
-        <div className="hidden sm:flex items-center gap-2 rounded-xl bg-slate-100/80 px-3.5 py-1.5 text-xs text-slate-400 border border-slate-200/50 transition-colors hover:border-slate-300">
-          <Search className="h-3.5 w-3.5 text-slate-400" />
-          <span className="font-normal text-slate-500">Search properties, tenants, payments...</span>
-          <kbd className="ml-3 rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 shadow-2xs border border-slate-200">
-            ⌘K
-          </kbd>
+          {/* Fully Interactive Search Bar Trigger (Desktop) */}
+          <div
+            onClick={() => setSearchOpen(true)}
+            role="button"
+            tabIndex={0}
+            className="hidden sm:flex items-center gap-2 rounded-xl bg-slate-100/80 px-3.5 py-1.5 text-xs text-slate-400 border border-slate-200/50 transition-all hover:border-blue-400 hover:bg-slate-100 cursor-pointer shadow-2xs select-none active:scale-[0.99]"
+          >
+            <Search className="h-3.5 w-3.5 text-blue-600" />
+            <span className="font-normal text-slate-500">Search properties, tenants, payments...</span>
+            <kbd className="ml-3 rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 shadow-2xs border border-slate-200">
+              ⌘K
+            </kbd>
+          </div>
         </div>
-      </div>
 
-      {/* Right side: Notifications, User Avatar & Logout */}
-      <div className="flex items-center gap-2.5 sm:gap-4">
+        {/* Right side: Mobile Search, Notifications, User Avatar & Logout */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Mobile Search Icon Button */}
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search"
+            className="sm:hidden rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors"
+          >
+            <Search className="h-4.5 w-4.5" />
+          </button>
         {/* Notifications Icon */}
         <button
           type="button"
@@ -90,5 +120,9 @@ export default function Navbar() {
         </Button>
       </div>
     </header>
+
+    {/* Universal Command Palette / Global Search Modal */}
+    <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+  </>
   );
 }

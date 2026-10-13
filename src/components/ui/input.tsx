@@ -11,6 +11,7 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,8 +67,14 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     ref
   ) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
+    const popoverRef = useRef<HTMLDivElement | null>(null);
     const hiddenSelectRef = useRef<HTMLSelectElement | null>(null);
     const [open, setOpen] = useState(false);
+    const [coords, setCoords] = useState<{ top: number; left: number; width: number; placeAbove?: boolean }>({
+      top: 0,
+      left: 0,
+      width: 0,
+    });
 
     // Extract option items from props.options or children
     const options: SelectOptionItem[] = useMemo(() => {
@@ -107,11 +114,31 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       }
     }, [value]);
 
-    // Close on click outside
+    const updateCoords = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const placeAbove = spaceBelow < 220 && rect.top > 220;
+      setCoords({
+        top: placeAbove ? rect.top - 6 : rect.bottom + 6,
+        left: rect.left,
+        width: rect.width,
+        placeAbove,
+      });
+    };
+
     useEffect(() => {
       if (!open) return;
+      updateCoords();
+
       const handleClickOutside = (e: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        const target = e.target as Node;
+        if (
+          containerRef.current &&
+          !containerRef.current.contains(target) &&
+          popoverRef.current &&
+          !popoverRef.current.contains(target)
+        ) {
           setOpen(false);
         }
       };
@@ -120,11 +147,20 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         if (e.key === "Escape") setOpen(false);
       };
 
+      const handleScroll = () => {
+        updateCoords();
+      };
+
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleEscape);
+      window.addEventListener("scroll", handleScroll, true);
+      window.addEventListener("resize", handleScroll);
+
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
         document.removeEventListener("keydown", handleEscape);
+        window.removeEventListener("scroll", handleScroll, true);
+        window.removeEventListener("resize", handleScroll);
       };
     }, [open]);
 
@@ -151,8 +187,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const TriggerIcon = currentOption?.icon;
 
     return (
-      <div ref={containerRef} className={cn("relative w-full", open && "z-30")}>
-        {/* Hidden select for React Hook Form integration */}
+      <div ref={containerRef} className={cn("relative w-full", className)}>
+        {/* Strictly hidden native select for React Hook Form integration (zero dimension, no pointer events) */}
         <select
           ref={(el) => {
             hiddenSelectRef.current = el;
@@ -162,7 +198,16 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           name={name}
           value={selectedVal}
           onChange={(e) => setSelectedVal(e.target.value)}
-          className="sr-only pointer-events-none"
+          style={{
+            position: "absolute",
+            opacity: 0,
+            pointerEvents: "none",
+            width: 0,
+            height: 0,
+            margin: 0,
+            padding: 0,
+            border: 0,
+          }}
           tabIndex={-1}
           aria-hidden="true"
           {...props}
@@ -174,11 +219,16 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ))}
         </select>
 
-        {/* Custom Select Trigger */}
+        {/* Custom Styled Select Trigger */}
         <button
           type="button"
           disabled={disabled}
-          onClick={() => setOpen((prev) => !prev)}
+          onClick={() => {
+            if (!disabled) {
+              updateCoords();
+              setOpen((prev) => !prev);
+            }
+          }}
           className={cn(
             baseInput,
             "cursor-pointer flex items-center justify-between text-left font-normal select-none pr-3.5",
@@ -201,41 +251,54 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           />
         </button>
 
-        {/* Custom Dropdown Popover */}
-        {open && (
-          <div className="absolute left-0 right-0 top-full mt-1.5 z-50 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl animate-in fade-in zoom-in-95 duration-150">
-            {options.map((opt) => {
-              const isSelected = opt.value === selectedVal;
-              const OptIcon = opt.icon;
-              return (
-                <div
-                  key={opt.value}
-                  onClick={() => !opt.disabled && handleSelect(opt.value)}
-                  className={cn(
-                    "flex items-center justify-between rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors select-none",
-                    isSelected
-                      ? "bg-blue-50 text-blue-700 font-semibold"
-                      : "text-slate-700 hover:bg-slate-50 hover:text-slate-900",
-                    opt.disabled && "cursor-not-allowed opacity-40 hover:bg-transparent"
-                  )}
-                >
-                  <div className="flex items-center gap-2.5 truncate min-w-0">
-                    {OptIcon && (
-                      <OptIcon
-                        className={cn(
-                          "h-4 w-4 shrink-0 transition-colors",
-                          isSelected ? "text-blue-600" : "text-slate-400"
-                        )}
-                      />
+        {/* Custom Dropdown Popover Rendered via Portal to Document Body */}
+        {open &&
+          createPortal(
+            <div
+              ref={popoverRef}
+              style={{
+                position: "fixed",
+                top: coords.placeAbove ? undefined : coords.top,
+                bottom: coords.placeAbove ? window.innerHeight - coords.top : undefined,
+                left: coords.left,
+                width: coords.width,
+                zIndex: 99999,
+              }}
+              className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl animate-in fade-in zoom-in-95 duration-150"
+            >
+              {options.map((opt) => {
+                const isSelected = opt.value === selectedVal;
+                const OptIcon = opt.icon;
+                return (
+                  <div
+                    key={opt.value}
+                    onClick={() => !opt.disabled && handleSelect(opt.value)}
+                    className={cn(
+                      "flex items-center justify-between rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors select-none",
+                      isSelected
+                        ? "bg-blue-50 text-blue-700 font-semibold"
+                        : "text-slate-700 hover:bg-slate-50 hover:text-slate-900",
+                      opt.disabled && "cursor-not-allowed opacity-40 hover:bg-transparent"
                     )}
-                    <span className="truncate">{opt.label}</span>
+                  >
+                    <div className="flex items-center gap-2.5 truncate min-w-0">
+                      {OptIcon && (
+                        <OptIcon
+                          className={cn(
+                            "h-4 w-4 shrink-0 transition-colors",
+                            isSelected ? "text-blue-600" : "text-slate-400"
+                          )}
+                        />
+                      )}
+                      <span className="truncate">{opt.label}</span>
+                    </div>
+                    {isSelected && <Check className="h-4 w-4 text-blue-600 shrink-0 ml-2" />}
                   </div>
-                  {isSelected && <Check className="h-4 w-4 text-blue-600 shrink-0 ml-2" />}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>,
+            document.body
+          )}
       </div>
     );
   }
