@@ -22,7 +22,7 @@ import { paymentService } from "@/services/payment.service";
 import { tenantService } from "@/services/tenant.service";
 import { propertyService } from "@/services/property.service";
 import { useAppSelector } from "@/app/hooks";
-import { generateRentInvoicePdf } from "@/lib/rentInvoicePdf";
+import { generateRentInvoicePdf, UtilityDetail } from "@/lib/rentInvoicePdf";
 import { shareRentOnWhatsApp } from "@/lib/whatsapp";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -123,16 +123,66 @@ export default function PaymentsPage() {
   const handleDownloadInvoice = (p: Payment) => {
     const tenant = tenants.find((t) => t.id === p.tenantId);
     const propId = p.propertyId || tenant?.propertyId;
-    const property = properties.find((pr) => pr.id === propId);
+    const property = properties.find((pr) => pr.id === propId) || p.property;
 
-    const baseRent = property?.rent ? Math.min(property.rent, p.amount) : p.amount;
-    const utilityAmount = p.amount > baseRent ? p.amount - baseRent : 0;
+    // Locate matching unit for tenant/property
+    const unit =
+      property?.units?.find((u: any) => u.unitNumber === "101" || u.status === "OCCUPIED") ||
+      property?.units?.[0];
+
+    // Filter meter readings for this billing month (or fallback to recorded)
+    const monthReadings =
+      unit?.meterReadings?.filter(
+        (r: any) => r.readingMonth === p.month || !r.readingMonth
+      ) || unit?.meterReadings || [];
+
+    const elecReading = monthReadings.find((r: any) => r.utilityType === "ELECTRICITY");
+    const waterReading = monthReadings.find((r: any) => r.utilityType === "WATER");
+
+    const utilities: UtilityDetail[] = [];
+    let totalUtility = 0;
+
+    if (elecReading && elecReading.amount > 0) {
+      utilities.push({
+        type: "ELECTRICITY",
+        meterNo: `E-${unit?.unitNumber || "101"}`,
+        previousReading: elecReading.previousReading,
+        currentReading: elecReading.currentReading,
+        consumedUnits: elecReading.consumedUnits,
+        unitMeasure: "kWh",
+        ratePerUnit: elecReading.ratePerUnit,
+        amount: elecReading.amount,
+      });
+      totalUtility += elecReading.amount;
+    }
+
+    if (waterReading && waterReading.amount > 0) {
+      utilities.push({
+        type: "WATER",
+        meterNo: `W-${unit?.unitNumber || "101"}`,
+        previousReading: waterReading.previousReading,
+        currentReading: waterReading.currentReading,
+        consumedUnits: waterReading.consumedUnits,
+        unitMeasure: "kL",
+        ratePerUnit: waterReading.ratePerUnit,
+        amount: waterReading.amount,
+      });
+      totalUtility += waterReading.amount;
+    }
+
+    const baseRent =
+      totalUtility > 0 && p.amount >= totalUtility
+        ? p.amount - totalUtility
+        : property?.rent
+        ? Math.min(property.rent, p.amount)
+        : p.amount;
 
     generateRentInvoicePdf({
       paymentId: p.id,
       month: p.month,
       propertyName: property?.title || "Rental Residence",
       propertyAddress: property?.address || `${property?.city || "Metro Area"}`,
+      unitNumber: unit?.unitNumber || "101",
       landlordName: user?.name || "Property Owner",
       landlordPhone: user?.mobile,
       landlordEmail: user?.email || undefined,
@@ -141,7 +191,8 @@ export default function PaymentsPage() {
       tenantEmail: tenant?.email || undefined,
       amount: p.amount,
       baseRent,
-      utilityAmount: utilityAmount > 0 ? utilityAmount : undefined,
+      utilityAmount: totalUtility > 0 ? totalUtility : undefined,
+      utilities: utilities.length > 0 ? utilities : undefined,
       status: p.status,
       paidOn: p.paidOn,
     });
@@ -150,24 +201,42 @@ export default function PaymentsPage() {
   const handleWhatsAppShare = (p: Payment) => {
     const tenant = tenants.find((t) => t.id === p.tenantId);
     const propId = p.propertyId || tenant?.propertyId;
-    const property = properties.find((pr) => pr.id === propId);
+    const property = properties.find((pr) => pr.id === propId) || p.property;
 
     if (!tenant) {
       setToast({ show: true, type: "error", message: "Tenant details not found" });
       return;
     }
 
-    const baseRent = property?.rent ? Math.min(property.rent, p.amount) : p.amount;
-    const utilityAmount = p.amount > baseRent ? p.amount - baseRent : 0;
+    const unit =
+      property?.units?.find((u: any) => u.unitNumber === "101" || u.status === "OCCUPIED") ||
+      property?.units?.[0];
+
+    const monthReadings =
+      unit?.meterReadings?.filter(
+        (r: any) => r.readingMonth === p.month || !r.readingMonth
+      ) || unit?.meterReadings || [];
+
+    const elecReading = monthReadings.find((r: any) => r.utilityType === "ELECTRICITY");
+    const waterReading = monthReadings.find((r: any) => r.utilityType === "WATER");
+    const totalUtility = (elecReading?.amount || 0) + (waterReading?.amount || 0);
+
+    const baseRent =
+      totalUtility > 0 && p.amount >= totalUtility
+        ? p.amount - totalUtility
+        : property?.rent
+        ? Math.min(property.rent, p.amount)
+        : p.amount;
 
     shareRentOnWhatsApp({
       tenantPhone: tenant.phone || "",
       tenantName: tenant.name || "Tenant",
       propertyName: property?.title || "Rental Property",
+      unitNumber: unit?.unitNumber || "101",
       month: p.month,
       amount: p.amount,
-      baseRent: utilityAmount > 0 ? baseRent : undefined,
-      utilityAmount: utilityAmount > 0 ? utilityAmount : undefined,
+      baseRent: totalUtility > 0 ? baseRent : undefined,
+      utilityAmount: totalUtility > 0 ? totalUtility : undefined,
       status: p.status,
       receiptNumber: `INV-${p.id.slice(-6).toUpperCase()}`,
       paidOn: p.paidOn ? formatDateTime(p.paidOn) : undefined,

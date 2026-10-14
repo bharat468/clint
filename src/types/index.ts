@@ -22,6 +22,13 @@ export interface Property {
   status: "VACANT" | "OCCUPIED";
   createdAt?: string;
   updatedAt?: string;
+  units?: any[];
+  organization?: {
+    id: string;
+    name: string;
+    electricityRate?: number;
+    waterRate?: number;
+  };
   createdBy?: {
     id: string;
     name?: string | null;
