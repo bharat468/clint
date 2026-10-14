@@ -125,6 +125,9 @@ export default function PaymentsPage() {
     const propId = p.propertyId || tenant?.propertyId;
     const property = properties.find((pr) => pr.id === propId);
 
+    const baseRent = property?.rent ? Math.min(property.rent, p.amount) : p.amount;
+    const utilityAmount = p.amount > baseRent ? p.amount - baseRent : 0;
+
     generateRentInvoicePdf({
       paymentId: p.id,
       month: p.month,
@@ -137,6 +140,8 @@ export default function PaymentsPage() {
       tenantPhone: tenant?.phone,
       tenantEmail: tenant?.email || undefined,
       amount: p.amount,
+      baseRent,
+      utilityAmount: utilityAmount > 0 ? utilityAmount : undefined,
       status: p.status,
       paidOn: p.paidOn,
     });
@@ -152,12 +157,17 @@ export default function PaymentsPage() {
       return;
     }
 
+    const baseRent = property?.rent ? Math.min(property.rent, p.amount) : p.amount;
+    const utilityAmount = p.amount > baseRent ? p.amount - baseRent : 0;
+
     shareRentOnWhatsApp({
       tenantPhone: tenant.phone || "",
       tenantName: tenant.name || "Tenant",
       propertyName: property?.title || "Rental Property",
       month: p.month,
       amount: p.amount,
+      baseRent: utilityAmount > 0 ? baseRent : undefined,
+      utilityAmount: utilityAmount > 0 ? utilityAmount : undefined,
       status: p.status,
       receiptNumber: `INV-${p.id.slice(-6).toUpperCase()}`,
       paidOn: p.paidOn ? formatDateTime(p.paidOn) : undefined,

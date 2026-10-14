@@ -3,7 +3,7 @@
  * -----------------------------------------------------------------------------
  * Uses the browser's native `https://wa.me/{phone}?text={encodedText}` protocol.
  * Opens directly in WhatsApp Web on desktop, or WhatsApp Mobile App on smartphones.
- * Zero external API cost, zero gateway latency, instant delivery.
+ * Features clean, modern, executive formatting with bold headers and bullet dividers.
  */
 
 export interface WhatsAppRentParams {
@@ -13,6 +13,8 @@ export interface WhatsAppRentParams {
   unitNumber?: string;
   month: string;
   amount: number;
+  baseRent?: number;
+  utilityAmount?: number;
   status: "PAID" | "PENDING" | "OVERDUE" | string;
   dueDate?: string;
   receiptNumber?: string;
@@ -54,41 +56,48 @@ export function shareRentOnWhatsApp(params: WhatsAppRentParams) {
   }
 
   const isPaid = params.status === "PAID";
-  const formattedAmount = `INR ${Number(params.amount || 0).toLocaleString("en-IN")}`;
+  const formattedAmount = `₹${Number(params.amount || 0).toLocaleString("en-IN")}`;
   const unitStr = params.unitNumber ? ` (Unit: ${params.unitNumber})` : "";
+  const hasUtility = typeof params.utilityAmount === "number" && params.utilityAmount > 0;
+  const baseRentVal = params.baseRent || (hasUtility ? params.amount - (params.utilityAmount || 0) : params.amount);
 
   let message = "";
   if (isPaid) {
-    message = `✅ *RENTMATE - OFFICIAL PAYMENT RECEIPT*
+    message = `*RENTMATE • OFFICIAL RENT RECEIPT*
+━━━━━━━━━━━━━━━━━━━━
+Hello *${params.tenantName}*,
 
-Dear *${params.tenantName}*,
+Your payment has been received and confirmed. Thank you!
 
-We have received your rent payment! Here are your official settlement details:
+• *Property:* ${params.propertyName}${unitStr}
+• *Billing Month:* ${params.month}
+${hasUtility ? `• *Base Rent:* ₹${baseRentVal.toLocaleString("en-IN")}\n• *Sub-Meter Utilities:* ₹${Number(params.utilityAmount).toLocaleString("en-IN")}\n` : ""}• *Amount Settled:* ${formattedAmount}
+• *Status:* Confirmed & Settled ✅
+${params.receiptNumber ? `• *Receipt No:* ${params.receiptNumber}\n` : ""}${params.paidOn ? `• *Settlement Date:* ${params.paidOn}\n` : ""}
+━━━━━━━━━━━━━━━━━━━━
+This is an electronically generated receipt for your rental records.
 
-🏢 *Property:* ${params.propertyName}${unitStr}
-📅 *Billing Period:* ${params.month}
-💰 *Amount Paid:* ${formattedAmount}
-${params.receiptNumber ? `🧾 *Receipt #:* ${params.receiptNumber}\n` : ""}${params.paidOn ? `🗓️ *Settlement Date:* ${params.paidOn}\n` : ""}✅ *Status:* PAID [VERIFIED]
-
-Thank you for your timely payment!`;
+Best regards,
+*Accounts & Billing Desk*`;
   } else {
     const isOverdue = params.status === "OVERDUE";
-    const statusLabel = isOverdue ? "⚠️ CRITICALLY OVERDUE" : "⏳ PENDING / DUE";
+    const statusText = isOverdue ? "Overdue ⚠️" : "Due (Pending)";
 
-    message = `🏢 *RENTMATE - RENT INVOICE & PAYMENT NOTICE*
+    message = `*RENTMATE • RENT PAYMENT NOTICE*
+━━━━━━━━━━━━━━━━━━━━
+Hello *${params.tenantName}*,
 
-Dear *${params.tenantName}*,
+Here is your monthly rental statement for *${params.month}*:
 
-This is a gentle payment notice regarding your monthly rental charges:
+• *Property:* ${params.propertyName}${unitStr}
+• *Billing Month:* ${params.month}
+${hasUtility ? `• *Base Rent:* ₹${baseRentVal.toLocaleString("en-IN")}\n• *Sub-Meter Utilities:* ₹${Number(params.utilityAmount).toLocaleString("en-IN")}\n` : ""}• *Total Payable:* ${formattedAmount}
+• *Status:* ${statusText}
+${params.dueDate ? `• *Due Date:* ${params.dueDate}\n` : ""}
+━━━━━━━━━━━━━━━━━━━━
+Kindly settle the dues on or before the due date to avoid late fee penalties.
 
-🏢 *Property:* ${params.propertyName}${unitStr}
-📅 *Billing Period:* ${params.month}
-💰 *Total Due:* ${formattedAmount}
-📌 *Status:* ${statusLabel}
-${params.dueDate ? `⏰ *Due Date:* ${params.dueDate}\n` : ""}
-Please settle your dues before the grace period expires to avoid late penalty charges.
-
-Thank you,
+Best regards,
 *Property Management Team*`;
   }
 
@@ -107,26 +116,26 @@ export function shareDefaulterOnWhatsApp(params: WhatsAppDefaulterParams) {
     return false;
   }
 
-  const baseDue = `INR ${Number(params.baseAmount || 0).toLocaleString("en-IN")}`;
-  const penaltyDue = `INR ${Number(params.penaltyAmount || 0).toLocaleString("en-IN")}`;
-  const totalDue = `INR ${Number(params.totalOutstanding || 0).toLocaleString("en-IN")}`;
+  const baseDue = `₹${Number(params.baseAmount || 0).toLocaleString("en-IN")}`;
+  const penaltyDue = `₹${Number(params.penaltyAmount || 0).toLocaleString("en-IN")}`;
+  const totalDue = `₹${Number(params.totalOutstanding || 0).toLocaleString("en-IN")}`;
 
-  const message = `🚨 *RENTMATE - URGENT OVERDUE RENT ARREARS NOTICE*
+  const message = `*RENTMATE • OVERDUE RENT NOTICE*
+━━━━━━━━━━━━━━━━━━━━
+Dear *${params.tenantName}*,
 
-Attention: *${params.tenantName}*,
+This is an urgent reminder regarding unpaid rental dues for *${params.propertyTitle} (Unit: ${params.unitNumber})*.
 
-Your rent for *${params.propertyTitle}* (Unit: *${params.unitNumber}*) is severely overdue.
+• *Billing Month:* ${params.month}
+• *Overdue Duration:* ${params.daysOverdue} Days
+• *Base Rent Overdue:* ${baseDue}
+• *Accrued Late Fee:* ${penaltyDue}
+• *Total Outstanding:* ${totalDue}
 
-⚠️ *Arrears Summary:*
-• Billing Period: *${params.month}*
-• Total Overdue: *${params.daysOverdue} Days*
-• Base Rent Due: *${baseDue}*
-• Accrued Late Penalty: *${penaltyDue}*
-• *TOTAL OUTSTANDING: ${totalDue}*
+━━━━━━━━━━━━━━━━━━━━
+Please clear this pending balance immediately to maintain your active lease standing and avoid late penalties.
 
-Please clear this outstanding amount immediately to avoid legal escalation or lease termination.
-
-Thank you,
+Best regards,
 *Compliance & Collections Team*`;
 
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;

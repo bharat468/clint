@@ -481,7 +481,7 @@ export default function OrganizationSettingsPage() {
               <div className="text-xs text-amber-950">
                 <p className="font-bold">Automated Sub-Meter Pricing Guarantee</p>
                 <p className="mt-0.5 text-slate-600 leading-relaxed">
-                  Jab bhi aap kisi flat ka Current Meter Reading record karenge, system automatically inhi rates ko multiply karke bijli aur paani ka hisaab calculate karega aur tenant ke monthly rent bill me add karega.
+                  Whenever you record a unit's sub-meter reading, the system automatically applies these configured tariff rates to calculate utility charges and attach them to the tenant's monthly rental invoice.
                 </p>
               </div>
             </div>

@@ -27,27 +27,14 @@ export interface RentInvoiceData {
 }
 
 /**
- * Generate Tenant Rent Invoice / Official Receipt PDF
+ * Generate Modern, Clean & Minimalist Rent Invoice / Official Receipt PDF
  * -------------------------------------------------------------------------
- * [Hinglish / Hindi-English Explanation]:
- * Yeh function tenant ke rent payment ka official digital PDF invoice ya receipt banata hai.
- * Agar payment 'PAID' hai, toh yeh green verified stamp ke sath "OFFICIAL RENT RECEIPT"
- * generate karta hai jisme transaction ID, payment method aur paid date hoti hai.
- * Agar 'PENDING' hai, toh yeh "RENT INVOICE / BILL" banata hai jisme breakdown
- * (Base Rent, Maintenance, Utilities, Late fee penalty) show hota hai.
- * 
- * [English Explanation]:
- * Generates an executive, print-ready PDF rent receipt / invoice document.
- * Automatically adapts title and watermarks based on status:
- * - 'PAID': Official verified receipt with settlement transaction timestamp, method & stamp.
- * - 'PENDING' / 'OVERDUE': Formal bill with breakdown of dues, late fee, and payment instructions.
- * 
- * Layout Architecture:
- * 1. Top branded gradient banner with ecosystem branding and dynamic invoice number.
- * 2. Metadata horizontal pill: issue date, billing period, status badge, and total amount.
- * 3. Two-column Landlord (Billed By) vs Tenant (Billed To) contact dossier.
- * 4. Itemized ledger table (Base rent, maintenance fee, utility dues, late penalty).
- * 5. Settlement / Transaction summary with official computer-generated authorization seal.
+ * Produces an executive, beautifully formatted A4 rental receipt or invoice:
+ * - Minimalist corporate header with typography-driven branding.
+ * - Structured side-by-side Landlord vs Tenant contact dossiers.
+ * - Clear itemized fee breakdown table (Base Rent, Utilities, Maintenance, Late fee).
+ * - Digital verification seal and settlement timestamp stamp.
+ * - 100% English, publication-grade layout suitable for tax/HRA filing.
  * 
  * @param {RentInvoiceData} data - Lease, property, landlord, tenant, and financial figures
  */
@@ -62,96 +49,112 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
   const margin = 15;
   const contentWidth = pageWidth - margin * 2;
 
-  // Primary Theme Colors
-  const primaryColor: [number, number, number] = [30, 58, 138]; // Deep Royal Blue #1E3A8A
-  const slateDark: [number, number, number] = [15, 23, 42]; // Slate 900
+  // Modern Clean Color Palette
+  const navyDark: [number, number, number] = [15, 23, 42]; // Slate 900
+  const primaryBlue: [number, number, number] = [37, 99, 235]; // Blue 600
+  const slateText: [number, number, number] = [51, 65, 85]; // Slate 700
   const slateMuted: [number, number, number] = [100, 116, 139]; // Slate 500
+  const borderLight: [number, number, number] = [226, 232, 240]; // Slate 200
+  const bgLight: [number, number, number] = [248, 250, 252]; // Slate 50
   const emeraldGreen: [number, number, number] = [16, 149, 102]; // Emerald 600
+  const amberOrange: [number, number, number] = [217, 119, 6]; // Amber 600
 
-  // Header Banner
-  doc.setFillColor(...primaryColor);
-  doc.roundedRect(margin, 12, contentWidth, 24, 3, 3, "F");
-
-  // Title in Banner
-  doc.setTextColor(255, 255, 255);
+  // 1. TOP HEADER (Modern Minimalist Style)
+  // Left: Brand Logo & Tagline
+  doc.setTextColor(...navyDark);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text("RENTMATE", margin + 8, 22);
+  doc.setFontSize(20);
+  doc.text("RentMate", margin, 20);
+
+  // Subtle brand dot
+  doc.setFillColor(...primaryBlue);
+  doc.circle(margin + 33, 16.5, 1.2, "F");
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("PROPERTY MANAGEMENT & RENTAL ECOSYSTEM", margin + 8, 28);
+  doc.setFontSize(8.5);
+  doc.setTextColor(...slateMuted);
+  doc.text("Property Management & Rental Ecosystem", margin, 26);
 
-  // Invoice / Receipt Label Right-Aligned
+  // Right: Document Title & Metadata
+  const isPaid = data.status === "PAID";
+  const docTitle = isPaid ? "OFFICIAL RENT RECEIPT" : "RENT INVOICE / BILL";
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  const statusLabel = data.status === "PAID" ? "OFFICIAL RENT RECEIPT" : "RENT INVOICE / BILL";
-  doc.text(statusLabel, pageWidth - margin - 8, 23, { align: "right" });
+  doc.setFontSize(13);
+  doc.setTextColor(isPaid ? emeraldGreen[0] : primaryBlue[0], isPaid ? emeraldGreen[1] : primaryBlue[1], isPaid ? emeraldGreen[2] : primaryBlue[2]);
+  doc.text(docTitle, pageWidth - margin, 18, { align: "right" });
 
   const invoiceNo = data.invoiceNumber || `INV-${(data.paymentId || Math.random().toString(36).substring(2, 8)).slice(-6).toUpperCase()}`;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.text(`Invoice #: ${invoiceNo}`, pageWidth - margin - 8, 29, { align: "right" });
+  doc.setTextColor(...slateMuted);
+  doc.text(`Invoice No: ${invoiceNo}`, pageWidth - margin, 24, { align: "right" });
 
-  // Invoice Meta Bar (Date, Month, Status)
-  let yPos = 42;
-  doc.setFillColor(248, 250, 252); // slate-50
-  doc.setDrawColor(226, 232, 240); // slate-200
+  const issueDate = data.date || new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  doc.text(`Issue Date: ${issueDate}`, pageWidth - margin, 29, { align: "right" });
+
+  // Divider Line
+  doc.setDrawColor(...borderLight);
+  doc.setLineWidth(0.3);
+  doc.line(margin, 34, pageWidth - margin, 34);
+
+  // 2. METADATA SUMMARY BAR
+  let yPos = 39;
+  doc.setFillColor(...bgLight);
+  doc.setDrawColor(...borderLight);
   doc.roundedRect(margin, yPos, contentWidth, 14, 2, 2, "FD");
 
+  doc.setFontSize(7.5);
   doc.setTextColor(...slateMuted);
-  doc.setFontSize(8);
-  doc.text("DATE OF ISSUE", margin + 6, yPos + 5);
-  doc.text("BILLING PERIOD", margin + 50, yPos + 5);
-  doc.text("PAYMENT STATUS", margin + 105, yPos + 5);
-  doc.text("TOTAL AMOUNT", pageWidth - margin - 6, yPos + 5, { align: "right" });
-
-  doc.setTextColor(...slateDark);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.5);
-  const issueDate = data.date || new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  doc.text(issueDate, margin + 6, yPos + 10.5);
-  doc.text(data.month, margin + 50, yPos + 10.5);
+  doc.text("BILLING PERIOD", margin + 6, yPos + 5);
+  doc.text("PAYMENT STATUS", margin + 65, yPos + 5);
+  doc.text("NET AMOUNT", pageWidth - margin - 6, yPos + 5, { align: "right" });
+
+  doc.setFontSize(9);
+  doc.setTextColor(...navyDark);
+  doc.text(data.month, margin + 6, yPos + 10.5);
+
+  if (isPaid) {
+    doc.setTextColor(...emeraldGreen);
+    doc.text("PAID • VERIFIED", margin + 65, yPos + 10.5);
+  } else {
+    doc.setTextColor(...amberOrange);
+    doc.text("PENDING / DUE", margin + 65, yPos + 10.5);
+  }
 
   const safeAmount = Number(data.amount || 0);
   const baseRentVal = Number(data.baseRent ?? data.amount ?? 0);
-  const maintenanceVal = Number(data.maintenanceAmount || 0);
   const utilityVal = Number(data.utilityAmount || 0);
+  const maintenanceVal = Number(data.maintenanceAmount || 0);
   const lateFeeVal = Number(data.lateFee || 0);
 
-  if (data.status === "PAID") {
-    doc.setTextColor(...emeraldGreen);
-    doc.text("PAID [VERIFIED]", margin + 105, yPos + 10.5);
-  } else {
-    doc.setTextColor(217, 119, 6); // amber-600
-    doc.text("PENDING / DUE", margin + 105, yPos + 10.5);
-  }
-
-  doc.setTextColor(...primaryColor);
+  doc.setTextColor(...navyDark);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10.5);
   doc.text(`INR ${safeAmount.toLocaleString("en-IN")}`, pageWidth - margin - 6, yPos + 10.5, { align: "right" });
 
-  // Two Columns: Landlord (Issuer) & Tenant (Billed To)
-  yPos = 62;
+  // 3. TWO-COLUMN DOSSIER (Billed By vs Billed To)
+  yPos = 59;
   const colWidth = (contentWidth - 6) / 2;
 
-  // Landlord Card
+  // Left Column: Landlord / Property Card
   doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(226, 232, 240);
+  doc.setDrawColor(...borderLight);
   doc.roundedRect(margin, yPos, colWidth, 34, 2, 2, "FD");
 
-  doc.setTextColor(...primaryColor);
+  doc.setTextColor(...primaryBlue);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text("ISSUED BY / LANDLORD", margin + 5, yPos + 6);
+  doc.setFontSize(8);
+  doc.text("ISSUED BY / PROPERTY DETAILS", margin + 5, yPos + 6);
 
-  doc.setTextColor(...slateDark);
-  doc.setFontSize(10);
+  doc.setTextColor(...navyDark);
+  doc.setFontSize(9.5);
   doc.text(data.landlordName || "Property Owner / Management", margin + 5, yPos + 12);
 
-  doc.setTextColor(...slateMuted);
+  doc.setTextColor(...slateText);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.text(`Property: ${data.propertyName || "N/A"}`, margin + 5, yPos + 18);
+  doc.setFontSize(8);
+  doc.text(`Property: ${data.propertyName || "Rental Residence"}`, margin + 5, yPos + 18);
   if (data.propertyAddress) {
     const splitAddr = doc.splitTextToSize(`Address: ${data.propertyAddress}`, colWidth - 10);
     doc.text(splitAddr, margin + 5, yPos + 23);
@@ -160,25 +163,25 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
     doc.text(`Contact: +91 ${data.landlordPhone}`, margin + 5, yPos + 30);
   }
 
-  // Tenant Card
+  // Right Column: Tenant Details Card
   const rightColX = margin + colWidth + 6;
   doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(226, 232, 240);
+  doc.setDrawColor(...borderLight);
   doc.roundedRect(rightColX, yPos, colWidth, 34, 2, 2, "FD");
 
-  doc.setTextColor(...primaryColor);
+  doc.setTextColor(...primaryBlue);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.text("TENANT DETAILS (BILLED TO)", rightColX + 5, yPos + 6);
+  doc.setFontSize(8);
+  doc.text("BILLED TO / TENANT DETAILS", rightColX + 5, yPos + 6);
 
-  doc.setTextColor(...slateDark);
-  doc.setFontSize(10);
+  doc.setTextColor(...navyDark);
+  doc.setFontSize(9.5);
   doc.text(data.tenantName || "Tenant", rightColX + 5, yPos + 12);
 
-  doc.setTextColor(...slateMuted);
+  doc.setTextColor(...slateText);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.text(`Allocated Unit: ${data.unitNumber || "Main Flat / Unit"}`, rightColX + 5, yPos + 18);
+  doc.setFontSize(8);
+  doc.text(`Occupied Unit: ${data.unitNumber || "Main Flat / Unit"}`, rightColX + 5, yPos + 18);
   if (data.tenantPhone) {
     doc.text(`Mobile: +91 ${data.tenantPhone}`, rightColX + 5, yPos + 24);
   }
@@ -186,18 +189,18 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
     doc.text(`Email: ${data.tenantEmail}`, rightColX + 5, yPos + 30);
   }
 
-  // Rent Breakdown Table
-  yPos = 102;
+  // 4. ITEMIZED CHARGES BREAKDOWN TABLE
+  yPos = 99;
 
-  const tableBody = [
-    ["1", `Monthly Residential Rent (${data.month || "Billing Month"})`, `INR ${baseRentVal.toLocaleString("en-IN")}`],
+  const tableBody: any[] = [
+    ["1", `Monthly Base Rent (${data.month || "Billing Period"})`, `INR ${baseRentVal.toLocaleString("en-IN")}`],
   ];
 
-  if (maintenanceVal > 0) {
-    tableBody.push(["2", "Society & Maintenance Charges", `INR ${maintenanceVal.toLocaleString("en-IN")}`]);
-  }
   if (utilityVal > 0) {
-    tableBody.push(["3", "Electricity & Water Surcharge", `INR ${utilityVal.toLocaleString("en-IN")}`]);
+    tableBody.push(["2", "Electricity & Water Sub-Meter Utility Charges", `INR ${utilityVal.toLocaleString("en-IN")}`]);
+  }
+  if (maintenanceVal > 0) {
+    tableBody.push(["3", "Society Maintenance & Operational Charges", `INR ${maintenanceVal.toLocaleString("en-IN")}`]);
   }
   if (lateFeeVal > 0) {
     tableBody.push(["4", "Late Payment Grace Overdue Penalty", `INR ${lateFeeVal.toLocaleString("en-IN")}`]);
@@ -209,108 +212,107 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
     head: [["#", "Description / Fee Item", "Amount (INR)"]],
     body: tableBody,
     headStyles: {
-      fillColor: primaryColor,
+      fillColor: [30, 41, 59], // Slate 800
       textColor: [255, 255, 255],
       fontStyle: "bold",
-      fontSize: 9,
+      fontSize: 8.5,
     },
     styles: {
-      fontSize: 8.5,
-      cellPadding: 3.5,
-      textColor: slateDark,
-      lineColor: [226, 232, 240],
+      fontSize: 8,
+      cellPadding: 3.2,
+      textColor: slateText,
+      lineColor: borderLight,
       lineWidth: 0.2,
     },
     columnStyles: {
-      0: { cellWidth: 12, halign: "center" },
-      1: { cellWidth: contentWidth - 52 },
-      2: { cellWidth: 40, halign: "right", fontStyle: "bold" },
+      0: { cellWidth: 10, halign: "center" },
+      1: { cellWidth: contentWidth - 45 },
+      2: { cellWidth: 35, halign: "right", fontStyle: "bold" },
     },
   });
 
-  // Summary Table / Box below table
-  const finalY = (doc as any).lastAutoTable?.finalY || 140;
+  // 5. SUMMARY ROW BELOW TABLE
+  const finalY = (doc as any).lastAutoTable?.finalY || 135;
+  const summaryBoxW = 70;
+  const summaryBoxH = 18;
+  const summaryBoxX = pageWidth - margin - summaryBoxW;
 
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(pageWidth - margin - 75, finalY + 4, 75, 22, 2, 2, "FD");
+  doc.setFillColor(...bgLight);
+  doc.setDrawColor(...borderLight);
+  doc.roundedRect(summaryBoxX, finalY + 4, summaryBoxW, summaryBoxH, 2, 2, "FD");
 
-  doc.setFontSize(8.5);
-  doc.setTextColor(...slateMuted);
-  doc.text("Total Charges:", pageWidth - margin - 70, finalY + 11);
-  doc.text("Net Total Paid:", pageWidth - margin - 70, finalY + 18);
-
-  doc.setTextColor(...slateDark);
-  doc.setFont("helvetica", "normal");
-  doc.text(`INR ${safeAmount.toLocaleString("en-IN")}`, pageWidth - margin - 5, finalY + 11, { align: "right" });
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.setTextColor(...primaryColor);
-  doc.text(`INR ${safeAmount.toLocaleString("en-IN")}`, pageWidth - margin - 5, finalY + 19, { align: "right" });
-
-  // Transaction Receipt Box
-  const txBoxY = finalY + 32;
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(margin, txBoxY, contentWidth, 24, 2, 2, "FD");
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8.5);
-  doc.setTextColor(...primaryColor);
-  doc.text("PAYMENT & SETTLEMENT RECORD", margin + 6, txBoxY + 6);
-
-  doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.setTextColor(...slateDark);
+  doc.setTextColor(...slateMuted);
+  doc.setFont("helvetica", "normal");
+  doc.text(isPaid ? "Total Settled:" : "Total Payable:", summaryBoxX + 5, finalY + 11);
 
-  const paymentMode = data.paymentMethod || "ONLINE_TRANSFER / UPI";
+  doc.setFontSize(11);
+  doc.setTextColor(...navyDark);
+  doc.setFont("helvetica", "bold");
+  doc.text(`INR ${safeAmount.toLocaleString("en-IN")}`, pageWidth - margin - 5, finalY + 14, { align: "right" });
+
+  // 6. SETTLEMENT & VERIFICATION CARD
+  const txBoxY = finalY + 27;
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(...borderLight);
+  doc.roundedRect(margin, txBoxY, contentWidth, 22, 2, 2, "FD");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...primaryBlue);
+  doc.text("PAYMENT SETTLEMENT & TRANSACTION RECORD", margin + 5, txBoxY + 5.5);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...slateText);
+
+  const paymentMode = data.paymentMethod || "Online Transfer / Bank UPI";
   const paidDateStr = data.paidOn
     ? new Date(data.paidOn).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-    : data.status === "PAID"
+    : isPaid
     ? "Recorded upon payment"
-    : "Awaiting settlement";
+    : "Awaiting settlement confirmation";
 
-  doc.text(`• Mode of Payment: ${paymentMode}`, margin + 6, txBoxY + 12);
-  doc.text(`• Settlement Date: ${paidDateStr}`, margin + 6, txBoxY + 18);
+  doc.text(`• Mode of Payment: ${paymentMode}`, margin + 5, txBoxY + 11.5);
+  doc.text(`• Settlement Date: ${paidDateStr}`, margin + 5, txBoxY + 16.5);
 
   const txIdStr = data.transactionRef || data.paymentId || "RNTM-TX-DIRECT";
-  doc.text(`• Transaction Ref: ${txIdStr}`, margin + 90, txBoxY + 12);
-  doc.text(`• Verification: Digitally Verified System Record`, margin + 90, txBoxY + 18);
+  doc.text(`• Reference ID: ${txIdStr}`, margin + 85, txBoxY + 11.5);
+  doc.text(`• Verification: Certified System Record`, margin + 85, txBoxY + 16.5);
 
-  // Signatures / Stamps
-  const footerY = txBoxY + 36;
+  // 7. FOOTER STAMP & LEGAL NOTICE
+  const footerY = txBoxY + 30;
 
-  // Left stamp
-  doc.setDrawColor(16, 149, 102);
+  // Left Green Certified Seal
+  doc.setDrawColor(...emeraldGreen);
   doc.setFillColor(240, 253, 244);
-  doc.roundedRect(margin, footerY, 55, 18, 2, 2, "FD");
-  doc.setFontSize(8);
+  doc.roundedRect(margin, footerY, 52, 16, 2, 2, "FD");
+  doc.setFontSize(7.5);
   doc.setTextColor(22, 101, 52);
   doc.setFont("helvetica", "bold");
-  doc.text("RENTMATE VERIFIED", margin + 6, footerY + 7);
+  doc.text("RENTMATE CERTIFIED", margin + 5, footerY + 6);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.text("Authentic Rental Transaction", margin + 6, footerY + 13);
+  doc.setFontSize(6.5);
+  doc.text("Verified Rental Ledger", margin + 5, footerY + 11.5);
 
-  // Right signature line
-  doc.setDrawColor(148, 163, 184);
-  doc.line(pageWidth - margin - 55, footerY + 12, pageWidth - margin, footerY + 12);
+  // Right Authorized Sign Line
+  doc.setDrawColor(...borderLight);
+  doc.line(pageWidth - margin - 50, footerY + 11, pageWidth - margin, footerY + 11);
   doc.setTextColor(...slateMuted);
-  doc.setFontSize(7.5);
-  doc.text("Authorized Landlord / Agent Sign", pageWidth - margin - 28, footerY + 16, { align: "center" });
-
-  // Bottom Notice
   doc.setFontSize(7);
+  doc.text("Authorized Signature", pageWidth - margin - 25, footerY + 15, { align: "center" });
+
+  // Bottom Legal / HRA Exemption Note
+  doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184);
   doc.text(
-    "This is an electronically generated rental invoice and receipt issued under the RENTMATE Rental Ecosystem. Valid for tax exemption under HRA.",
+    "This is an electronically generated rental invoice and receipt issued under the RentMate Property Management Ecosystem. Valid for HRA tax exemption.",
     pageWidth / 2,
-    285,
+    286,
     { align: "center" }
   );
 
-  // Save / Download PDF
+  // Download PDF
   const safeProp = (data.propertyName || "Property").replace(/[^a-zA-Z0-9_-]/g, "_");
   const safeMonth = (data.month || "Month").replace(/[^a-zA-Z0-9_-]/g, "_");
   const filename = `Rent_Receipt_${safeProp}_${safeMonth}.pdf`;
