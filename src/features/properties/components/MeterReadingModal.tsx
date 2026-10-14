@@ -12,7 +12,7 @@ import {
 } from "@/services/rentalLifecycle.service";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Toast } from "@/components/ui/toast";
@@ -45,6 +45,18 @@ export function MeterReadingModal({
     new Date().toISOString().slice(0, 7)
   );
   const [notes, setNotes] = useState<string>("");
+
+  const monthOptions = React.useMemo(() => {
+    const list = [];
+    const now = new Date();
+    for (let i = -6; i <= 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      list.push({ value: val, label });
+    }
+    return list;
+  }, []);
 
   const [toast, setToast] = useState<{
     show: boolean;
@@ -197,18 +209,18 @@ export function MeterReadingModal({
             {/* Landlord Settings Badge */}
             <div className="hidden sm:flex flex-col items-end text-right">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Landlord Setting Rates
+                Landlord Tariff Rates
               </span>
-              <div className="flex items-center gap-2 mt-0.5 text-xs font-bold text-slate-700">
-                <span className="text-amber-600">⚡ ₹{orgRates.electricityRate}/kWh</span>
+              <div className="flex items-center gap-2 mt-0.5 text-xs font-semibold text-slate-700">
+                <span>Electricity: ₹{orgRates.electricityRate}/kWh</span>
                 <span className="text-slate-300">|</span>
-                <span className="text-blue-600">💧 ₹{orgRates.waterRate}/kL</span>
+                <span>Water: ₹{orgRates.waterRate}/kL</span>
               </div>
             </div>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Utility Type Picker */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
@@ -218,29 +230,33 @@ export function MeterReadingModal({
                 <button
                   type="button"
                   onClick={() => setUtilityType("ELECTRICITY")}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                     utilityType === "ELECTRICITY"
-                      ? "border-amber-400 bg-amber-50/70 text-amber-900 shadow-xs"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                      ? "border-blue-600 bg-blue-50 text-blue-900 shadow-xs"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  <Zap className="h-4 w-4 text-amber-500" />
-                  <span>Electricity (kWh)</span>
-                  <Badge tone="yellow">₹{orgRates.electricityRate}/unit</Badge>
+                  <span className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-blue-600" />
+                    <span>Electricity (kWh)</span>
+                  </span>
+                  <Badge tone="blue">₹{orgRates.electricityRate}/kWh</Badge>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setUtilityType("WATER")}
-                  className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                     utilityType === "WATER"
-                      ? "border-blue-400 bg-blue-50/70 text-blue-900 shadow-xs"
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                      ? "border-blue-600 bg-blue-50 text-blue-900 shadow-xs"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  <Droplets className="h-4 w-4 text-blue-500" />
-                  <span>Water Supply (kL)</span>
-                  <Badge tone="blue">₹{orgRates.waterRate}/unit</Badge>
+                  <span className="flex items-center gap-2">
+                    <Droplets className="h-4 w-4 text-blue-600" />
+                    <span>Water Supply (kL)</span>
+                  </span>
+                  <Badge tone="blue">₹{orgRates.waterRate}/kL</Badge>
                 </button>
               </div>
             </div>
@@ -321,13 +337,18 @@ export function MeterReadingModal({
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Billing Period (Month)
                 </label>
-                <Input
-                  type="month"
+                <Select
                   value={readingMonth}
                   onChange={(e) => setReadingMonth(e.target.value)}
                   className="text-xs font-semibold"
                   required
-                />
+                >
+                  {monthOptions.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </Select>
               </div>
 
               <div>
@@ -345,49 +366,49 @@ export function MeterReadingModal({
             </div>
 
             {/* Live Calculation Output Card */}
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-md">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-700/80 text-xs">
-                <span className="text-slate-300 font-medium">Automatic Consumption Math</span>
-                <span className="font-mono text-amber-400">
-                  {utilityType === "ELECTRICITY" ? "⚡ Power Tariff" : "💧 Water Tariff"}
+            <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/80 shadow-xs">
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 text-xs">
+                <span className="text-slate-700 font-semibold">Automatic Consumption Calculation</span>
+                <span className="text-xs text-slate-500 font-medium">
+                  {utilityType === "ELECTRICITY" ? "Electricity Tariff" : "Water Tariff"}
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 pt-3 text-center">
+              <div className="grid grid-cols-3 gap-3 pt-3 text-center">
                 <div>
-                  <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 block">
+                  <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-500 block">
                     Units Consumed
                   </span>
-                  <p className="text-xl font-bold text-white mt-0.5">
+                  <p className="text-lg font-bold text-slate-900 mt-0.5">
                     {consumedUnits}{" "}
-                    <span className="text-xs font-normal text-slate-300">
+                    <span className="text-xs font-normal text-slate-500">
                       {utilityType === "ELECTRICITY" ? "kWh" : "kL"}
                     </span>
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 block">
+                  <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-500 block">
                     Applied Tariff
                   </span>
-                  <p className="text-xl font-bold text-amber-400 mt-0.5">
+                  <p className="text-lg font-bold text-slate-900 mt-0.5">
                     ₹{parsedRate}{" "}
-                    <span className="text-xs font-normal text-slate-400">/unit</span>
+                    <span className="text-xs font-normal text-slate-500">/unit</span>
                   </p>
                 </div>
 
                 <div>
-                  <span className="text-[10px] uppercase font-semibold tracking-wider text-emerald-400 block">
+                  <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-500 block">
                     Total Utility Due
                   </span>
-                  <p className="text-xl font-extrabold text-emerald-400 mt-0.5">
+                  <p className="text-lg font-bold text-blue-700 mt-0.5">
                     {formatINR(calculatedTotal)}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
                 Cancel
               </Button>
@@ -401,7 +422,7 @@ export function MeterReadingModal({
                 ) : (
                   <>
                     <FileCheck2 className="h-4 w-4" />
-                    <span>Record & Bill {formatINR(calculatedTotal)}</span>
+                    <span>Record Reading {formatINR(calculatedTotal)}</span>
                   </>
                 )}
               </Button>
@@ -449,16 +470,8 @@ export function MeterReadingModal({
                         <td className="py-2 px-3 font-semibold text-slate-800">
                           {r.readingMonth}
                         </td>
-                        <td className="py-2 px-3">
-                          <span
-                            className={`inline-flex items-center gap-1 font-bold ${
-                              r.utilityType === "ELECTRICITY"
-                                ? "text-amber-600"
-                                : "text-blue-600"
-                            }`}
-                          >
-                            {r.utilityType === "ELECTRICITY" ? "⚡ Power" : "💧 Water"}
-                          </span>
+                        <td className="py-2 px-3 font-medium text-slate-700">
+                          {r.utilityType === "ELECTRICITY" ? "Electricity" : "Water Supply"}
                         </td>
                         <td className="py-2 px-3 text-right font-mono text-slate-500">
                           {r.previousReading}

@@ -208,24 +208,48 @@ export default function PaymentsPage() {
 
   const tenantName = (id: string) => tenants.find((t) => t.id === id)?.name ?? "Tenant";
 
-  const handleDownloadInvoice = (p: Payment) => {
-    const tenant = tenants.find((t) => t.id === p.tenantId);
-    const propId = p.propertyId || tenant?.propertyId;
-    const property = properties.find((pr) => pr.id === propId) || p.property;
+  const handleDownloadInvoice = async (p: Payment) => {
+    let freshPayment = p;
+    try {
+      const res = await paymentService.get(p.id);
+      if (res) freshPayment = res;
+    } catch {
+      // fallback
+    }
 
-    // Locate matching unit for tenant/property
-    const unit =
-      property?.units?.find((u: any) => u.unitNumber === "101" || u.status === "OCCUPIED") ||
-      property?.units?.[0];
+    const tenant = tenants.find((t) => t.id === freshPayment.tenantId) || freshPayment.tenant;
+    const propId = freshPayment.propertyId || tenant?.propertyId;
+    let property = properties.find((pr) => pr.id === propId) || freshPayment.property;
 
-    // Filter meter readings for this billing month (or fallback to recorded)
-    const monthReadings =
-      unit?.meterReadings?.filter(
-        (r: any) => r.readingMonth === p.month || !r.readingMonth
-      ) || unit?.meterReadings || [];
+    if (!property?.units || property.units.length === 0) {
+      try {
+        if (propId) {
+          const freshProp = await propertyService.get(propId);
+          if (freshProp) property = freshProp;
+        }
+      } catch {
+        // fallback
+      }
+    }
 
-    const elecReading = monthReadings.find((r: any) => r.utilityType === "ELECTRICITY");
-    const waterReading = monthReadings.find((r: any) => r.utilityType === "WATER");
+    const allUnits = property?.units || [];
+    const allReadings = allUnits.flatMap((u: any) =>
+      (u.meterReadings || []).map((r: any) => ({ ...r, unitNumber: u.unitNumber }))
+    );
+
+    // Match readings specifically for this payment's month, or most recent
+    const elecReading =
+      allReadings.find((r: any) => r.utilityType === "ELECTRICITY" && r.readingMonth === freshPayment.month) ||
+      allReadings.find((r: any) => r.utilityType === "ELECTRICITY");
+
+    const waterReading =
+      allReadings.find((r: any) => r.utilityType === "WATER" && r.readingMonth === freshPayment.month) ||
+      allReadings.find((r: any) => r.utilityType === "WATER");
+
+    const activeUnit =
+      allUnits.find((u: any) => u.unitNumber === elecReading?.unitNumber || u.unitNumber === waterReading?.unitNumber) ||
+      allUnits.find((u: any) => u.status === "OCCUPIED") ||
+      allUnits[0];
 
     const utilities: UtilityDetail[] = [];
     let totalUtility = 0;
@@ -233,7 +257,7 @@ export default function PaymentsPage() {
     if (elecReading && elecReading.amount > 0) {
       utilities.push({
         type: "ELECTRICITY",
-        meterNo: `E-${unit?.unitNumber || "101"}`,
+        meterNo: `Unit ${elecReading.unitNumber || activeUnit?.unitNumber || "101"}`,
         previousReading: elecReading.previousReading,
         currentReading: elecReading.currentReading,
         consumedUnits: elecReading.consumedUnits,
@@ -247,7 +271,7 @@ export default function PaymentsPage() {
     if (waterReading && waterReading.amount > 0) {
       utilities.push({
         type: "WATER",
-        meterNo: `W-${unit?.unitNumber || "101"}`,
+        meterNo: `Unit ${waterReading.unitNumber || activeUnit?.unitNumber || "101"}`,
         previousReading: waterReading.previousReading,
         currentReading: waterReading.currentReading,
         consumedUnits: waterReading.consumedUnits,
@@ -259,75 +283,101 @@ export default function PaymentsPage() {
     }
 
     const baseRent =
-      totalUtility > 0 && p.amount >= totalUtility
-        ? p.amount - totalUtility
+      totalUtility > 0 && freshPayment.amount >= totalUtility
+        ? freshPayment.amount - totalUtility
         : property?.rent
-        ? Math.min(property.rent, p.amount)
-        : p.amount;
+        ? Math.min(property.rent, freshPayment.amount)
+        : freshPayment.amount;
 
     generateRentInvoicePdf({
-      paymentId: p.id,
-      month: p.month,
+      paymentId: freshPayment.id,
+      month: freshPayment.month,
       propertyName: property?.title || "Rental Residence",
       propertyAddress: property?.address || `${property?.city || "Metro Area"}`,
-      unitNumber: unit?.unitNumber || "101",
+      unitNumber: activeUnit?.unitNumber || "101",
       landlordName: user?.name || "Property Owner",
       landlordPhone: user?.mobile,
       landlordEmail: user?.email || undefined,
       tenantName: tenant?.name || "Tenant",
       tenantPhone: tenant?.phone,
       tenantEmail: tenant?.email || undefined,
-      amount: p.amount,
+      amount: freshPayment.amount,
       baseRent,
       utilityAmount: totalUtility > 0 ? totalUtility : undefined,
       utilities: utilities.length > 0 ? utilities : undefined,
-      status: p.status,
-      paidOn: p.paidOn,
+      status: freshPayment.status,
+      paidOn: freshPayment.paidOn,
     });
   };
 
-  const handleWhatsAppShare = (p: Payment) => {
-    const tenant = tenants.find((t) => t.id === p.tenantId);
-    const propId = p.propertyId || tenant?.propertyId;
-    const property = properties.find((pr) => pr.id === propId) || p.property;
+  const handleWhatsAppShare = async (p: Payment) => {
+    let freshPayment = p;
+    try {
+      const res = await paymentService.get(p.id);
+      if (res) freshPayment = res;
+    } catch {
+      // fallback
+    }
+
+    const tenant = tenants.find((t) => t.id === freshPayment.tenantId) || freshPayment.tenant;
+    const propId = freshPayment.propertyId || tenant?.propertyId;
+    let property = properties.find((pr) => pr.id === propId) || freshPayment.property;
 
     if (!tenant) {
       setToast({ show: true, type: "error", message: "Tenant details not found" });
       return;
     }
 
-    const unit =
-      property?.units?.find((u: any) => u.unitNumber === "101" || u.status === "OCCUPIED") ||
-      property?.units?.[0];
+    if (!property?.units || property.units.length === 0) {
+      try {
+        if (propId) {
+          const freshProp = await propertyService.get(propId);
+          if (freshProp) property = freshProp;
+        }
+      } catch {
+        // fallback
+      }
+    }
 
-    const monthReadings =
-      unit?.meterReadings?.filter(
-        (r: any) => r.readingMonth === p.month || !r.readingMonth
-      ) || unit?.meterReadings || [];
+    const allUnits = property?.units || [];
+    const allReadings = allUnits.flatMap((u: any) =>
+      (u.meterReadings || []).map((r: any) => ({ ...r, unitNumber: u.unitNumber }))
+    );
 
-    const elecReading = monthReadings.find((r: any) => r.utilityType === "ELECTRICITY");
-    const waterReading = monthReadings.find((r: any) => r.utilityType === "WATER");
+    const elecReading =
+      allReadings.find((r: any) => r.utilityType === "ELECTRICITY" && r.readingMonth === freshPayment.month) ||
+      allReadings.find((r: any) => r.utilityType === "ELECTRICITY");
+
+    const waterReading =
+      allReadings.find((r: any) => r.utilityType === "WATER" && r.readingMonth === freshPayment.month) ||
+      allReadings.find((r: any) => r.utilityType === "WATER");
+
+    const activeUnit =
+      allUnits.find((u: any) => u.unitNumber === elecReading?.unitNumber || u.unitNumber === waterReading?.unitNumber) ||
+      allUnits.find((u: any) => u.status === "OCCUPIED") ||
+      allUnits[0];
+
     const totalUtility = (elecReading?.amount || 0) + (waterReading?.amount || 0);
 
     const baseRent =
-      totalUtility > 0 && p.amount >= totalUtility
-        ? p.amount - totalUtility
+      totalUtility > 0 && freshPayment.amount >= totalUtility
+        ? freshPayment.amount - totalUtility
         : property?.rent
-        ? Math.min(property.rent, p.amount)
-        : p.amount;
+        ? Math.min(property.rent, freshPayment.amount)
+        : freshPayment.amount;
 
     shareRentOnWhatsApp({
       tenantPhone: tenant.phone || "",
       tenantName: tenant.name || "Tenant",
       propertyName: property?.title || "Rental Property",
-      unitNumber: unit?.unitNumber || "101",
-      month: p.month,
-      amount: p.amount,
+      unitNumber: activeUnit?.unitNumber || "101",
+      month: freshPayment.month,
+      amount: freshPayment.amount,
       baseRent: totalUtility > 0 ? baseRent : undefined,
       utilityAmount: totalUtility > 0 ? totalUtility : undefined,
-      status: p.status,
-      receiptNumber: `INV-${p.id.slice(-6).toUpperCase()}`,
-      paidOn: p.paidOn ? formatDateTime(p.paidOn) : undefined,
+      status: freshPayment.status,
+      receiptNumber: `INV-${freshPayment.id.slice(-6).toUpperCase()}`,
+      paidOn: freshPayment.paidOn ? formatDateTime(freshPayment.paidOn) : undefined,
     });
   };
 
@@ -1003,10 +1053,10 @@ export default function PaymentsPage() {
 
           {/* Sub-Meter Utility Billing Section right in Bill Creation Form */}
           {selectedTenantId && (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
               <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-700 shadow-xs">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shadow-xs">
                     <Zap className="h-4 w-4" />
                   </span>
                   <div>
@@ -1034,13 +1084,13 @@ export default function PaymentsPage() {
                 <div className="space-y-3 pt-1">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {/* Electricity Meter Inputs */}
-                    <div className="rounded-xl bg-white p-3 border border-amber-200/90 shadow-xs space-y-2">
+                    <div className="rounded-xl bg-white p-3 border border-slate-200 shadow-xs space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-amber-950 flex items-center gap-1.5">
-                          <Zap className="h-4 w-4 text-amber-500" />
+                        <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <Zap className="h-4 w-4 text-blue-600" />
                           Electricity Meter (kWh)
                         </span>
-                        <Badge tone="yellow">₹{elecRate}/unit</Badge>
+                        <Badge tone="blue">₹{elecRate}/unit</Badge>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1050,32 +1100,32 @@ export default function PaymentsPage() {
                             type="number"
                             value={elecPrev}
                             onChange={(e) => setElecPrev(parseFloat(e.target.value) || 0)}
-                            className="h-8 text-xs font-mono bg-slate-50 border-slate-200"
+                            className="h-8 text-xs font-mono bg-slate-50 border-slate-200 text-slate-700"
                           />
                         </div>
                         <div>
-                          <span className="text-[11px] font-bold text-amber-900 block mb-1">Current Unit *</span>
+                          <span className="text-[11px] font-bold text-slate-900 block mb-1">Current Unit *</span>
                           <Input
                             type="number"
                             placeholder="e.g. 1420"
                             value={elecCurrent}
                             onChange={(e) => setElecCurrent(e.target.value)}
-                            className="h-8 text-xs font-mono font-bold text-slate-900 border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+                            className="h-8 text-xs font-mono font-bold text-slate-900 border-slate-300 focus:border-blue-500"
                           />
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100 bg-amber-50/50 p-2 rounded-lg">
+                      <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100 bg-slate-50/80 p-2 rounded-lg">
                         <span className="text-slate-600">Consumed: <strong className="text-slate-900 font-bold">{elecConsumed} units</strong></span>
-                        <span className="text-amber-800 font-bold text-sm">₹{elecAmount.toLocaleString("en-IN")}</span>
+                        <span className="text-blue-700 font-bold text-sm">₹{elecAmount.toLocaleString("en-IN")}</span>
                       </div>
                     </div>
 
                     {/* Water Meter Inputs */}
-                    <div className="rounded-xl bg-white p-3 border border-blue-200/90 shadow-xs space-y-2">
+                    <div className="rounded-xl bg-white p-3 border border-slate-200 shadow-xs space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-blue-950 flex items-center gap-1.5">
-                          <Droplets className="h-4 w-4 text-blue-500" />
+                        <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <Droplets className="h-4 w-4 text-blue-600" />
                           Water Supply Meter (kL)
                         </span>
                         <Badge tone="blue">₹{waterRate}/unit</Badge>
@@ -1088,49 +1138,49 @@ export default function PaymentsPage() {
                             type="number"
                             value={waterPrev}
                             onChange={(e) => setWaterPrev(parseFloat(e.target.value) || 0)}
-                            className="h-8 text-xs font-mono bg-slate-50 border-slate-200"
+                            className="h-8 text-xs font-mono bg-slate-50 border-slate-200 text-slate-700"
                           />
                         </div>
                         <div>
-                          <span className="text-[11px] font-bold text-blue-900 block mb-1">Current Unit *</span>
+                          <span className="text-[11px] font-bold text-slate-900 block mb-1">Current Unit *</span>
                           <Input
                             type="number"
                             placeholder="e.g. 340"
                             value={waterCurrent}
                             onChange={(e) => setWaterCurrent(e.target.value)}
-                            className="h-8 text-xs font-mono font-bold text-slate-900 border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                            className="h-8 text-xs font-mono font-bold text-slate-900 border-slate-300 focus:border-blue-500"
                           />
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100 bg-blue-50/50 p-2 rounded-lg">
+                      <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100 bg-slate-50/80 p-2 rounded-lg">
                         <span className="text-slate-600">Consumed: <strong className="text-slate-900 font-bold">{waterConsumed} kL</strong></span>
-                        <span className="text-blue-800 font-bold text-sm">₹{waterAmount.toLocaleString("en-IN")}</span>
+                        <span className="text-blue-700 font-bold text-sm">₹{waterAmount.toLocaleString("en-IN")}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Live Calculation Summary Banner */}
-                  <div className="p-3 rounded-xl bg-slate-900 text-white flex flex-wrap items-center justify-between gap-2 shadow-sm">
+                  {/* Clean Light Summary Banner */}
+                  <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-100/80 flex flex-wrap items-center justify-between gap-2 shadow-xs">
                     <div className="flex items-center gap-3 text-xs">
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Base Rent</span>
-                        <span className="font-bold text-white">₹{(baseRent || 0).toLocaleString("en-IN")}</span>
+                        <span className="text-slate-500 block text-[10px] uppercase font-semibold">Base Rent</span>
+                        <span className="font-bold text-slate-900">₹{(baseRent || 0).toLocaleString("en-IN")}</span>
                       </div>
-                      <span className="text-slate-600 font-bold">+</span>
+                      <span className="text-slate-400 font-bold">+</span>
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Electricity</span>
-                        <span className="font-bold text-amber-400">₹{elecAmount.toLocaleString("en-IN")}</span>
+                        <span className="text-slate-500 block text-[10px] uppercase font-semibold">Electricity</span>
+                        <span className="font-bold text-slate-900">₹{elecAmount.toLocaleString("en-IN")}</span>
                       </div>
-                      <span className="text-slate-600 font-bold">+</span>
+                      <span className="text-slate-400 font-bold">+</span>
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Water</span>
-                        <span className="font-bold text-blue-400">₹{waterAmount.toLocaleString("en-IN")}</span>
+                        <span className="text-slate-500 block text-[10px] uppercase font-semibold">Water</span>
+                        <span className="font-bold text-slate-900">₹{waterAmount.toLocaleString("en-IN")}</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-emerald-400 block text-[10px] uppercase font-bold tracking-wider">TOTAL BILL PAYABLE</span>
-                      <span className="text-lg font-black text-emerald-400">
+                      <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">TOTAL BILL PAYABLE</span>
+                      <span className="text-lg font-black text-blue-700">
                         ₹{calculatedTotal.toLocaleString("en-IN")}
                       </span>
                     </div>
