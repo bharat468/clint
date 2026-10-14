@@ -93,7 +93,25 @@ function addFooter(doc: jsPDF) {
 }
 
 /**
- * 1. Monthly Rent Collection Report PDF
+ * ============================================================================
+ * 1. generateMonthlyCollectionsPdf(report)
+ * ============================================================================
+ * Function Purpose:
+ * BRD Section 25.1 ke mutabik Monthly Rent Collection Report ka branded PDF banata hai.
+ * 
+ * Features & Layout:
+ * 1. A4 Portrait Document (`jsPDF`) with RentMate primary brand header (#1E3A8A).
+ * 2. 4 Executive Summary KPI Cards:
+ *    - TOTAL COLLECTED (Emerald Green)
+ *    - PENDING / DUE (Amber Orange)
+ *    - OVERDUE ARREARS (Rose Red)
+ *    - COLLECTION RATE % (Slate Dark)
+ * 3. Detailed Data Table (`autoTable`):
+ *    - Columns: Receipt No, Month, Tenant, Property, Amount, Status, Paid Date.
+ *    - Dynamic cell styling: 'PAID' -> Green, 'PENDING' -> Orange, 'OVERDUE' -> Red.
+ * 4. Automatic Multi-Page Pagination with branded footer stamp.
+ * 
+ * @param {MonthlyCollectionReportResponse} report - Report summary metrics and payment ledger items
  */
 export function generateMonthlyCollectionsPdf(
   report: MonthlyCollectionReportResponse
@@ -234,7 +252,27 @@ export function generateMonthlyCollectionsPdf(
 }
 
 /**
- * 2. Pending Defaulters List PDF
+ * 2. Pending Defaulters List PDF Generator
+ * -------------------------------------------------------------------------
+ * [Hinglish / Hindi-English Explanation]:
+ * Yeh function un tenants ka legal & arrears report generate karta hai jinka
+ * rent overdue ho chuka hai. Isme base overdue amount, late fee penalty,
+ * overdue days, aur tenant contact info include hoti hai. Table rows ko
+ * high-contrast red warning styling di gayi hai taaki defaulters clearly highlight ho sakein.
+ * 
+ * [English Explanation]:
+ * Generates an executive compliance and arrears audit PDF documenting delinquent
+ * tenant accounts. Calculates total exposure including accrued late fees, total days overdue,
+ * and direct tenant phone contacts. Applies crimson alert theming and auto-pagination.
+ * 
+ * Flow:
+ * 1. Instantiates portrait A4 jsPDF canvas with standard 14mm margins.
+ * 2. Adds red-accented compliance header with dynamic subtitle.
+ * 3. Draws 4 summary KPI cards: Total Defaulters, Base Overdue, Accrued Penalty, Total Arrears.
+ * 4. Renders dense data table with 11 columns for deep property audit.
+ * 5. Saves file as `RentMate-Defaulters-Ledger-<YYYY-MM-DD>.pdf`.
+ * 
+ * @param {DefaulterReportResponse} report - Aggregate summary and list of delinquent tenant records
  */
 export function generateDefaultersPdf(report: DefaulterReportResponse) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -359,7 +397,31 @@ export function generateDefaultersPdf(report: DefaulterReportResponse) {
 }
 
 /**
- * 3. Property-wise Profit & Loss / Expense Report PDF
+ * 3. Property-wise Profit & Loss / Expense Report PDF Generator
+ * -------------------------------------------------------------------------
+ * [Hinglish / Hindi-English Explanation]:
+ * Yeh function har property ka revenue aur maintenance expense compare karke
+ * Net Operating Income (NOI) aur profit margin calculate karta hai. Landlord
+ * ya asset manager ko clear financial picture milti hai ki kaun si property
+ * profitable chal rahi hai aur kahan maintenance kharche jyada ho rahe hain.
+ * 
+ * [English Explanation]:
+ * Generates an asset-level Profit & Loss statement detailing gross rental yields,
+ * operational maintenance expenditures, Net Operating Income (NOI), occupancy ratios,
+ * and net profit margins per property.
+ * 
+ * Formula:
+ * - Net Operating Income (NOI) = Gross Collected Rent - Resolved Maintenance Expenses
+ * - Profit Margin % = (Net Operating Income / Gross Income) * 100
+ * 
+ * Flow:
+ * 1. Instantiates portrait A4 jsPDF instance.
+ * 2. Adds branded header with 'P&L STATEMENT' classification.
+ * 3. Draws 4 summary metrics cards: Portfolio Revenue, Total Maintenance, Net Income, Operating Margin.
+ * 4. Renders multi-column table showing each property asset, city, occupancy ratio, revenue, expenses, net profit, margin %, and ticket count.
+ * 5. Saves file as `RentMate-Property-P&L-<YYYY-MM-DD>.pdf`.
+ * 
+ * @param {PropertyPnlReportResponse} report - Aggregate portfolio P&L metrics and asset-level ledger rows
  */
 export function generatePropertyPnlPdf(report: PropertyPnlReportResponse) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });

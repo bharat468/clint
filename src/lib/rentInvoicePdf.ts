@@ -26,6 +26,31 @@ export interface RentInvoiceData {
   paidOn?: string | null;
 }
 
+/**
+ * Generate Tenant Rent Invoice / Official Receipt PDF
+ * -------------------------------------------------------------------------
+ * [Hinglish / Hindi-English Explanation]:
+ * Yeh function tenant ke rent payment ka official digital PDF invoice ya receipt banata hai.
+ * Agar payment 'PAID' hai, toh yeh green verified stamp ke sath "OFFICIAL RENT RECEIPT"
+ * generate karta hai jisme transaction ID, payment method aur paid date hoti hai.
+ * Agar 'PENDING' hai, toh yeh "RENT INVOICE / BILL" banata hai jisme breakdown
+ * (Base Rent, Maintenance, Utilities, Late fee penalty) show hota hai.
+ * 
+ * [English Explanation]:
+ * Generates an executive, print-ready PDF rent receipt / invoice document.
+ * Automatically adapts title and watermarks based on status:
+ * - 'PAID': Official verified receipt with settlement transaction timestamp, method & stamp.
+ * - 'PENDING' / 'OVERDUE': Formal bill with breakdown of dues, late fee, and payment instructions.
+ * 
+ * Layout Architecture:
+ * 1. Top branded gradient banner with ecosystem branding and dynamic invoice number.
+ * 2. Metadata horizontal pill: issue date, billing period, status badge, and total amount.
+ * 3. Two-column Landlord (Billed By) vs Tenant (Billed To) contact dossier.
+ * 4. Itemized ledger table (Base rent, maintenance fee, utility dues, late penalty).
+ * 5. Settlement / Transaction summary with official computer-generated authorization seal.
+ * 
+ * @param {RentInvoiceData} data - Lease, property, landlord, tenant, and financial figures
+ */
 export function generateRentInvoicePdf(data: RentInvoiceData) {
   const doc = new jsPDF({
     orientation: "portrait",
