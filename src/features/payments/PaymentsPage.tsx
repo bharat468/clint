@@ -15,6 +15,7 @@ import {
   FileDown,
   FileSpreadsheet,
   ShieldAlert,
+  MessageCircle,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { paymentService } from "@/services/payment.service";
@@ -22,6 +23,7 @@ import { tenantService } from "@/services/tenant.service";
 import { propertyService } from "@/services/property.service";
 import { useAppSelector } from "@/app/hooks";
 import { generateRentInvoicePdf } from "@/lib/rentInvoicePdf";
+import { shareRentOnWhatsApp } from "@/lib/whatsapp";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
@@ -137,6 +139,28 @@ export default function PaymentsPage() {
       amount: p.amount,
       status: p.status,
       paidOn: p.paidOn,
+    });
+  };
+
+  const handleWhatsAppShare = (p: Payment) => {
+    const tenant = tenants.find((t) => t.id === p.tenantId);
+    const propId = p.propertyId || tenant?.propertyId;
+    const property = properties.find((pr) => pr.id === propId);
+
+    if (!tenant) {
+      setToast({ show: true, type: "error", message: "Tenant details not found" });
+      return;
+    }
+
+    shareRentOnWhatsApp({
+      tenantPhone: tenant.phone || "",
+      tenantName: tenant.name || "Tenant",
+      propertyName: property?.title || "Rental Property",
+      month: p.month,
+      amount: p.amount,
+      status: p.status,
+      receiptNumber: `INV-${p.id.slice(-6).toUpperCase()}`,
+      paidOn: p.paidOn ? formatDateTime(p.paidOn) : undefined,
     });
   };
 
@@ -527,6 +551,16 @@ export default function PaymentsPage() {
                               <FileDown className="h-3.5 w-3.5 text-blue-600" />
                               <span>Bill PDF</span>
                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleWhatsAppShare(p)}
+                              title="Share Notice or Receipt directly on WhatsApp (Zero API)"
+                              className="gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-8 text-xs font-semibold px-2"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>WhatsApp</span>
+                            </Button>
                             {p.status !== "PAID" && canUpdatePayment && (
                               <Button
                                 variant="outline"
@@ -611,6 +645,16 @@ export default function PaymentsPage() {
                       >
                         <FileDown className="h-3.5 w-3.5 text-blue-600" />
                         <span>PDF</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleWhatsAppShare(p)}
+                        title="Share on WhatsApp"
+                        className="gap-1 border-emerald-200 text-emerald-700 hover:bg-emerald-50 h-8 text-xs font-semibold px-2"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>WhatsApp</span>
                       </Button>
                       {p.status !== "PAID" && canUpdatePayment && (
                         <Button

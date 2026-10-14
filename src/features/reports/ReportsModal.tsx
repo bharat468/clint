@@ -9,6 +9,7 @@ import {
   Search,
   ArrowUpRight,
   ArrowDownRight,
+  MessageCircle,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
   generateDefaultersPdf,
   generatePropertyPnlPdf,
 } from "@/lib/reportPdfGenerator";
+import { shareDefaulterOnWhatsApp } from "@/lib/whatsapp";
 import { formatINR } from "@/lib/utils";
 
 interface ReportsModalProps {
@@ -556,12 +558,13 @@ export function ReportsModal({
                     <th className="py-2.5 px-3 text-right">Base Due</th>
                     <th className="py-2.5 px-3 text-right">Penalty</th>
                     <th className="py-2.5 px-3 text-right">Total Outstanding</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {filteredDefaulters.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-8 text-slate-400">
+                      <td colSpan={9} className="text-center py-8 text-slate-400">
                         {loading ? "Scanning arrears ledger..." : "No overdue defaulters detected. Excellent collections!"}
                       </td>
                     </tr>
@@ -593,6 +596,30 @@ export function ReportsModal({
                         </td>
                         <td className="py-2.5 px-3 text-right font-bold text-rose-700">
                           {formatINR(item.totalOutstanding)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              shareDefaulterOnWhatsApp({
+                                tenantPhone: item.tenantPhone,
+                                tenantName: item.tenantName,
+                                propertyTitle: item.propertyTitle,
+                                unitNumber: item.unitNumber,
+                                month: item.month,
+                                daysOverdue: item.daysOverdue,
+                                baseAmount: item.baseAmount,
+                                penaltyAmount: item.penaltyAmount,
+                                totalOutstanding: item.totalOutstanding,
+                              })
+                            }
+                            title="Send 1-Click Arrears Notice on WhatsApp"
+                            className="h-7 text-[11px] gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-semibold px-2"
+                          >
+                            <MessageCircle className="h-3 w-3 text-emerald-600" />
+                            <span>WhatsApp</span>
+                          </Button>
                         </td>
                       </tr>
                     ))
