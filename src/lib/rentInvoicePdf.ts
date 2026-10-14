@@ -267,8 +267,8 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
     doc.text(`Email: ${data.tenantEmail}`, rightX + 4, y + 25);
   }
 
-  // 5. ITEMIZED CHARGES TABLE
-  const tableStartY = 79;
+  // 5. ITEMIZED CHARGES TABLE (Spacious corporate layout)
+  const tableStartY = 84;
   const safeAmount = Number(data.amount || 0);
 
   // Compute breakdown
@@ -368,12 +368,12 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
       textColor: [255, 255, 255],
       fontStyle: "bold",
       fontSize: 8,
-      cellPadding: 3.5,
+      cellPadding: 4.2,
       halign: "left",
     },
     styles: {
       fontSize: 8,
-      cellPadding: 3.5,
+      cellPadding: 4.2,
       textColor: slateText,
       lineColor: borderRule,
       lineWidth: 0.2,
@@ -393,43 +393,43 @@ export function generateRentInvoicePdf(data: RentInvoiceData) {
 
   const finalY = (doc as any).lastAutoTable?.finalY || 135;
 
-  // 6. TOTALS & SUMMARY SECTION (Y: finalY + 4)
+  // 6. TOTALS & SUMMARY SECTION (With balanced breathing space)
   const calcTotal = baseRentVal + utilityTotal + maintenanceVal + lateFeeVal;
   const grandTotal = Math.max(safeAmount, calcTotal);
 
   // Left Column: Amount in Words & Settlement
   const summaryLeftW = contentWidth - 75;
   const summaryLeftX = margin;
-  const summaryY = finalY + 4;
+  const summaryY = finalY + 7;
 
   // Amount in words box
   doc.setFillColor(...bgShade);
   doc.setDrawColor(...borderRule);
-  doc.roundedRect(summaryLeftX, summaryY, summaryLeftW, 14, 1, 1, "FD");
+  doc.roundedRect(summaryLeftX, summaryY, summaryLeftW, 15, 1, 1, "FD");
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(...slateSub);
-  doc.text("AMOUNT IN WORDS:", summaryLeftX + 4, summaryY + 4.5);
+  doc.text("AMOUNT IN WORDS:", summaryLeftX + 4, summaryY + 5);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(...navyBrand);
   const wordsStr = numberToWordsINR(grandTotal);
-  doc.text(wordsStr, summaryLeftX + 4, summaryY + 9.5);
+  doc.text(wordsStr, summaryLeftX + 4, summaryY + 10.5);
 
   // Settlement Details Box (Without raw UUID!)
-  const settleY = summaryY + 17;
+  const settleY = summaryY + 19;
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(...borderRule);
-  doc.roundedRect(summaryLeftX, settleY, summaryLeftW, 20, 1, 1, "FD");
+  doc.roundedRect(summaryLeftX, settleY, summaryLeftW, 21, 1, 1, "FD");
 
   doc.setFillColor(...navyBrand);
-  doc.rect(summaryLeftX, settleY, summaryLeftW, 4.5, "F");
+  doc.rect(summaryLeftX, settleY, summaryLeftW, 4.8, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   doc.setTextColor(255, 255, 255);
-  doc.text("PAYMENT SETTLEMENT & TRANSACTION RECORD", summaryLeftX + 4, settleY + 3.2);
+  doc.text("PAYMENT SETTLEMENT & TRANSACTION RECORD", summaryLeftX + 4, settleY + 3.4);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
