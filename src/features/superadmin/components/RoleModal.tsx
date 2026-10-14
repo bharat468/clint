@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   X,
   UserPlus,
-  RefreshCw,
   CheckCircle2,
   Layers,
   Building2,
@@ -13,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { adminService } from "@/services/admin.service";
 import type { SuperAdminRole } from "@/types";
 
@@ -390,7 +390,7 @@ export default function RoleModal({ open, roleToEdit, onClose, onSuccess }: Role
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs gap-1.5 shadow-xs"
             >
               {submitting ? (
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                <Spinner size="xs" className="text-white" />
               ) : (
                 <CheckCircle2 className="h-3.5 w-3.5" />
               )}

@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, UserCheck, RefreshCw, CheckCircle2 } from "lucide-react";
+import { X, UserCheck, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import type { AdminUser, SuperAdminRole } from "@/types";
 import { adminService } from "@/services/admin.service";
 
@@ -137,7 +138,7 @@ export default function PrivilegeModal({
             disabled={submitting}
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs gap-1.5"
           >
-            {submitting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+            {submitting ? <Spinner size="xs" className="text-white" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
             <span>Update Privileges</span>
           </Button>
         </div>

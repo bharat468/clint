@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, Building2, RefreshCw, CheckCircle2 } from "lucide-react";
+import { X, Building2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { Field } from "@/components/ui/field";
 import { adminService } from "@/services/admin.service";
 import type { AdminOrganization, Plan } from "@/types";
@@ -220,7 +221,7 @@ export default function OrganizationModal({
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs gap-1.5"
             >
               {submitting ? (
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                <Spinner size="xs" className="text-white" />
               ) : (
                 <CheckCircle2 className="h-3.5 w-3.5" />
               )}

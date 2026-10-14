@@ -11,7 +11,6 @@ import {
   Building2,
   Calendar,
   Search,
-  RefreshCw,
   Clock,
   ShieldAlert,
 } from "lucide-react";
@@ -23,6 +22,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { PageHeader, State } from "@/components/ui/page";
@@ -510,7 +510,7 @@ export default function TenantsPage() {
             <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
               {isSubmitting ? (
                 <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <Spinner size="sm" className="text-white" />
                   <span>Saving...</span>
                 </>
               ) : (

@@ -6,6 +6,7 @@ import { setCredentials } from "./authSlice";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { errMsg } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 import {
   ArrowRight,
   RefreshCw,
@@ -318,7 +319,7 @@ export default function LoginPage() {
                 >
                   {loading ? (
                     <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <Spinner size="sm" className="text-white" />
                       <span>Sending Code...</span>
                     </>
                   ) : (
@@ -365,7 +366,7 @@ export default function LoginPage() {
                 >
                   {loading ? (
                     <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <Spinner size="sm" className="text-white" />
                       <span>Verifying...</span>
                     </>
                   ) : (

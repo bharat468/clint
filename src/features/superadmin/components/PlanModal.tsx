@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { X, Layers, RefreshCw, CheckCircle2 } from "lucide-react";
+import { X, Layers, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import type { Plan } from "@/types";
 import { planService, type CreatePlanInput } from "@/services/plan.service";
 
@@ -287,7 +288,7 @@ export default function PlanModal({
               disabled={submitting}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs gap-1.5"
             >
-              {submitting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              {submitting ? <Spinner size="xs" className="text-white" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
               <span>{planToEdit ? "Update Plan Specs" : "Publish Dynamic Plan"}</span>
             </Button>
           </div>

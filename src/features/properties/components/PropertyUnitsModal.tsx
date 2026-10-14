@@ -6,7 +6,6 @@ import {
   Share2,
   Layers,
   Sparkles,
-  Loader2,
   Check,
   Home,
 } from "lucide-react";
@@ -18,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Toast } from "@/components/ui/toast";
 import { Select, type SelectOptionItem } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
@@ -483,7 +483,7 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
               </span>
               {bulkProgress && (
                 <span className="font-bold flex items-center gap-1.5 text-blue-700">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Spinner size="xs" className="text-blue-700" />
                   Generating flat {bulkProgress.current} of {bulkProgress.total}...
                 </span>
               )}
@@ -505,7 +505,7 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
               >
                 {savingUnit ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Spinner size="sm" className="text-white" />
                     <span>Generating Units...</span>
                   </>
                 ) : (

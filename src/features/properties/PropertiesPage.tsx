@@ -11,7 +11,6 @@ import {
   Bed,
   IndianRupee,
   Search,
-  RefreshCw,
   Clock,
   Layers,
   ShieldAlert,
@@ -23,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -468,7 +468,7 @@ export default function PropertiesPage() {
             <Button type="submit" disabled={isSubmitting} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
               {isSubmitting ? (
                 <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <Spinner size="sm" className="text-white" />
                   <span>Saving...</span>
                 </>
               ) : (

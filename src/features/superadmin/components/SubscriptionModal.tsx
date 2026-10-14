@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { X, Calendar, RefreshCw, CheckCircle2 } from "lucide-react";
+import { X, Calendar, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Spinner } from "@/components/ui/spinner";
 import { formatINR } from "@/lib/utils";
 import type { AdminOrganization, Plan } from "@/types";
 import { adminService } from "@/services/admin.service";
@@ -197,7 +198,7 @@ export default function SubscriptionModal({
             disabled={submitting}
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs gap-1.5"
           >
-            {submitting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+            {submitting ? <Spinner size="xs" className="text-white" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
             <span>Save Subscription</span>
           </Button>
         </div>

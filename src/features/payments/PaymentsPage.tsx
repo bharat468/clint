@@ -12,7 +12,6 @@ import {
   Clock,
   AlertCircle,
   Search,
-  RefreshCw,
   FileDown,
   FileSpreadsheet,
   ShieldAlert,
@@ -23,6 +22,7 @@ import { tenantService } from "@/services/tenant.service";
 import { propertyService } from "@/services/property.service";
 import { useAppSelector } from "@/app/hooks";
 import { generateRentInvoicePdf } from "@/lib/rentInvoicePdf";
+import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
@@ -727,7 +727,7 @@ export default function PaymentsPage() {
             <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
               {isSubmitting ? (
                 <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <Spinner size="sm" className="text-white" />
                   <span>Saving...</span>
                 </>
               ) : (
