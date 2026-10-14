@@ -11,12 +11,12 @@ import {
   Shield,
   ArrowRight,
   X,
-  Clock,
 } from "lucide-react";
 import { propertyService } from "@/services/property.service";
 import { tenantService } from "@/services/tenant.service";
 import { paymentService } from "@/services/payment.service";
 import { formatINR } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 import type { Property, Tenant, Payment } from "@/types";
 
 interface Props {
@@ -186,7 +186,7 @@ export default function GlobalSearchModal({ open, onClose }: Props) {
         <div className="max-h-[60vh] overflow-y-auto p-3 space-y-4">
           {loading && (
             <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-              <Clock className="h-4 w-4 animate-spin text-blue-600" />
+              <Spinner size="sm" className="text-blue-600" />
               <span>Indexing portfolio records...</span>
             </div>
           )}

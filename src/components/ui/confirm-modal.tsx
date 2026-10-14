@@ -1,5 +1,6 @@
 import { AlertTriangle, Trash2, X } from "lucide-react";
 import { Button } from "./button";
+import { Spinner } from "./spinner";
 
 interface ConfirmModalProps {
   open: boolean;
@@ -102,7 +103,14 @@ export function ConfirmModal({
                 : "bg-amber-600 hover:bg-amber-700 border-amber-700"
             }`}
           >
-            {isBusy ? "Processing..." : finalConfirmLabel}
+            {isBusy ? (
+              <span className="flex items-center gap-1.5">
+                <Spinner size="xs" className="text-white" />
+                <span>Processing...</span>
+              </span>
+            ) : (
+              finalConfirmLabel
+            )}
           </Button>
         </div>
       </div>

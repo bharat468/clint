@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { Loader2, AlertTriangle, Inbox } from "lucide-react";
+import { AlertTriangle, Inbox } from "lucide-react";
 import { Card } from "./card";
+import { Spinner } from "./spinner";
 
 export const PageHeader = ({
   title,
@@ -35,11 +36,11 @@ export const State = ({
 }) => {
   if (loading)
     return (
-      <div className="flex flex-col items-center justify-center p-16 text-center">
-        <div className="rounded-2xl bg-indigo-50/80 p-4">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+      <div className="flex flex-col items-center justify-center p-16 text-center animate-in fade-in duration-150">
+        <div className="rounded-2xl bg-slate-100/90 p-4 border border-slate-200/80 shadow-xs">
+          <Spinner size="xl" className="text-slate-700" />
         </div>
-        <p className="mt-3 text-sm font-medium text-slate-500">Loading data...</p>
+        <p className="mt-3 text-xs font-medium text-slate-500 tracking-wide">Loading data...</p>
       </div>
     );
 
