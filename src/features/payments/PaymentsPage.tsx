@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Plus,
+  ShieldAlert,
   Trash2,
   Pencil,
   Calendar,
@@ -14,13 +14,16 @@ import {
   Search,
   FileDown,
   FileSpreadsheet,
-  ShieldAlert,
   MessageCircle,
+  Zap,
+  Droplets,
+  Receipt,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { paymentService } from "@/services/payment.service";
 import { tenantService } from "@/services/tenant.service";
 import { propertyService } from "@/services/property.service";
+import { rentalLifecycleService } from "@/services/rentalLifecycle.service";
 import { useAppSelector } from "@/app/hooks";
 import { generateRentInvoicePdf, UtilityDetail } from "@/lib/rentInvoicePdf";
 import { shareRentOnWhatsApp } from "@/lib/whatsapp";
@@ -60,7 +63,7 @@ export default function PaymentsPage() {
 
   const { data, setData, loading, error, reload } = useApi(paymentService.list, [] as Payment[]);
   const { data: tenants } = useApi(tenantService.list, [] as Tenant[]);
-  const { data: properties } = useApi(propertyService.list, [] as Property[]);
+  const { data: properties, reload: reloadProperties } = useApi(propertyService.list, [] as Property[]);
   const [open, setOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
   const [reportTab, setReportTab] = useState<"collections" | "defaulters" | "pnl">("collections");
@@ -100,11 +103,96 @@ export default function PaymentsPage() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<Form>({
     resolver: zodResolver(schema),
     defaultValues: { status: "PENDING", month: currentMonth },
   });
+
+  // Sub-Meter Utility state for billing
+  const [baseRent, setBaseRent] = useState<number>(20000);
+  const [includeUtilities, setIncludeUtilities] = useState<boolean>(true);
+  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
+  const [elecPrev, setElecPrev] = useState<number>(0);
+  const [elecCurrent, setElecCurrent] = useState<string>("");
+  const [elecRate, setElecRate] = useState<number>(9);
+  const [waterPrev, setWaterPrev] = useState<number>(0);
+  const [waterCurrent, setWaterCurrent] = useState<string>("");
+  const [waterRate, setWaterRate] = useState<number>(20);
+
+  const selectedTenantId = watch("tenantId");
+
+  const selectedTenant = useMemo(
+    () => tenants.find((item) => item.id === selectedTenantId),
+    [selectedTenantId, tenants]
+  );
+
+  const selectedProperty = useMemo(() => {
+    if (!selectedTenant?.propertyId) return null;
+    return properties.find((pr) => pr.id === selectedTenant.propertyId) || null;
+  }, [selectedTenant, properties]);
+
+  const availableUnits = useMemo(() => {
+    return selectedProperty?.units || [];
+  }, [selectedProperty]);
+
+  // Sync unit selection when tenant or property changes
+  useEffect(() => {
+    if (!selectedTenant) {
+      setSelectedUnitId("");
+      return;
+    }
+    const units = selectedProperty?.units || [];
+    const matchedUnit = units.find((u: any) => u.status === "OCCUPIED") || units[0];
+    if (matchedUnit) {
+      setSelectedUnitId(matchedUnit.id);
+    } else {
+      setSelectedUnitId("");
+    }
+  }, [selectedTenant, selectedProperty]);
+
+  // Sync rent, utility tariffs, and previous readings when unit changes
+  useEffect(() => {
+    if (!selectedTenant) return;
+    const unit = availableUnits.find((u: any) => u.id === selectedUnitId) || availableUnits[0];
+
+    const rent = unit?.rentAmount || selectedProperty?.rent || 20000;
+    setBaseRent(rent);
+
+    const orgElec = selectedProperty?.organization?.electricityRate ?? 9;
+    const orgWater = selectedProperty?.organization?.waterRate ?? 20;
+    setElecRate(orgElec);
+    setWaterRate(orgWater);
+
+    if (unit) {
+      const lastElec = unit.meterReadings?.find((r: any) => r.utilityType === "ELECTRICITY");
+      const lastWater = unit.meterReadings?.find((r: any) => r.utilityType === "WATER");
+      setElecPrev(lastElec ? lastElec.currentReading : 0);
+      setWaterPrev(lastWater ? lastWater.currentReading : 0);
+    } else {
+      setElecPrev(0);
+      setWaterPrev(0);
+    }
+  }, [selectedUnitId, availableUnits, selectedProperty, selectedTenant]);
+
+  const parsedElec = parseFloat(elecCurrent) || 0;
+  const elecConsumed = parsedElec >= elecPrev ? Math.round((parsedElec - elecPrev) * 100) / 100 : 0;
+  const elecAmount = Math.round(elecConsumed * elecRate);
+
+  const parsedWater = parseFloat(waterCurrent) || 0;
+  const waterConsumed = parsedWater >= waterPrev ? Math.round((parsedWater - waterPrev) * 100) / 100 : 0;
+  const waterAmount = Math.round(waterConsumed * waterRate);
+
+  const totalUtility = includeUtilities ? elecAmount + waterAmount : 0;
+  const calculatedTotal = (baseRent || 0) + totalUtility;
+
+  useEffect(() => {
+    if (calculatedTotal > 0 && !editingPayment) {
+      setValue("amount", calculatedTotal);
+    }
+  }, [calculatedTotal, setValue, editingPayment]);
 
   const monthOptions = useMemo(() => {
     const list = [];
@@ -245,6 +333,10 @@ export default function PaymentsPage() {
 
   const handleOpenCreate = () => {
     setEditingPayment(null);
+    setElecCurrent("");
+    setWaterCurrent("");
+    setIncludeUtilities(true);
+    setSelectedUnitId("");
     reset({
       tenantId: "",
       amount: 20000,
@@ -270,11 +362,52 @@ export default function PaymentsPage() {
   const onSubmit = async (v: Form) => {
     setFormError(null);
     const tenant = tenants.find((t) => t.id === v.tenantId);
+    const propId = tenant?.propertyId ?? (editingPayment ? editingPayment.propertyId : "");
+    const property = properties.find((pr) => pr.id === propId);
+    const units = property?.units || [];
+    const unit =
+      units.find((u: any) => u.id === selectedUnitId) ||
+      units.find((u: any) => u.status === "OCCUPIED") ||
+      units[0];
+
+    // Auto-record meter readings to the unit if entered during billing
+    if (includeUtilities && unit) {
+      if (parsedElec > 0 && parsedElec >= elecPrev) {
+        try {
+          await rentalLifecycleService.recordMeterReading(unit.id, {
+            utilityType: "ELECTRICITY",
+            readingMonth: v.month,
+            previousReading: elecPrev,
+            currentReading: parsedElec,
+            customRate: elecRate,
+            notes: `Recorded during billing for month ${v.month}`,
+          });
+        } catch (err) {
+          console.warn("Could not save electricity meter reading", err);
+        }
+      }
+
+      if (parsedWater > 0 && parsedWater >= waterPrev) {
+        try {
+          await rentalLifecycleService.recordMeterReading(unit.id, {
+            utilityType: "WATER",
+            readingMonth: v.month,
+            previousReading: waterPrev,
+            currentReading: parsedWater,
+            customRate: waterRate,
+            notes: `Recorded during billing for month ${v.month}`,
+          });
+        } catch (err) {
+          console.warn("Could not save water meter reading", err);
+        }
+      }
+    }
+
     try {
       if (editingPayment) {
         const updated = await paymentService.update(editingPayment.id, {
           ...v,
-          propertyId: tenant?.propertyId ?? editingPayment.propertyId ?? "",
+          propertyId: propId,
           paidOn: v.status === "PAID" ? new Date().toISOString().slice(0, 10) : null,
         });
         reset();
@@ -283,12 +416,13 @@ export default function PaymentsPage() {
         if (updated) {
           setData((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
         }
-        setToast({ show: true, type: "success", message: "Payment record updated successfully." });
+        setToast({ show: true, type: "success", message: "Bill and payment record updated successfully." });
         await reload();
+        await reloadProperties();
       } else {
         const created = await paymentService.create({
           ...v,
-          propertyId: tenant?.propertyId ?? "",
+          propertyId: propId,
           paidOn: v.status === "PAID" ? new Date().toISOString().slice(0, 10) : null,
         });
         reset();
@@ -297,8 +431,12 @@ export default function PaymentsPage() {
         if (created) {
           setData((prev) => [created, ...prev.filter((p) => p.id !== created.id)]);
         }
-        setToast({ show: true, type: "success", message: "Payment record created successfully." });
+        const msg = totalUtility > 0
+          ? `Bill created: Base Rent ₹${(baseRent || 0).toLocaleString()} + Utilities ₹${totalUtility.toLocaleString()} = Total ₹${v.amount.toLocaleString()}!`
+          : "Monthly bill created successfully.";
+        setToast({ show: true, type: "success", message: msg });
         await reload();
+        await reloadProperties();
       }
     } catch (e) {
       setFormError(errMsg(e));
@@ -413,7 +551,7 @@ export default function PaymentsPage() {
             </Button>
             {canCreatePayment && (
               <Button onClick={handleOpenCreate} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-                <Plus className="h-4 w-4" /> Record Payment
+                <Receipt className="h-4 w-4" /> Generate Bill / Payment
               </Button>
             )}
           </div>
@@ -511,8 +649,8 @@ export default function PaymentsPage() {
         emptyMessage="No payment records found. Log monthly rental invoices to track payment history."
         emptyAction={
           canCreatePayment ? (
-            <Button onClick={handleOpenCreate} size="sm">
-              <Plus className="h-4 w-4" /> Record Payment
+            <Button onClick={handleOpenCreate} size="sm" className="gap-2">
+              <Receipt className="h-4 w-4" /> Generate Bill / Payment
             </Button>
           ) : undefined
         }
@@ -788,54 +926,239 @@ export default function PaymentsPage() {
         </>
       )}
 
-      {/* Record / Edit Payment Modal */}
+      {/* Generate Bill / Record Payment Modal */}
       <Modal
         open={open}
-        title={editingPayment ? "Edit Rent Payment" : "Record Rent Payment"}
+        maxWidth="max-w-2xl"
+        title={editingPayment ? "Edit Rent Bill & Payment" : "Generate Monthly Bill & Record Payment"}
         subtitle={
           editingPayment
-            ? "Update payment invoice records, amount or status"
-            : "Log a new rent invoice or payment transaction"
+            ? "Update rental invoice, meter readings, or payment status"
+            : "Enter sub-meter readings (Electricity & Water) and generate monthly rent bill"
         }
         onClose={() => setOpen(false)}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Field label="Tenant" error={errors.tenantId?.message} required>
-            <Select {...register("tenantId")}>
-              <option value="">Select tenant</option>
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          {/* Top Row: Tenant & Billing Month */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <Field label="Tenant *" error={errors.tenantId?.message} required>
+              <Select {...register("tenantId")}>
+                <option value="">Select Tenant</option>
+                {tenants.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} {t.property?.title ? `(${t.property.title})` : t.phone ? `(${t.phone})` : ""}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-          <Field label="Billing Month" error={errors.month?.message} required>
-            <Select {...register("month")}>
-              {monthOptions.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </Select>
-          </Field>
+            <Field label="Billing Month *" error={errors.month?.message} required>
+              <Select {...register("month")}>
+                {monthOptions.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
 
-          <Field label="Amount (₹)" error={errors.amount?.message} required>
-            <Input
-              type="number"
-              placeholder="e.g. 25000"
-              {...register("amount", { valueAsNumber: true })}
-            />
-          </Field>
+          {/* Unit & Base Monthly Rent */}
+          {selectedTenantId && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-0.5">
+              {availableUnits.length > 0 ? (
+                <Field label="Assigned Unit / Room">
+                  <Select
+                    value={selectedUnitId}
+                    onChange={(e) => setSelectedUnitId(e.target.value)}
+                  >
+                    {availableUnits.map((u: any) => (
+                      <option key={u.id} value={u.id}>
+                        {selectedProperty?.title ? `${selectedProperty.title} • ` : ""}Unit {u.unitNumber} {u.type ? `(${u.type})` : ""}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              ) : (
+                <Field label="Property Location">
+                  <Input
+                    disabled
+                    value={selectedProperty?.title || "Standard Rental Property"}
+                    className="bg-slate-100 text-slate-600 font-medium cursor-not-allowed"
+                  />
+                </Field>
+              )}
 
-          <Field label="Payment Status">
-            <Select {...register("status")}>
-              <option value="PENDING">Pending (Payment Awaited)</option>
-              <option value="PAID">Paid (Payment Received)</option>
-              <option value="OVERDUE">Overdue (Delayed Payment)</option>
-            </Select>
-          </Field>
+              <Field label="Base Monthly Rent (₹)" required>
+                <Input
+                  type="number"
+                  value={baseRent}
+                  onChange={(e) => setBaseRent(parseFloat(e.target.value) || 0)}
+                  placeholder="e.g. 20000"
+                  className="font-bold text-slate-900"
+                />
+              </Field>
+            </div>
+          )}
+
+          {/* Sub-Meter Utility Billing Section right in Bill Creation Form */}
+          {selectedTenantId && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-700 shadow-xs">
+                    <Zap className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">
+                      Sub-Meter Utilities (Electricity & Water)
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Enter monthly meter units to auto-calculate tenant charges
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-xs hover:border-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={includeUtilities}
+                    onChange={(e) => setIncludeUtilities(e.target.checked)}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>Add to Bill</span>
+                </label>
+              </div>
+
+              {includeUtilities && (
+                <div className="space-y-3 pt-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Electricity Meter Inputs */}
+                    <div className="rounded-xl bg-white p-3 border border-amber-200/90 shadow-xs space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                          <Zap className="h-4 w-4 text-amber-500" />
+                          Electricity Meter (kWh)
+                        </span>
+                        <Badge tone="yellow">₹{elecRate}/unit</Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-[11px] font-medium text-slate-500 block mb-1">Previous Unit</span>
+                          <Input
+                            type="number"
+                            value={elecPrev}
+                            onChange={(e) => setElecPrev(parseFloat(e.target.value) || 0)}
+                            className="h-8 text-xs font-mono bg-slate-50 border-slate-200"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-[11px] font-bold text-amber-900 block mb-1">Current Unit *</span>
+                          <Input
+                            type="number"
+                            placeholder="e.g. 1420"
+                            value={elecCurrent}
+                            onChange={(e) => setElecCurrent(e.target.value)}
+                            className="h-8 text-xs font-mono font-bold text-slate-900 border-amber-300 focus:border-amber-500 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100 bg-amber-50/50 p-2 rounded-lg">
+                        <span className="text-slate-600">Consumed: <strong className="text-slate-900 font-bold">{elecConsumed} units</strong></span>
+                        <span className="text-amber-800 font-bold text-sm">₹{elecAmount.toLocaleString("en-IN")}</span>
+                      </div>
+                    </div>
+
+                    {/* Water Meter Inputs */}
+                    <div className="rounded-xl bg-white p-3 border border-blue-200/90 shadow-xs space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-blue-950 flex items-center gap-1.5">
+                          <Droplets className="h-4 w-4 text-blue-500" />
+                          Water Supply Meter (kL)
+                        </span>
+                        <Badge tone="blue">₹{waterRate}/unit</Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-[11px] font-medium text-slate-500 block mb-1">Previous Unit</span>
+                          <Input
+                            type="number"
+                            value={waterPrev}
+                            onChange={(e) => setWaterPrev(parseFloat(e.target.value) || 0)}
+                            className="h-8 text-xs font-mono bg-slate-50 border-slate-200"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-[11px] font-bold text-blue-900 block mb-1">Current Unit *</span>
+                          <Input
+                            type="number"
+                            placeholder="e.g. 340"
+                            value={waterCurrent}
+                            onChange={(e) => setWaterCurrent(e.target.value)}
+                            className="h-8 text-xs font-mono font-bold text-slate-900 border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100 bg-blue-50/50 p-2 rounded-lg">
+                        <span className="text-slate-600">Consumed: <strong className="text-slate-900 font-bold">{waterConsumed} kL</strong></span>
+                        <span className="text-blue-800 font-bold text-sm">₹{waterAmount.toLocaleString("en-IN")}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Calculation Summary Banner */}
+                  <div className="p-3 rounded-xl bg-slate-900 text-white flex flex-wrap items-center justify-between gap-2 shadow-sm">
+                    <div className="flex items-center gap-3 text-xs">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Base Rent</span>
+                        <span className="font-bold text-white">₹{(baseRent || 0).toLocaleString("en-IN")}</span>
+                      </div>
+                      <span className="text-slate-600 font-bold">+</span>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Electricity</span>
+                        <span className="font-bold text-amber-400">₹{elecAmount.toLocaleString("en-IN")}</span>
+                      </div>
+                      <span className="text-slate-600 font-bold">+</span>
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Water</span>
+                        <span className="font-bold text-blue-400">₹{waterAmount.toLocaleString("en-IN")}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-emerald-400 block text-[10px] uppercase font-bold tracking-wider">TOTAL BILL PAYABLE</span>
+                      <span className="text-lg font-black text-emerald-400">
+                        ₹{calculatedTotal.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Amount and Status Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <Field label="Total Bill Amount (₹) *" error={errors.amount?.message} required>
+              <Input
+                type="number"
+                placeholder="e.g. 25000"
+                {...register("amount", { valueAsNumber: true })}
+                className="font-bold text-base text-slate-900"
+              />
+            </Field>
+
+            <Field label="Payment Status">
+              <Select {...register("status")}>
+                <option value="PENDING">Pending (Bill Issued / Awaiting Payment)</option>
+                <option value="PAID">Paid (Payment Received & Confirmed)</option>
+                <option value="OVERDUE">Overdue (Delayed / Late Payment)</option>
+              </Select>
+            </Field>
+          </div>
 
           {formError && (
             <div className="rounded-xl bg-rose-50 p-3 text-xs text-rose-600 border border-rose-100">
@@ -847,14 +1170,17 @@ export default function PaymentsPage() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button type="submit" disabled={isSubmitting} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
               {isSubmitting ? (
                 <>
                   <Spinner size="sm" className="text-white" />
                   <span>Saving...</span>
                 </>
               ) : (
-                <span>{editingPayment ? "Save Changes" : "Record Payment"}</span>
+                <>
+                  <Receipt className="h-4 w-4" />
+                  <span>{editingPayment ? "Save Changes" : "Generate Bill & Save"}</span>
+                </>
               )}
             </Button>
           </div>
