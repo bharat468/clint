@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Building2,
   ShieldCheck,
@@ -6,27 +6,78 @@ import {
   Home,
   CreditCard,
   Phone,
+  Zap,
+  Droplets,
+  Save,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { organizationService } from "@/services/organization.service";
 import { propertyService } from "@/services/property.service";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Toast } from "@/components/ui/toast";
+import { Spinner } from "@/components/ui/spinner";
 import { formatINR } from "@/lib/utils";
 import type { Property } from "@/types";
 
 export default function OrganizationSettingsPage() {
-  const { data: orgs } = useApi(organizationService.list, [] as any[]);
+  const { data: orgs, reload: reloadOrgs } = useApi(organizationService.list, [] as any[]);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"PROFILE" | "PLAN">("PROFILE");
+  const [activeTab, setActiveTab] = useState<"PROFILE" | "PLAN" | "UTILITY">("PROFILE");
+  const [electricityRate, setElectricityRate] = useState<number>(9.0);
+  const [waterRate, setWaterRate] = useState<number>(20.0);
+  const [savingRates, setSavingRates] = useState(false);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type?: "success" | "error" | "info";
+  }>({
+    show: false,
+    message: "",
+  });
 
   const currentOrg =
     (selectedOrgId ? orgs.find((o: any) => o.id === selectedOrgId) : orgs[0]) || {
       id: "default",
       name: "Bharat Estates",
       slug: "bharat-estates",
+      electricityRate: 9.0,
+      waterRate: 20.0,
     };
+
+  useEffect(() => {
+    if (currentOrg) {
+      if (currentOrg.electricityRate !== undefined) {
+        setElectricityRate(currentOrg.electricityRate);
+      }
+      if (currentOrg.waterRate !== undefined) {
+        setWaterRate(currentOrg.waterRate);
+      }
+    }
+  }, [currentOrg]);
+
+  const handleSaveUtilityRates = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentOrg || currentOrg.id === "default") {
+      setToast({ show: true, type: "error", message: "Please select an active organization" });
+      return;
+    }
+    setSavingRates(true);
+    try {
+      await organizationService.updateUtilityRates(currentOrg.id, {
+        electricityRate: Number(electricityRate),
+        waterRate: Number(waterRate),
+      });
+      setToast({ show: true, type: "success", message: "Utility rates saved successfully! These rates will auto-apply to all unit meter readings." });
+      await reloadOrgs();
+    } catch (err: any) {
+      setToast({ show: true, type: "error", message: err.response?.data?.message || "Failed to update utility rates" });
+    } finally {
+      setSavingRates(false);
+    }
+  };
 
   const fetchMembers = async () => {
     let orgId = selectedOrgId || currentOrg?.id;
@@ -137,6 +188,18 @@ export default function OrganizationSettingsPage() {
         >
           <CreditCard className="h-4 w-4" />
           <span>Plan & Quotas</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("UTILITY")}
+          className={`flex items-center gap-2 pb-3 px-4 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+            activeTab === "UTILITY"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <Zap className="h-4 w-4 text-amber-500" />
+          <span>Utility & Meter Rates</span>
         </button>
       </div>
 
@@ -316,6 +379,130 @@ export default function OrganizationSettingsPage() {
             </div>
           </div>
         </Card>
+      )}
+
+      {/* TAB 3: UTILITY & METER RATES */}
+      {activeTab === "UTILITY" && (
+        <Card className="p-6 bg-white border-slate-200 shadow-2xs space-y-6 rounded-2xl">
+          <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 shadow-xs">
+              <Zap className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Utility Billing & Meter Rates</h3>
+              <p className="text-xs text-slate-500">
+                Configure your per-unit electricity and water rates. These default prices are automatically fetched when calculating flat sub-meter readings.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSaveUtilityRates} className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* Electricity Rate */}
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                      <Zap className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">Electricity Unit Rate</h4>
+                      <p className="text-[11px] text-slate-500">Billed per Kilowatt-hour (kWh)</p>
+                    </div>
+                  </div>
+                  <Badge tone="yellow">⚡ Power</Badge>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Rate per Unit (₹ / kWh)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold text-xs">₹</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={electricityRate}
+                      onChange={(e) => setElectricityRate(parseFloat(e.target.value) || 0)}
+                      className="pl-8 font-bold text-sm"
+                      placeholder="e.g. 9.50"
+                      required
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    Example: If a flat consumes 120 units, charge = 120 × ₹{electricityRate} = ₹{(120 * electricityRate).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Water Rate */}
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                      <Droplets className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">Water Unit Rate</h4>
+                      <p className="text-[11px] text-slate-500">Billed per Kilolitre (1,000 Litres)</p>
+                    </div>
+                  </div>
+                  <Badge tone="blue">💧 Water</Badge>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Rate per Unit (₹ / kL)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold text-xs">₹</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={waterRate}
+                      onChange={(e) => setWaterRate(parseFloat(e.target.value) || 0)}
+                      className="pl-8 font-bold text-sm"
+                      placeholder="e.g. 20.00"
+                      required
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    Example: If a flat consumes 15 kL, charge = 15 × ₹{waterRate} = ₹{(15 * waterRate).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Explanation card */}
+            <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/60 flex items-start gap-3">
+              <Zap className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-950">
+                <p className="font-bold">Automated Sub-Meter Pricing Guarantee</p>
+                <p className="mt-0.5 text-slate-600 leading-relaxed">
+                  Jab bhi aap kisi flat ka Current Meter Reading record karenge, system automatically inhi rates ko multiply karke bijli aur paani ka hisaab calculate karega aur tenant ke monthly rent bill me add karega.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={savingRates} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                {savingRates ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
+                <span>Save Utility Rates</span>
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {toast.show && (
+        <Toast
+          show={toast.show}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ show: false, message: "" })}
+        />
       )}
     </div>
   );

@@ -8,11 +8,13 @@ import {
   Sparkles,
   Check,
   Home,
+  Zap,
 } from "lucide-react";
 import {
   rentalLifecycleService,
   Unit,
 } from "@/services/rentalLifecycle.service";
+import { MeterReadingModal } from "./MeterReadingModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Toast } from "@/components/ui/toast";
@@ -83,6 +85,10 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
   const [listingTitle, setListingTitle] = useState("");
   const [category, setCategory] = useState("RESIDENTIAL");
   const [publishing, setPublishing] = useState(false);
+
+  // Meter Reading Modal
+  const [selectedMeterUnit, setSelectedMeterUnit] = useState<Unit | null>(null);
+  const [meterModalOpen, setMeterModalOpen] = useState(false);
 
   useEffect(() => {
     loadUnits();
@@ -619,6 +625,19 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedMeterUnit(u);
+                          setMeterModalOpen(true);
+                        }}
+                        title="Record Sub-Meter Reading & Calculate Bill"
+                        className="border-amber-200 text-amber-800 hover:bg-amber-50 text-xs gap-1 font-semibold"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Meter Reading</span>
+                      </Button>
                       {u.status === "VACANT" && (
                         <Button
                           size="sm"
@@ -738,6 +757,14 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
         type={toast.type}
         message={toast.message}
         onClose={() => setToast({ show: false, message: "" })}
+      />
+
+      <MeterReadingModal
+        unit={selectedMeterUnit}
+        propertyTitle={property.title}
+        open={meterModalOpen}
+        onClose={() => setMeterModalOpen(false)}
+        onSaved={loadUnits}
       />
     </div>
   );

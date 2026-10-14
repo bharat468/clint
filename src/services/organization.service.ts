@@ -54,4 +54,12 @@ export const organizationService = {
     api
       .delete(ENDPOINTS.ORGANIZATIONS.MEMBER_REMOVE(orgId, userId))
       .then((r) => r.data?.data ?? r.data),
+
+  updateUtilityRates: (
+    orgId: string,
+    data: { electricityRate?: number; waterRate?: number }
+  ) =>
+    api
+      .patch(`/organizations/${orgId}/utility-rates`, data)
+      .then((r) => r.data?.data ?? r.data),
 };

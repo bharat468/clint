@@ -157,6 +157,35 @@ export interface MaintenanceRequest {
   };
 }
 
+export interface MeterReading {
+  id: string;
+  unitId: string;
+  utilityType: "ELECTRICITY" | "WATER";
+  readingMonth: string;
+  previousReading: number;
+  currentReading: number;
+  consumedUnits: number;
+  ratePerUnit: number;
+  amount: number;
+  status: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface UnitMeterReadingsResponse {
+  unit: {
+    id: string;
+    unitNumber: string;
+    propertyTitle: string;
+    propertyId: string;
+    organizationRates: {
+      electricityRate: number;
+      waterRate: number;
+    };
+  };
+  readings: MeterReading[];
+}
+
 export const rentalLifecycleService = {
   // Units
   async listUnits(propertyId?: string, status?: string) {
@@ -175,6 +204,23 @@ export const rentalLifecycleService = {
   async updateUnit(id: string, data: Partial<Unit>) {
     const res = await api.patch(ENDPOINTS.UNITS.UPDATE(id), data);
     return (res.data?.data ?? res.data) as Unit;
+  },
+
+  async recordMeterReading(unitId: string, data: {
+    utilityType?: string;
+    readingMonth?: string;
+    previousReading?: number;
+    currentReading: number;
+    customRate?: number;
+    notes?: string;
+  }) {
+    const res = await api.post(`/units/${unitId}/meter-readings`, data);
+    return (res.data?.data ?? res.data) as MeterReading;
+  },
+
+  async getMeterReadings(unitId: string) {
+    const res = await api.get(`/units/${unitId}/meter-readings`);
+    return (res.data?.data ?? res.data) as UnitMeterReadingsResponse;
   },
 
   // Listings
