@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 import { Lock, LogOut } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 import { useLogout } from "@/features/auth/useLogout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { RouteLoadingFallback } from "@/components/ui/RouteLoadingFallback";
 import SuperAdminSidebar from "../components/SuperAdminSidebar";
 import SuperAdminNavbar from "../components/SuperAdminNavbar";
 
@@ -46,7 +48,9 @@ export default function SuperAdminLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <SuperAdminNavbar />
         <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-200">
-          <Outlet />
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

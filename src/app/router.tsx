@@ -1,39 +1,74 @@
+import React, { Suspense, lazy } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import ProtectedRoute from "@/features/auth/ProtectedRoute";
-import LoginPage from "@/features/auth/LoginPage";
-import RegisterPage from "@/features/auth/RegisterPage";
-import DashboardPage from "@/features/dashboard/DashboardPage";
-import PropertiesPage from "@/features/properties/PropertiesPage";
-import TenantsPage from "@/features/tenants/TenantsPage";
-import PaymentsPage from "@/features/payments/PaymentsPage";
-import ApplicationsPage from "@/features/applications/ApplicationsPage";
-import MaintenancePage from "@/features/maintenance/MaintenancePage";
-import MyRentalsPage from "@/features/tenant/MyRentalsPage";
-import SettingsLayout from "@/features/settings/layouts/SettingsLayout";
-import TeamSettingsPage from "@/features/settings/pages/TeamSettingsPage";
-import RolesSettingsPage from "@/features/settings/pages/RolesSettingsPage";
-import OrganizationSettingsPage from "@/features/settings/pages/OrganizationSettingsPage";
-
-// Modular SuperAdmin Platform Architecture
-import SuperAdminLayout from "@/features/superadmin/layouts/SuperAdminLayout";
-import SuperAdminOverviewPage from "@/features/superadmin/pages/SuperAdminOverviewPage";
-import SuperAdminOrganizationsPage from "@/features/superadmin/pages/SuperAdminOrganizationsPage";
-import SuperAdminPropertiesPage from "@/features/superadmin/pages/SuperAdminPropertiesPage";
-import SuperAdminLeasesPage from "@/features/superadmin/pages/SuperAdminLeasesPage";
-import SuperAdminMaintenancePage from "@/features/superadmin/pages/SuperAdminMaintenancePage";
-import SuperAdminPlansPage from "@/features/superadmin/pages/SuperAdminPlansPage";
-import SuperAdminRolesPage from "@/features/superadmin/pages/SuperAdminRolesPage";
-import SuperAdminUsersPage from "@/features/superadmin/pages/SuperAdminUsersPage";
-import SuperAdminSettingsPage from "@/features/superadmin/pages/SuperAdminSettingsPage";
-import NotFoundPage from "@/features/errors/NotFoundPage";
 import { useAppSelector } from "@/app/hooks";
 import { RouteErrorBoundary } from "@/components/ui/RouteErrorBoundary";
+import { RouteLoadingFallback } from "@/components/ui/RouteLoadingFallback";
+
+/**
+ * Helper to wrap dynamically imported lazy components in Suspense with
+ * our unified brand loading indicator.
+ */
+function withSuspense(
+  Component: React.LazyExoticComponent<React.ComponentType<any>> | React.ComponentType<any>
+) {
+  return (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <Component />
+    </Suspense>
+  );
+}
+
+// ============================================================
+// 1. LAZY LOADED AUTHENTICATION & ONBOARDING
+// ============================================================
+const LoginPage = lazy(() => import("@/features/auth/LoginPage"));
+const RegisterPage = lazy(() => import("@/features/auth/RegisterPage"));
+
+// ============================================================
+// 2. LAZY LOADED CORE LANDLORD & TENANT WORKSPACES
+// ============================================================
+const DashboardPage = lazy(() => import("@/features/dashboard/DashboardPage"));
+const PropertiesPage = lazy(() => import("@/features/properties/PropertiesPage"));
+const TenantsPage = lazy(() => import("@/features/tenants/TenantsPage"));
+const PaymentsPage = lazy(() => import("@/features/payments/PaymentsPage"));
+const ApplicationsPage = lazy(() => import("@/features/applications/ApplicationsPage"));
+const MaintenancePage = lazy(() => import("@/features/maintenance/MaintenancePage"));
+const MyRentalsPage = lazy(() => import("@/features/tenant/MyRentalsPage"));
+
+// ============================================================
+// 3. LAZY LOADED SETTINGS & RBAC WORKSPACES
+// ============================================================
+const SettingsLayout = lazy(() => import("@/features/settings/layouts/SettingsLayout"));
+const TeamSettingsPage = lazy(() => import("@/features/settings/pages/TeamSettingsPage"));
+const RolesSettingsPage = lazy(() => import("@/features/settings/pages/RolesSettingsPage"));
+const OrganizationSettingsPage = lazy(() => import("@/features/settings/pages/OrganizationSettingsPage"));
+
+// ============================================================
+// 4. LAZY LOADED SUPERADMIN CONTROL CENTER
+// ============================================================
+const SuperAdminLayout = lazy(() => import("@/features/superadmin/layouts/SuperAdminLayout"));
+const SuperAdminOverviewPage = lazy(() => import("@/features/superadmin/pages/SuperAdminOverviewPage"));
+const SuperAdminOrganizationsPage = lazy(() => import("@/features/superadmin/pages/SuperAdminOrganizationsPage"));
+const SuperAdminPropertiesPage = lazy(() => import("@/features/superadmin/pages/SuperAdminPropertiesPage"));
+const SuperAdminLeasesPage = lazy(() => import("@/features/superadmin/pages/SuperAdminLeasesPage"));
+const SuperAdminMaintenancePage = lazy(() => import("@/features/superadmin/pages/SuperAdminMaintenancePage"));
+const SuperAdminPlansPage = lazy(() => import("@/features/superadmin/pages/SuperAdminPlansPage"));
+const SuperAdminRolesPage = lazy(() => import("@/features/superadmin/pages/SuperAdminRolesPage"));
+const SuperAdminUsersPage = lazy(() => import("@/features/superadmin/pages/SuperAdminUsersPage"));
+const SuperAdminSettingsPage = lazy(() => import("@/features/superadmin/pages/SuperAdminSettingsPage"));
+
+// ============================================================
+// 5. LAZY LOADED ERROR / 404
+// ============================================================
+const NotFoundPage = lazy(() => import("@/features/errors/NotFoundPage"));
 
 /**
  * Direct entry dispatcher:
  * - If unauthenticated -> Redirect to /login
  * - If SuperAdmin -> Redirect to /superadmin (Admin Dashboard)
+ * - If Tenant -> Redirect to /tenant/my-rentals (Tenant Portal)
  * - If Landlord/Staff -> Redirect to /dashboard (Landlord Dashboard)
  */
 function IndexRedirect() {
@@ -47,7 +82,32 @@ function IndexRedirect() {
     return <Navigate to="/superadmin" replace />;
   }
 
+  if (user.role?.toUpperCase() === "TENANT") {
+    return <Navigate to="/tenant/my-rentals" replace />;
+  }
+
   return <Navigate to="/dashboard" replace />;
+}
+
+/**
+ * PublicOnlyRoute:
+ * Prevents logged-in users from seeing login/register forms,
+ * redirecting them smoothly to their active workspace.
+ */
+function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+  const user = useAppSelector((s) => s.auth.user);
+
+  if (user) {
+    if (Boolean(user.isSuperAdmin) || Boolean(user.adminRole)) {
+      return <Navigate to="/superadmin" replace />;
+    }
+    if (user.role?.toUpperCase() === "TENANT") {
+      return <Navigate to="/tenant/my-rentals" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 export const router = createBrowserRouter([
@@ -58,10 +118,18 @@ export const router = createBrowserRouter([
   { path: "/admin", element: <Navigate to="/superadmin" replace />, errorElement: <RouteErrorBoundary /> },
 
   // ============================================================
-  // 2. AUTHENTICATION ONBOARDING
+  // 2. AUTHENTICATION ONBOARDING (Protected from already logged-in users)
   // ============================================================
-  { path: "/login", element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
-  { path: "/register", element: <RegisterPage />, errorElement: <RouteErrorBoundary /> },
+  {
+    path: "/login",
+    element: <PublicOnlyRoute>{withSuspense(LoginPage)}</PublicOnlyRoute>,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/register",
+    element: <PublicOnlyRoute>{withSuspense(RegisterPage)}</PublicOnlyRoute>,
+    errorElement: <RouteErrorBoundary />,
+  },
 
   // ============================================================
   // 3. PROTECTED PLATFORM WORKSPACES
@@ -74,21 +142,21 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { path: "/dashboard", element: <DashboardPage /> },
-          { path: "/properties", element: <PropertiesPage /> },
-          { path: "/applications", element: <ApplicationsPage /> },
-          { path: "/maintenance", element: <MaintenancePage /> },
-          { path: "/tenant/my-rentals", element: <MyRentalsPage /> },
-          { path: "/tenants", element: <TenantsPage /> },
-          { path: "/payments", element: <PaymentsPage /> },
+          { path: "/dashboard", element: withSuspense(DashboardPage) },
+          { path: "/properties", element: withSuspense(PropertiesPage) },
+          { path: "/applications", element: withSuspense(ApplicationsPage) },
+          { path: "/maintenance", element: withSuspense(MaintenancePage) },
+          { path: "/tenant/my-rentals", element: withSuspense(MyRentalsPage) },
+          { path: "/tenants", element: withSuspense(TenantsPage) },
+          { path: "/payments", element: withSuspense(PaymentsPage) },
           {
             path: "/settings",
-            element: <SettingsLayout />,
+            element: withSuspense(SettingsLayout),
             children: [
               { index: true, element: <Navigate to="/settings/team" replace /> },
-              { path: "team", element: <TeamSettingsPage /> },
-              { path: "roles", element: <RolesSettingsPage /> },
-              { path: "organization", element: <OrganizationSettingsPage /> },
+              { path: "team", element: withSuspense(TeamSettingsPage) },
+              { path: "roles", element: withSuspense(RolesSettingsPage) },
+              { path: "organization", element: withSuspense(OrganizationSettingsPage) },
               { path: "billing", element: <Navigate to="/settings/organization" replace /> },
             ],
           },
@@ -97,17 +165,17 @@ export const router = createBrowserRouter([
       // B. SuperAdmin Platform Control Center (Dashboard 2)
       {
         path: "/superadmin",
-        element: <SuperAdminLayout />,
+        element: withSuspense(SuperAdminLayout),
         children: [
-          { path: "", element: <SuperAdminOverviewPage /> },
-          { path: "organizations", element: <SuperAdminOrganizationsPage /> },
-          { path: "properties", element: <SuperAdminPropertiesPage /> },
-          { path: "leases", element: <SuperAdminLeasesPage /> },
-          { path: "maintenance", element: <SuperAdminMaintenancePage /> },
-          { path: "plans", element: <SuperAdminPlansPage /> },
-          { path: "roles", element: <SuperAdminRolesPage /> },
-          { path: "users", element: <SuperAdminUsersPage /> },
-          { path: "settings", element: <SuperAdminSettingsPage /> },
+          { path: "", element: withSuspense(SuperAdminOverviewPage) },
+          { path: "organizations", element: withSuspense(SuperAdminOrganizationsPage) },
+          { path: "properties", element: withSuspense(SuperAdminPropertiesPage) },
+          { path: "leases", element: withSuspense(SuperAdminLeasesPage) },
+          { path: "maintenance", element: withSuspense(SuperAdminMaintenancePage) },
+          { path: "plans", element: withSuspense(SuperAdminPlansPage) },
+          { path: "roles", element: withSuspense(SuperAdminRolesPage) },
+          { path: "users", element: withSuspense(SuperAdminUsersPage) },
+          { path: "settings", element: withSuspense(SuperAdminSettingsPage) },
         ],
       },
     ],
@@ -116,8 +184,10 @@ export const router = createBrowserRouter([
   // ============================================================
   // 4. NOT FOUND / 404 MODULE
   // ============================================================
-  { path: "/404", element: <NotFoundPage />, errorElement: <RouteErrorBoundary /> },
+  { path: "/404", element: withSuspense(NotFoundPage), errorElement: <RouteErrorBoundary /> },
 
   // Catch-all route for any unmapped URL
-  { path: "*", element: <NotFoundPage />, errorElement: <RouteErrorBoundary /> },
+  { path: "*", element: withSuspense(NotFoundPage), errorElement: <RouteErrorBoundary /> },
 ]);
+
+export default router;
