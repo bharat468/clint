@@ -105,6 +105,19 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
     return units.slice(start, start + pageSize);
   }, [units, page, pageSize]);
 
+  /**
+   * Single Unit Creation Handler
+   * -------------------------------------------------------------------------
+   * [Hinglish / Hindi-English Explanation]:
+   * Yeh function property me single flat/unit manually create karta hai.
+   * Unit number, floor, furnishing status aur rent amount set karke backend API
+   * ko call karta hai, aur create hote hi unit list ko instant update karta hai.
+   * 
+   * [English Explanation]:
+   * Dispatches a single unit record creation request to the rental lifecycle service.
+   * Validates state, disables UI buttons during submission, appends created unit
+   * to local state, and refreshes the parent unit list.
+   */
   const handleCreateUnit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingUnit(true);
@@ -133,6 +146,28 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
     }
   };
 
+  /**
+   * Bulk Unit Generator Handler (Automated Multi-Floor Creation)
+   * -------------------------------------------------------------------------
+   * [Hinglish / Hindi-English Explanation]:
+   * Yeh function bade apartments/buildings ke liye ek sath multiple flats generate karta hai.
+   * Example: Agar user ko 20 flats banane hain (10 flats per floor), toh:
+   * - Flat 101 to 110 ko Floor 1 assign karega
+   * - Flat 111 to 120 ko Floor 2 assign karega
+   * Sath me progress bar (current/total) show karta hai taaki user ko generation progress dikhe.
+   * 
+   * [English Explanation]:
+   * Automatically provisions a series of units across multiple floors in bulk.
+   * 
+   * Formula & Logic:
+   * - Flat Number: `bulkStartNum + i` (e.g. 101, 102...)
+   * - Floor Index: `Math.max(1, Math.floor(i / bulkUnitsPerFloor) + 1)`
+   * - Unit Identifier: `${bulkPrefix}${flatNumber}` (e.g. "Flat-101")
+   * 
+   * Features:
+   * - Real-time progress tracker (`bulkProgress.current` / `bulkProgress.total`).
+   * - Clamped between 1 and 100 units per batch for safety and throughput stability.
+   */
   const handleBulkCreateUnits = async (e: React.FormEvent) => {
     e.preventDefault();
     if (bulkCount <= 0 || bulkCount > 100) {
@@ -176,11 +211,25 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
     }
   };
 
+  /**
+   * Prepares and opens the Public Listing Modal for a specific vacant unit
+   */
   const handleOpenPublish = (unit: Unit) => {
     setPublishingUnit(unit);
     setListingTitle(`${property.title} - ${unit.unitNumber} (${unit.type.replace("_", " ")})`);
   };
 
+  /**
+   * Public Marketplace Listing Publisher
+   * -------------------------------------------------------------------------
+   * [Hinglish / Hindi-English Explanation]:
+   * Vacant unit ko publicly discoverable banata hai. Market listing create
+   * hone ke bad unit status local UI me automatically 'LISTED' ho jata hai.
+   * 
+   * [English Explanation]:
+   * Publishes an existing vacant unit onto the public rental marketplace directory
+   * with base amenities, and transitions unit state from 'VACANT' to 'LISTED'.
+   */
   const handlePublishListing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!publishingUnit) return;

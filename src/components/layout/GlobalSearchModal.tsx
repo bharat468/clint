@@ -85,7 +85,22 @@ export default function GlobalSearchModal({ open, onClose }: Props) {
 
   const q = query.trim().toLowerCase();
 
-  // Filtered Results
+  /**
+   * Omni-Search Aggregation Engine (Unified Multi-Entity Fuzzy Search)
+   * -------------------------------------------------------------------------
+   * [Hinglish / Hindi-English Explanation]:
+   * Yeh search engine pure platform ke 4 core areas me live instant search karta hai:
+   * 1. Navigation Quick Links (Settings, Reports, Profile, etc.)
+   * 2. Properties (Title, City, Address)
+   * 3. Tenants (Name, Phone number, Email)
+   * 4. Payments (Billing Month, Status, Amount)
+   * Jab query khali ho toh default quick suggestions dikhata hai, aur jab query
+   * type ho toh real-time relevant filtered results render karta hai.
+   * 
+   * [English Explanation]:
+   * High-performance client-side memoized search engine indexing across navigation links,
+   * real estate assets, tenant profiles, and transaction records simultaneously.
+   */
   const matchingLinks = useMemo(() => {
     if (!q) return QUICK_LINKS.slice(0, 5);
     return QUICK_LINKS.filter((item) => item.label.toLowerCase().includes(q));
