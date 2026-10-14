@@ -941,7 +941,7 @@ export default function PaymentsPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Top Row: Tenant & Billing Month */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <Field label="Tenant *" error={errors.tenantId?.message} required>
+            <Field label="Tenant" error={errors.tenantId?.message} required>
               <Select {...register("tenantId")}>
                 <option value="">Select Tenant</option>
                 {tenants.map((t) => (
@@ -952,7 +952,7 @@ export default function PaymentsPage() {
               </Select>
             </Field>
 
-            <Field label="Billing Month *" error={errors.month?.message} required>
+            <Field label="Billing Month" error={errors.month?.message} required>
               <Select {...register("month")}>
                 {monthOptions.map((m) => (
                   <option key={m.value} value={m.value}>
@@ -1142,7 +1142,7 @@ export default function PaymentsPage() {
 
           {/* Amount and Status Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <Field label="Total Bill Amount (₹) *" error={errors.amount?.message} required>
+            <Field label="Total Bill Amount (₹)" error={errors.amount?.message} required>
               <Input
                 type="number"
                 placeholder="e.g. 25000"
