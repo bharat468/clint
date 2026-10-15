@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Bell, LogOut, Menu, Search } from "lucide-react";
+import { LogOut, Menu, Search } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSidebar } from "@/features/ui/uiSlice";
 import { useLogout } from "@/features/auth/useLogout";
 import { Button } from "@/components/ui/button";
 import GlobalSearchModal from "@/components/layout/GlobalSearchModal";
+import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 
 export default function SuperAdminNavbar() {
   const dispatch = useAppDispatch();
@@ -82,18 +83,8 @@ export default function SuperAdminNavbar() {
           >
             <Search className="h-4.5 w-4.5" />
           </button>
-        {/* Notifications Icon */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-        >
-          <Bell className="h-4.5 w-4.5" />
-          <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600" />
-          </span>
-        </button>
+        {/* Notifications Dropdown */}
+        <NotificationDropdown />
 
         <div className="h-6 w-px bg-slate-200" />
 
