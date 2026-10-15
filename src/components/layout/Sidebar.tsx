@@ -234,9 +234,9 @@ export default function Sidebar() {
             {getInitials(user?.name)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-bold text-slate-900">{user?.name || "Landlord"}</p>
+            <p className="truncate text-xs font-bold text-slate-900">{user?.name || "User"}</p>
             <p className="truncate text-[11px] text-slate-500 font-medium">
-              {(user as any)?.organizationName || "Owner Account"}
+              {(user as any)?.organizationName || user?.role || "Member Workspace"}
             </p>
           </div>
         </div>

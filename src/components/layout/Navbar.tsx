@@ -91,8 +91,10 @@ export default function Navbar() {
         {/* User Profile Chip */}
         <div className="flex items-center gap-3">
           <div className="hidden text-right md:block">
-            <p className="text-xs font-bold text-slate-800 leading-tight">{user?.name || "Administrator"}</p>
-            <p className="text-[11px] font-medium text-slate-400 leading-tight">Property Manager</p>
+            <p className="text-xs font-bold text-slate-800 leading-tight">{user?.name || "User"}</p>
+            <p className="text-[11px] font-medium text-slate-400 leading-tight">
+              {user?.role || "Landlord"}
+            </p>
           </div>
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-600 text-xs font-bold text-white shadow-xs">
             {getInitials(user?.name)}
