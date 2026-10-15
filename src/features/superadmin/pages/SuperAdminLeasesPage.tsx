@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
+import { generateLegalRentalAgreementPdf } from "@/lib/legalRentalAgreementPdf";
 
 export default function SuperAdminLeasesPage() {
   const { data: leases, loading, error, reload } = useApi(adminService.listLeases, [] as any[]);
@@ -21,6 +22,33 @@ export default function SuperAdminLeasesPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(9);
+
+  const handleDownloadAgreement = (l: any) => {
+    generateLegalRentalAgreementPdf({
+      agreementNumber: `LSE-${l.id.slice(0, 8).toUpperCase()}`,
+      executionDate: l.startDate || new Date().toISOString(),
+      landlordName: l.property?.organization?.name || "Property Management",
+      landlordAddress: l.property?.address || "",
+      tenantName: l.tenant?.name || "Tenant",
+      tenantPhone: l.tenant?.mobile || "",
+      tenantEmail: l.tenant?.email || "",
+      propertyName: l.property?.title || "Property",
+      propertyAddress: l.property?.address || "",
+      city: l.property?.city || "Jaipur",
+      unitNumber: l.unit?.unitNumber || "101",
+      floor: l.unit?.floor || 1,
+      furnishing: l.unit?.furnishing || "Semi-Furnished",
+      startDate: l.startDate || new Date().toISOString(),
+      endDate: l.endDate || new Date(Date.now() + 330 * 24 * 60 * 60 * 1000).toISOString(),
+      monthlyRent: Number(l.monthlyRent || 0),
+      securityDeposit: Number(l.securityDeposit || (l.monthlyRent || 0) * 2),
+      rentDueDay: l.rentRule?.dueDay || 5,
+      graceDays: l.rentRule?.graceDays || 3,
+      electricityRate: 9,
+      waterRate: 20,
+      escalationPercentage: 10,
+    });
+  };
 
   const filtered = leases.filter((l) => {
     const matchesSearch =
@@ -187,6 +215,16 @@ export default function SuperAdminLeasesPage() {
                   </div>
                 )}
               </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadAgreement(item)}
+                className="w-full mt-3.5 gap-1.5 text-xs text-slate-700 font-semibold border-slate-200 hover:bg-slate-50"
+              >
+                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                <span>Download Agreement PDF</span>
+              </Button>
             </Card>
           ))}
           </div>

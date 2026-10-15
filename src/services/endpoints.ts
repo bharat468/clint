@@ -122,7 +122,10 @@ export const ENDPOINTS = {
   LEASES: {
     MY_RENTALS: "/leases/my-rentals",
     OWNER_LIST: "/leases",
+    EXPIRING_ALERTS: "/leases/expiring-alerts",
     DETAIL: (id: string) => `/leases/${id}`,
+    RENEW: (id: string) => `/leases/${id}/renew`,
+    TERMINATE: (id: string) => `/leases/${id}/terminate`,
     PAY_SCHEDULE: (scheduleId: string) => `/leases/schedules/${scheduleId}/pay`,
   },
 

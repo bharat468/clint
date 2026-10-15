@@ -12,42 +12,55 @@ import {
   Home,
   ChevronRight,
   FileSpreadsheet,
+  AlertTriangle,
+  FileText,
+  RefreshCw,
+  MessageCircle,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { propertyService } from "@/services/property.service";
 import { tenantService } from "@/services/tenant.service";
 import { paymentService } from "@/services/payment.service";
+import { rentalLifecycleService, Lease } from "@/services/rentalLifecycle.service";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { State } from "@/components/ui/page";
 import { formatINR } from "@/lib/utils";
 import { ReportsModal } from "@/features/reports/ReportsModal";
+import { RenewLeaseModal } from "@/features/leases/components/RenewLeaseModal";
+import { generateLegalRentalAgreementPdf } from "@/lib/legalRentalAgreementPdf";
 import type { Payment, Property, Tenant } from "@/types";
 
 const fetchAll = async () => {
-  const [properties, tenants, payments] = await Promise.all([
+  const [properties, tenants, payments, expiringLeases] = await Promise.all([
     propertyService.list(),
     tenantService.list(),
     paymentService.list(),
+    rentalLifecycleService.getExpiringLeases().catch(() => []),
   ]);
-  return { properties, tenants, payments };
+  return { properties, tenants, payments, expiringLeases };
 };
 
 const initial = {
   properties: [] as Property[],
   tenants: [] as Tenant[],
   payments: [] as Payment[],
+  expiringLeases: [] as (Lease & { daysRemaining: number; isExpired: boolean })[],
 };
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [reportsOpen, setReportsOpen] = useState(false);
   const [reportTab, setReportTab] = useState<"collections" | "defaulters" | "pnl">("collections");
-  const { data, loading, error } = useApi(fetchAll, initial);
+  const [renewModalOpen, setRenewModalOpen] = useState(false);
+  const [selectedLeaseForRenew, setSelectedLeaseForRenew] = useState<Lease | null>(null);
+
+  const { data, loading, error, reload } = useApi(fetchAll, initial);
   const properties = Array.isArray(data?.properties) ? data.properties : [];
   const tenants = Array.isArray(data?.tenants) ? data.tenants : [];
   const payments = Array.isArray(data?.payments) ? data.payments : [];
+  const expiringLeases = Array.isArray(data?.expiringLeases) ? data.expiringLeases : [];
 
   // Financial Calculations
   const paidPayments = payments.filter((p) => p && p.status === "PAID");
@@ -66,6 +79,45 @@ export default function DashboardPage() {
     payments.length > 0 ? Math.round((paidPayments.length / payments.length) * 100) : 0;
 
   const tenantName = (id: string) => tenants.find((t) => t.id === id)?.name ?? "Tenant";
+
+  const handleDownloadAgreement = (lease: any) => {
+    generateLegalRentalAgreementPdf({
+      agreementNumber: `LSE-${lease.id.slice(0, 8).toUpperCase()}`,
+      executionDate: lease.startDate || new Date().toISOString(),
+      landlordName: lease.property?.organization?.name || lease.property?.owner?.name || "Property Landlord",
+      landlordPhone: lease.property?.owner?.mobile || "",
+      landlordEmail: lease.property?.owner?.email || "",
+      landlordAddress: lease.property?.address || "",
+      tenantName: lease.tenant?.name || "Tenant",
+      tenantPhone: lease.tenant?.mobile || "",
+      tenantEmail: lease.tenant?.email || "",
+      propertyName: lease.property?.title || "Residential Property",
+      propertyAddress: lease.property?.address || "",
+      city: lease.property?.city || "Jaipur",
+      unitNumber: lease.unit?.unitNumber || "101",
+      floor: lease.unit?.floor || 1,
+      furnishing: lease.unit?.furnishing || "Semi-Furnished",
+      startDate: lease.startDate || new Date().toISOString(),
+      endDate: lease.endDate || new Date(Date.now() + 330 * 24 * 60 * 60 * 1000).toISOString(),
+      monthlyRent: Number(lease.monthlyRent || 0),
+      securityDeposit: Number(lease.securityDeposit || lease.monthlyRent * 2 || 0),
+      rentDueDay: lease.rentRule?.dueDay || 5,
+      graceDays: lease.rentRule?.graceDays || 3,
+      electricityRate: lease.property?.organization?.electricityRate || 9,
+      waterRate: lease.property?.organization?.waterRate || 20,
+      escalationPercentage: 10,
+    });
+  };
+
+  const handleWhatsAppNotice = (lease: any) => {
+    const days = lease.daysRemaining;
+    const daysText = days > 0 ? `in ${days} days (on ${new Date(lease.endDate).toLocaleDateString("en-IN")})` : `already ended`;
+    const message = `Hello ${lease.tenant?.name || "Tenant"},\n\nThis is an advance notice that your 11-month rental agreement for Unit ${lease.unit?.unitNumber || ""} at ${lease.property?.title || "our property"} is expiring ${daysText}.\n\nAs per standard tenancy norms, the agreement can be renewed with the standard annual rent escalation (+5% to +10%).\n\nPlease let us know if you wish to renew your lease for the upcoming 11-month term.\n\nThank you,\n${lease.property?.organization?.name || "Property Management"}`;
+
+    const phone = (lease.tenant?.mobile || "").replace(/\D/g, "");
+    const url = `https://wa.me/${phone.startsWith("91") ? phone : `91${phone}`}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  };
 
   return (
     <div className="space-y-6">
@@ -112,9 +164,9 @@ export default function DashboardPage() {
 
       {!loading && !error && (
         <>
-          {/* Top 4 KPI Metrics (Clickable Navigation to Modules) */}
+          {/* Top 4 KPI Metrics */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Metric 1: Properties -> /properties */}
+            {/* Metric 1: Properties */}
             <Card
               hoverEffect
               onClick={() => navigate("/properties")}
@@ -142,7 +194,7 @@ export default function DashboardPage() {
               </div>
             </Card>
 
-            {/* Metric 2: Active Tenants -> /tenants */}
+            {/* Metric 2: Active Tenants */}
             <Card
               hoverEffect
               onClick={() => navigate("/tenants")}
@@ -167,7 +219,7 @@ export default function DashboardPage() {
               </div>
             </Card>
 
-            {/* Metric 3: Rent Collected -> /payments?status=PAID */}
+            {/* Metric 3: Rent Collected */}
             <Card
               hoverEffect
               onClick={() => navigate("/payments?status=PAID")}
@@ -192,7 +244,7 @@ export default function DashboardPage() {
               </div>
             </Card>
 
-            {/* Metric 4: Pending / Overdue -> /payments?status=PENDING */}
+            {/* Metric 4: Pending Dues */}
             <Card
               hoverEffect
               onClick={() => navigate("/payments?status=PENDING")}
@@ -220,7 +272,7 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Rate Progress Card (Clean Light Theme) */}
+          {/* Rate Progress Card */}
           <Card className="p-6 border-slate-200/90 bg-white shadow-xs">
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -255,6 +307,134 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
+          </Card>
+
+          {/* LEASE EXPIRY & RENT ESCALATION ALERTS (30 DAYS ADVANCE) */}
+          <Card className="p-6 border-slate-200 bg-white shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                  <h3 className="font-bold text-slate-900 text-base">Lease Expiry & Rent Escalation Alerts</h3>
+                  {expiringLeases.length > 0 && (
+                    <span className="rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-bold border border-amber-200">
+                      {expiringLeases.length} Expiring Soon (&le;30 Days)
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Tenants reaching the end of their 11-month lease term. Review to apply annual rent escalation (+5% to +10%) or issue renewal agreement.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => reload()} className="gap-1.5 text-xs text-slate-600">
+                  <RefreshCw className="h-3 w-3" />
+                  <span>Refresh</span>
+                </Button>
+              </div>
+            </div>
+
+            {expiringLeases.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2">
+                <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                <div className="font-semibold text-slate-700">All Tenancy Agreements Are Up To Date</div>
+                <p className="text-slate-400 max-w-md">
+                  No active leases are expiring within the next 30 days. Automated background cron monitors daily.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 divide-y divide-slate-100 overflow-x-auto">
+                <div className="min-w-[680px]">
+                  {expiringLeases.map((l) => {
+                    const days = l.daysRemaining;
+                    const isOverdue = days <= 0;
+                    return (
+                      <div key={l.id} className="py-3.5 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700 font-bold text-xs">
+                            {l.tenant?.name ? l.tenant.name.slice(0, 2).toUpperCase() : "TE"}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-slate-900">{l.tenant?.name || "Tenant"}</span>
+                              <span className="text-xs text-slate-400">•</span>
+                              <span className="text-xs text-slate-600 font-medium">{l.tenant?.mobile || "No Mobile"}</span>
+                            </div>
+                            <div className="text-xs text-slate-500 mt-0.5">
+                              {l.property?.title || "Property"} • Unit {l.unit?.unitNumber || "101"}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-slate-900">{formatINR(l.monthlyRent)}/mo</div>
+                          <div className="text-[11px] text-slate-500">
+                            Ends: {l.endDate ? new Date(l.endDate).toLocaleDateString("en-IN") : "N/A"}
+                          </div>
+                        </div>
+
+                        <div>
+                          {isOverdue ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                              Expired {Math.abs(days)} days ago
+                            </span>
+                          ) : (
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                days <= 10
+                                  ? "bg-rose-50 text-rose-700 border-rose-200"
+                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                              }`}
+                            >
+                              Expires in {days} days
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedLeaseForRenew(l);
+                              setRenewModalOpen(true);
+                            }}
+                            className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                          >
+                            <TrendingUp className="h-3.5 w-3.5" />
+                            <span>Renew (+Hike)</span>
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadAgreement(l)}
+                            className="gap-1.5 text-xs text-slate-700 border-slate-300 hover:bg-slate-50"
+                            title="Download 11-Month Legal Rental Agreement PDF"
+                          >
+                            <FileText className="h-3.5 w-3.5 text-blue-600" />
+                            <span>Agreement PDF</span>
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleWhatsAppNotice(l)}
+                            className="gap-1.5 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                            title="Send Expiry & Renewal Notice via WhatsApp"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                            <span>WhatsApp</span>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Real Dashboard Widgets: Recent Payments & Property Status */}
@@ -355,6 +535,17 @@ export default function DashboardPage() {
           </div>
         </>
       )}
+
+      {/* Renew Lease Modal */}
+      <RenewLeaseModal
+        open={renewModalOpen}
+        onClose={() => {
+          setRenewModalOpen(false);
+          setSelectedLeaseForRenew(null);
+        }}
+        lease={selectedLeaseForRenew}
+        onSuccess={() => reload()}
+      />
 
       {/* Financial & Operational Reports Modal (BRD Sec 25) */}
       <ReportsModal

@@ -292,6 +292,26 @@ export const rentalLifecycleService = {
     return (res.data?.data ?? res.data) as Lease[];
   },
 
+  async getExpiringLeases() {
+    const res = await api.get(ENDPOINTS.LEASES.EXPIRING_ALERTS);
+    return (res.data?.data ?? res.data) as (Lease & { daysRemaining: number; isExpired: boolean })[];
+  },
+
+  async getLeaseById(id: string) {
+    const res = await api.get(ENDPOINTS.LEASES.DETAIL(id));
+    return (res.data?.data ?? res.data) as Lease;
+  },
+
+  async renewLease(id: string, data: { escalationPercentage?: number; newMonthlyRent?: number; durationMonths?: number }) {
+    const res = await api.post(ENDPOINTS.LEASES.RENEW(id), data);
+    return (res.data?.data ?? res.data) as Lease;
+  },
+
+  async terminateLease(id: string, reason?: string) {
+    const res = await api.post(ENDPOINTS.LEASES.TERMINATE(id), { reason });
+    return (res.data?.data ?? res.data) as Lease;
+  },
+
   async payRentSchedule(scheduleId: string, amount: number) {
     const res = await api.post(ENDPOINTS.LEASES.PAY_SCHEDULE(scheduleId), { amount });
     return res.data?.data ?? res.data;

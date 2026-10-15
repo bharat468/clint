@@ -13,10 +13,12 @@ import {
   Search,
   Clock,
   ShieldAlert,
+  FileText,
 } from "lucide-react";
 import { useApi } from "@/hooks/useApi";
 import { tenantService } from "@/services/tenant.service";
 import { propertyService } from "@/services/property.service";
+import { generateLegalRentalAgreementPdf } from "@/lib/legalRentalAgreementPdf";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
@@ -157,6 +159,34 @@ export default function TenantsPage() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleDownloadAgreement = (t: Tenant) => {
+    const prop = properties.find((p) => p.id === t.propertyId);
+    generateLegalRentalAgreementPdf({
+      agreementNumber: `LSE-${t.id.slice(-6).toUpperCase()}`,
+      executionDate: t.leaseStart || new Date().toISOString(),
+      landlordName: (prop as any)?.organization?.name || "Property Management",
+      landlordAddress: prop?.address || "",
+      tenantName: t.name,
+      tenantPhone: t.phone,
+      tenantEmail: t.email,
+      propertyName: prop?.title || "Property",
+      propertyAddress: prop?.address || "",
+      city: prop?.city || "Jaipur",
+      unitNumber: "101",
+      floor: 1,
+      furnishing: "Semi-Furnished",
+      startDate: t.leaseStart || new Date().toISOString(),
+      endDate: t.leaseEnd || new Date(Date.now() + 330 * 24 * 60 * 60 * 1000).toISOString(),
+      monthlyRent: Number(prop?.rent || 15000),
+      securityDeposit: Number((prop?.rent || 15000) * 2),
+      rentDueDay: 5,
+      graceDays: 3,
+      electricityRate: 9,
+      waterRate: 20,
+      escalationPercentage: 10,
+    });
   };
 
   const filteredTenants = useMemo(() => {
@@ -426,6 +456,18 @@ export default function TenantsPage() {
                     <Building2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
                     <span>{propertyName(t.propertyId)}</span>
                   </div>
+                </div>
+
+                <div className="mt-3 pt-2.5 border-t border-slate-100">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownloadAgreement(t)}
+                    className="w-full gap-1.5 text-xs text-slate-700 font-semibold border-slate-200 hover:bg-slate-50"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-blue-600" />
+                    <span>Download Agreement PDF</span>
+                  </Button>
                 </div>
               </Card>
             ))}
