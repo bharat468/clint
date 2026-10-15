@@ -21,7 +21,21 @@ function withSuspense(
 }
 
 // ============================================================
-// 1. LAZY LOADED AUTHENTICATION & ONBOARDING
+// 1. LAZY LOADED PUBLIC MARKETING SITE
+// ============================================================
+const PublicLayout = lazy(() => import("@/features/public/layouts/PublicLayout"));
+const LandingPage = lazy(() => import("@/features/public/pages/LandingPage"));
+const FeaturesPage = lazy(() => import("@/features/public/pages/FeaturesPage"));
+const PricingPage = lazy(() => import("@/features/public/pages/PricingPage"));
+const AboutPage = lazy(() => import("@/features/public/pages/AboutPage"));
+const ContactPage = lazy(() => import("@/features/public/pages/ContactPage"));
+const FaqPage = lazy(() => import("@/features/public/pages/FaqPage"));
+const RentalsMarketplacePage = lazy(() => import("@/features/public/pages/RentalsMarketplacePage"));
+const TermsPage = lazy(() => import("@/features/public/pages/TermsPage"));
+const PrivacyPolicyPage = lazy(() => import("@/features/public/pages/PrivacyPolicyPage"));
+
+// ============================================================
+// 2. LAZY LOADED AUTHENTICATION & ONBOARDING
 // ============================================================
 const LoginPage = lazy(() => import("@/features/auth/LoginPage"));
 const RegisterPage = lazy(() => import("@/features/auth/RegisterPage"));
@@ -112,9 +126,23 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 
 export const router = createBrowserRouter([
   // ============================================================
-  // 1. ROOT DISPATCHER (Direct SaaS entry - No public marketing)
+  // 1. PUBLIC MARKETING WEBSITE (Root Domain Entry)
   // ============================================================
-  { path: "/", element: <IndexRedirect />, errorElement: <RouteErrorBoundary /> },
+  {
+    element: withSuspense(PublicLayout),
+    errorElement: <RouteErrorBoundary />,
+    children: [
+      { path: "/", element: withSuspense(LandingPage) },
+      { path: "/features", element: withSuspense(FeaturesPage) },
+      { path: "/pricing", element: withSuspense(PricingPage) },
+      { path: "/about", element: withSuspense(AboutPage) },
+      { path: "/contact", element: withSuspense(ContactPage) },
+      { path: "/faq", element: withSuspense(FaqPage) },
+      { path: "/rentals", element: withSuspense(RentalsMarketplacePage) },
+      { path: "/terms", element: withSuspense(TermsPage) },
+      { path: "/privacy", element: withSuspense(PrivacyPolicyPage) },
+    ],
+  },
   { path: "/admin", element: <Navigate to="/superadmin" replace />, errorElement: <RouteErrorBoundary /> },
 
   // ============================================================

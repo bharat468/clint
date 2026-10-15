@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -14,6 +15,13 @@ import {
   Star,
   Check,
   Sliders,
+  Search,
+  Bell,
+  KeyRound,
+  CheckCircle2,
+  LayoutDashboard,
+  FileCheck,
+  Maximize2,
 } from "lucide-react";
 import type { Plan } from "@/types";
 import { api } from "@/services/axios";
@@ -87,10 +95,93 @@ const DEFAULT_PLANS: Plan[] = [
   },
 ];
 
+const showcaseTabs = [
+  {
+    id: "portfolio",
+    title: "Portfolio Overview & Lease Alerts",
+    shortLabel: "Portfolio Dashboard",
+    icon: LayoutDashboard,
+    badge: "Landlord Operations",
+    image: "/screenshots/dashboard-overview.png",
+    url: "https://app.rentmate.in/dashboard",
+    description:
+      "Central command center with real-time occupancy, revenue collection efficiency, 30-day lease expiry & rent escalation warnings, and recent transaction audit logs.",
+    highlights: [
+      "100% real-time occupancy gauge and collection efficiency progress bars",
+      "Automated 30-day advance lease expiry warnings with +5% to +10% rent hike",
+      "1-Click 11-month legal rental agreement PDF generator",
+      "Instant WhatsApp reminder integration for expiring tenants",
+    ],
+  },
+  {
+    id: "search",
+    title: "Global Command Search Palette",
+    shortLabel: "Cmd+K Quick Search",
+    icon: Search,
+    badge: "Instant Keyboard Access",
+    image: "/screenshots/smart-search-palette.png",
+    url: "https://app.rentmate.in/search?cmd=palette",
+    description:
+      "Global keyboard command palette (Cmd+K / Ctrl+K) allowing instant fuzzy search across all buildings, occupied flats, active tenants, and system navigation.",
+    highlights: [
+      "Open with Cmd+K / Ctrl+K from any screen in the application",
+      "Fast instant fuzzy search by property name, unit number, or tenant",
+      "Quick status badges (Occupied, Vacant, Pending Dues)",
+      "Zero-latency keyboard arrow navigation with Escape to dismiss",
+    ],
+  },
+  {
+    id: "notifications",
+    title: "Automated Expiry & Dues Drawer",
+    shortLabel: "Notification Center",
+    icon: Bell,
+    badge: "Real-Time Automation",
+    image: "/screenshots/notification-drawer.png",
+    url: "https://app.rentmate.in/notifications",
+    description:
+      "Automated background engine evaluates tenant lease deadlines, generates overdue rent alerts, and tracks rental applications in one central notification hub.",
+    highlights: [
+      "Automatic daily background evaluation for overdue rent invoices",
+      "Clear priority tags: Overdue (Red), Expiring (Amber), New Apps (Green)",
+      "1-Click 'Mark all read' and direct navigation to affected records",
+      "Multi-tenant scoped: Landlords only see alerts for their properties",
+    ],
+  },
+  {
+    id: "security",
+    title: "Zero-Trust Mobile OTP Authentication",
+    shortLabel: "Zero-Trust Login",
+    icon: KeyRound,
+    badge: "Military-Grade Security",
+    image: "/screenshots/otp-login.png",
+    url: "https://app.rentmate.in/login",
+    description:
+      "Passwordless zero-trust authentication via cryptographic 6-digit OTP sent to verified mobile numbers. Protected by IP rate limiting and strict role segregation.",
+    highlights: [
+      "No passwords to remember, leak, or brute-force",
+      "Strict pre-registered mobile number gating (Zero-Trust access control)",
+      "Express rate-limiting against automated brute-force attacks",
+      "Automatic workspace isolation between SuperAdmins and Landlords",
+    ],
+  },
+];
+
 export default function LandingPage() {
+  const token = useAppSelector((s) => s.auth.token);
+  const user = useAppSelector((s) => s.auth.user);
+  const activePortal = useAppSelector((s) => s.auth.activePortal);
+
+  const [activeTab, setActiveTab] = useState<number>(0);
   const [plans, setPlans] = useState<Plan[]>(DEFAULT_PLANS);
   const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+
+  const dashboardTarget =
+    activePortal === "SUPERADMIN" || user?.isSuperAdmin
+      ? "/superadmin"
+      : user?.role?.toUpperCase() === "TENANT"
+      ? "/tenant/my-rentals"
+      : "/dashboard";
 
   // Fetch live plans from server with graceful fallback
   useEffect(() => {
@@ -165,87 +256,59 @@ export default function LandingPage() {
 
           {/* Primary & Secondary Action CTAs */}
           <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-            <Link to="/login" className="w-full sm:w-auto">
-              <Button className="w-full sm:w-auto h-12 px-7 text-sm font-bold gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
-                <span>Start Free Trial</span>
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <a href="#features" className="w-full sm:w-auto">
+            {token ? (
+              <Link to={dashboardTarget} className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto h-12 px-7 text-sm font-bold gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span>Go to Workspace</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/login" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto h-12 px-7 text-sm font-bold gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200">
+                  <span>Start Free Trial</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+            <a href="#showcase" className="w-full sm:w-auto">
               <Button
                 variant="outline"
                 className="w-full sm:w-auto h-12 px-7 text-sm font-semibold text-slate-700 hover:text-slate-900 border-slate-300 bg-white/80 hover:bg-white rounded-xl shadow-2xs"
               >
-                Explore Features
+                View Live Screenshots
               </Button>
             </a>
           </div>
 
-          {/* Live Product Hero Showcase Card */}
+          {/* Real Dashboard Screenshot Hero */}
           <div className="mt-14 sm:mt-16 relative max-w-5xl mx-auto">
-            <div className="relative rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white p-2 sm:p-4 shadow-xl sm:shadow-2xl">
-              {/* Card Window Bar */}
-              <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/70 rounded-t-xl mb-3">
+            <div className="relative rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white p-1.5 sm:p-3 shadow-xl sm:shadow-2xl overflow-hidden">
+              {/* macOS-style Window Bar */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50/70 rounded-t-xl mb-2">
                 <div className="flex items-center gap-1.5">
                   <div className="h-3 w-3 rounded-full bg-rose-400" />
                   <div className="h-3 w-3 rounded-full bg-amber-400" />
                   <div className="h-3 w-3 rounded-full bg-emerald-400" />
                 </div>
                 <div className="text-[11px] font-mono text-slate-500 font-medium">
-                  app.rentmate.local — Landlord Dashboard
+                  app.rentmate.in — Landlord Dashboard
                 </div>
                 <div className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                   Live Preview
                 </div>
               </div>
-
-              {/* Simulated Live Dashboard Metrics */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 p-2 sm:p-4 text-left">
-                <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50/70 to-indigo-50/40 border border-blue-100">
-                  <div className="text-xs font-semibold text-slate-600 flex items-center justify-between">
-                    <span>Total Rent Collected</span>
-                    <TrendingUp className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-slate-900 mt-2">₹18,40,000</div>
-                  <div className="text-[11px] font-medium text-emerald-600 mt-1">
-                    ↑ 12.4% vs last month
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-100">
-                  <div className="text-xs font-semibold text-slate-600 flex items-center justify-between">
-                    <span>Occupancy Rate</span>
-                    <Building2 className="h-4 w-4 text-emerald-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-slate-900 mt-2">94.6%</div>
-                  <div className="text-[11px] font-medium text-slate-500 mt-1">
-                    138 Occupied / 146 Total
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-gradient-to-br from-purple-50/70 to-indigo-50/40 border border-purple-100">
-                  <div className="text-xs font-semibold text-slate-600 flex items-center justify-between">
-                    <span>Active Tenants</span>
-                    <Users className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-slate-900 mt-2">138 Profiles</div>
-                  <div className="text-[11px] font-medium text-emerald-600 mt-1">
-                    100% Leases Verified
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50/70 to-orange-50/40 border border-amber-100">
-                  <div className="text-xs font-semibold text-slate-600 flex items-center justify-between">
-                    <span>Pending Dues</span>
-                    <CreditCard className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-slate-900 mt-2">₹32,500</div>
-                  <div className="text-[11px] font-medium text-amber-700 mt-1">
-                    2 Invoices Awaiting Pay
-                  </div>
-                </div>
-              </div>
+              {/* Actual Screenshot */}
+              <img
+                src="/screenshots/dashboard-overview.png"
+                alt="RentMate Landlord Dashboard — Portfolio Overview with Lease Alerts, Rent Collection, and Occupancy Tracking"
+                className="w-full h-auto rounded-xl shadow-inner"
+                loading="eager"
+              />
             </div>
+            {/* Subtle glow effect behind the card */}
+            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-4/5 h-20 bg-gradient-to-t from-blue-100/50 to-transparent blur-2xl pointer-events-none -z-10" />
           </div>
         </div>
       </section>
@@ -282,6 +345,123 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 2.5 INTERACTIVE PLATFORM SHOWCASE (REAL SCREENSHOTS)        */}
+      {/* ============================================================ */}
+      <section id="showcase" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center max-w-3xl mx-auto mb-10">
+          <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+            Interactive Product Tour
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
+            Real Software, Not Conceptual Mockups
+          </h2>
+          <p className="mt-3 text-base text-slate-600 leading-relaxed">
+            Explore live production captures of the RentMate web application. See exactly how landlord operations, command search, real-time alerts, and zero-trust auth function.
+          </p>
+        </div>
+
+        {/* Tab Selector Buttons */}
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-8">
+          {showcaseTabs.map((tab, idx) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === idx;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(idx)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border ${
+                  isActive
+                    ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-blue-600"}`} />
+                <span>{tab.shortLabel}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Selected Showcase Feature Card */}
+        {(() => {
+          const current = showcaseTabs[activeTab];
+          return (
+            <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50/50 p-6 sm:p-10 shadow-lg">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+                {/* Feature details (Left column) */}
+                <div className="lg:col-span-5 space-y-6">
+                  <div>
+                    <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+                      {current.badge}
+                    </span>
+                    <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-3">
+                      {current.title}
+                    </h3>
+                    <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed">
+                      {current.description}
+                    </p>
+                  </div>
+
+                  {/* Highlights Bullet List */}
+                  <div className="space-y-3">
+                    {current.highlights.map((item, i) => (
+                      <div key={i} className="flex items-start gap-2.5">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm font-medium text-slate-700 leading-relaxed">
+                          {item}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* CTA button to test in live demo */}
+                  <div className="pt-2">
+                    <Link to="/login">
+                      <Button className="h-11 px-6 text-xs sm:text-sm font-bold gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm">
+                        <span>Launch 1-Click Interactive Demo</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Browser Frame with Live Screenshot (Right column) */}
+                <div className="lg:col-span-7">
+                  <div className="rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden group transition-all duration-300 hover:shadow-2xl">
+                    {/* Simulated browser topbar */}
+                    <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-100/90 border-b border-slate-200 text-xs font-mono text-slate-600">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-3 w-3 rounded-full bg-rose-400" />
+                        <div className="h-3 w-3 rounded-full bg-amber-400" />
+                        <div className="h-3 w-3 rounded-full bg-emerald-400" />
+                      </div>
+                      <div className="flex-1 max-w-sm mx-4 bg-white px-3 py-1 rounded-md text-[11px] text-slate-500 truncate border border-slate-200/80 text-center font-sans">
+                        {current.url}
+                      </div>
+                      <div className="text-[10px] text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded-full font-sans">
+                        100% Real
+                      </div>
+                    </div>
+
+                    {/* Screenshot image container */}
+                    <div className="relative bg-slate-900 overflow-hidden">
+                      <img
+                        key={current.image}
+                        src={current.image}
+                        alt={current.title}
+                        className="w-full h-auto object-cover object-top transition-transform duration-500 group-hover:scale-[1.01]"
+                        loading="lazy"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </section>
 
       {/* ============================================================ */}
