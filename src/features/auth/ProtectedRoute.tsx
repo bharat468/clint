@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { setCredentials } from "@/features/auth/authSlice";
+import { logout, setCredentials } from "@/features/auth/authSlice";
 import { authService } from "@/services/auth.service";
 import { canAccess } from "@/lib/permissions";
 
@@ -23,7 +23,8 @@ export default function ProtectedRoute() {
           }
         })
         .catch(() => {
-          // Handled by axios 401 interceptor
+          // If profile check fails (e.g. user was deleted in database), immediately evict
+          dispatch(logout());
         });
     }
   }, [dispatch, token]);
@@ -35,9 +36,14 @@ export default function ProtectedRoute() {
   const isSuperAdminRoute = location.pathname.startsWith("/superadmin");
   const hasAdminPrivileges = Boolean(user.isSuperAdmin || user.adminRole);
 
-  // If a non-admin tries to access /superadmin, redirect to landlord home
+  // 1. Strict Isolation: Landlords and Tenants cannot access the SuperAdmin console
   if (isSuperAdminRoute && !hasAdminPrivileges) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={user.role?.toUpperCase() === "TENANT" ? "/tenant/my-rentals" : "/dashboard"} replace />;
+  }
+
+  // 2. Strict Isolation: SuperAdministrators belong exclusively to the SuperAdmin console
+  if (!isSuperAdminRoute && hasAdminPrivileges) {
+    return <Navigate to="/superadmin" replace />;
   }
 
   // Strict RBAC Route Guards for Landlord Workspace

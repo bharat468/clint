@@ -214,13 +214,21 @@ export default function SuperAdminUsersPage() {
       setEditingUser(null);
       reloadUsers();
     } catch (err: any) {
-      showFeedback(err?.message || "Failed to update user", "error");
+      showFeedback(err?.response?.data?.message || err?.message || "Failed to update user", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleRequestDelete = (u: AdminUser) => {
+    if (u.id === user?.id) {
+      showFeedback("Security restriction: You cannot delete your own active administrator account.", "error");
+      return;
+    }
+    if (u.mobile === "9876543210" || (Boolean(u.isSuperAdmin) && u.adminRole === "SUPER_ADMIN")) {
+      showFeedback("Root SuperAdmin Master account is immutable and protected from deletion.", "error");
+      return;
+    }
     setDeletingUser(u);
   };
 
@@ -233,20 +241,28 @@ export default function SuperAdminUsersPage() {
       setDeletingUser(null);
       reloadUsers();
     } catch (err: any) {
-      showFeedback(err?.message || "Failed to delete user", "error");
+      showFeedback(err?.response?.data?.message || err?.message || "Failed to delete user", "error");
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handleToggleStatus = async (u: AdminUser) => {
+    if (u.id === user?.id) {
+      showFeedback("Security restriction: You cannot suspend your own active administrator account.", "error");
+      return;
+    }
+    if (u.mobile === "9876543210") {
+      showFeedback("Root SuperAdmin Master account status is protected and cannot be changed.", "error");
+      return;
+    }
     const nextStatus = u.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
     try {
       await adminService.updateStatus(u.id, nextStatus as any);
       showFeedback(`User ${u.name || u.mobile} status updated to ${nextStatus}`);
       reloadUsers();
     } catch (err: any) {
-      showFeedback(err?.message || "Failed to update status", "error");
+      showFeedback(err?.response?.data?.message || err?.message || "Failed to update status", "error");
     }
   };
 
@@ -276,7 +292,7 @@ export default function SuperAdminUsersPage() {
       });
       reloadUsers();
     } catch (err: any) {
-      setFormError(err?.message || "Failed to register user");
+      setFormError(err?.response?.data?.message || err?.message || "Failed to register user");
     } finally {
       setIsSubmitting(false);
     }

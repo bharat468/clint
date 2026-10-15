@@ -43,6 +43,21 @@ api.interceptors.response.use(
   async (err) => {
     const originalRequest = err.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+    const errorMsg = String(err.response?.data?.message || "").toLowerCase();
+
+    // If account does not exist, was deleted, or is suspended, immediately evict session
+    if (
+      (err.response?.status === 401 || err.response?.status === 403) &&
+      (errorMsg.includes("does not exist") ||
+        errorMsg.includes("not found") ||
+        errorMsg.includes("inactive") ||
+        errorMsg.includes("suspended") ||
+        errorMsg.includes("deleted"))
+    ) {
+      store.dispatch(logout());
+      return Promise.reject(err);
+    }
+
     if (err.response?.status === 401 && originalRequest && !originalRequest._retry) {
       const url = originalRequest.url || "";
 
