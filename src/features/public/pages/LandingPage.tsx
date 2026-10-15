@@ -20,8 +20,6 @@ import {
   KeyRound,
   CheckCircle2,
   LayoutDashboard,
-  FileCheck,
-  Maximize2,
 } from "lucide-react";
 import type { Plan } from "@/types";
 import { api } from "@/services/axios";

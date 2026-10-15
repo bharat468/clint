@@ -78,30 +78,6 @@ const SuperAdminSettingsPage = lazy(() => import("@/features/superadmin/pages/Su
 // ============================================================
 const NotFoundPage = lazy(() => import("@/features/errors/NotFoundPage"));
 
-/**
- * Direct entry dispatcher:
- * - If unauthenticated -> Redirect to /login
- * - If SuperAdmin -> Redirect to /superadmin (Admin Dashboard)
- * - If Tenant -> Redirect to /tenant/my-rentals (Tenant Portal)
- * - If Landlord/Staff -> Redirect to /dashboard (Landlord Dashboard)
- */
-function IndexRedirect() {
-  const user = useAppSelector((s) => s.auth.user);
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (Boolean(user.isSuperAdmin) || Boolean(user.adminRole)) {
-    return <Navigate to="/superadmin" replace />;
-  }
-
-  if (user.role?.toUpperCase() === "TENANT") {
-    return <Navigate to="/tenant/my-rentals" replace />;
-  }
-
-  return <Navigate to="/dashboard" replace />;
-}
 
 /**
  * PublicOnlyRoute:
