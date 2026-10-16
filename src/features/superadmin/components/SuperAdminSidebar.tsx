@@ -6,15 +6,20 @@ import {
   ShieldCheck,
   Users,
   Sliders,
+  Mail,
   X,
 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSidebar, closeSidebar } from "@/features/ui/uiSlice";
 import { canAccessPlatform } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { api } from "@/services/axios";
+import { ENDPOINTS } from "@/services/endpoints";
 
 const superAdminNavLinks = [
   { to: "/superadmin", label: "Overview", icon: LayoutDashboard, end: true },
+  { to: "/superadmin/messages", label: "Messages & Inquiries", icon: Mail },
   { to: "/superadmin/organizations", label: "Landlords & Clients", icon: Building2 },
   { to: "/superadmin/plans", label: "Plans & Quotas", icon: Layers },
   { to: "/superadmin/roles", label: "Roles & Permissions", icon: ShieldCheck },
@@ -26,10 +31,33 @@ export default function SuperAdminSidebar() {
   const dispatch = useAppDispatch();
   const open = useAppSelector((s) => s.ui.sidebarOpen);
   const user = useAppSelector((s) => s.auth.user);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchUnread = async () => {
+      try {
+        const res = await api.get(ENDPOINTS.MESSAGES.METRICS);
+        if (mounted && res.data?.data?.unread !== undefined) {
+          setUnreadCount(Number(res.data.data.unread));
+        }
+      } catch (err) {
+        // silent
+      }
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000); // 30s poll
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Dynamic RBAC Filter for SuperAdmin: Only show modules authorized for this admin
   const filteredSuperAdminNavLinks = superAdminNavLinks.filter((link) => {
     if (link.to === "/superadmin") return canAccessPlatform(user, "PLATFORM_VIEW_VITALS");
+    if (link.to === "/superadmin/messages") return true;
     if (link.to === "/superadmin/organizations") return canAccessPlatform(user, "PLATFORM_MANAGE_ORGANIZATIONS");
     if (link.to === "/superadmin/plans") return canAccessPlatform(user, "PLATFORM_MANAGE_PLANS");
     if (link.to === "/superadmin/roles") return canAccessPlatform(user, "PLATFORM_MANAGE_ADMIN_ROLES");
@@ -103,7 +131,19 @@ export default function SuperAdminSidebar() {
                         isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"
                       )}
                     />
-                    <span>{label}</span>
+                    <span className="flex-1 truncate">{label}</span>
+                    {to === "/superadmin/messages" && unreadCount > 0 && (
+                      <span
+                        className={cn(
+                          "ml-auto px-2 py-0.5 text-[10px] font-extrabold rounded-full transition-colors",
+                          isActive
+                            ? "bg-white text-blue-700"
+                            : "bg-amber-500 text-white shadow-2xs"
+                        )}
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
                   </>
                 )}
               </NavLink>

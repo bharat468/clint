@@ -72,6 +72,7 @@ const SuperAdminPlansPage = lazy(() => import("@/features/superadmin/pages/Super
 const SuperAdminRolesPage = lazy(() => import("@/features/superadmin/pages/SuperAdminRolesPage"));
 const SuperAdminUsersPage = lazy(() => import("@/features/superadmin/pages/SuperAdminUsersPage"));
 const SuperAdminSettingsPage = lazy(() => import("@/features/superadmin/pages/SuperAdminSettingsPage"));
+const SuperAdminMessagesPage = lazy(() => import("@/features/superadmin/pages/SuperAdminMessagesPage"));
 
 // ============================================================
 // 5. LAZY LOADED ERROR / 404
@@ -172,6 +173,7 @@ export const router = createBrowserRouter([
         element: <SuperAdminLayout />,
         children: [
           { path: "", element: <SuperAdminOverviewPage /> },
+          { path: "messages", element: <SuperAdminMessagesPage /> },
           { path: "organizations", element: <SuperAdminOrganizationsPage /> },
           { path: "properties", element: <SuperAdminPropertiesPage /> },
           { path: "leases", element: <SuperAdminLeasesPage /> },
