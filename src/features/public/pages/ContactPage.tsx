@@ -2,11 +2,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
-import { Mail, Phone, MapPin, Send, CheckCircle2 } from "lucide-react";
+import { Mail, Phone, MapPin, Send, CheckCircle2, AlertCircle } from "lucide-react";
+import { api } from "@/services/axios";
+import { ENDPOINTS } from "@/services/endpoints";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ticketId, setTicketId] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [form, setForm] = useState({
     name: "",
     mobile: "",
@@ -15,14 +19,28 @@ export default function ContactPage() {
     message: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate inquiry submission
-    setTimeout(() => {
-      setLoading(false);
+    setErrorMessage("");
+    try {
+      const res = await api.post(ENDPOINTS.MESSAGES.SUBMIT, {
+        name: form.name,
+        mobile: form.mobile,
+        email: form.email,
+        subject: `Portfolio Inquiry (${form.units} Units)`,
+        message: form.message,
+        category: "PORTFOLIO_INQUIRY",
+      });
+      setTicketId(res.data?.data?.id || `TICK-${Date.now().toString().slice(-6)}`);
       setSubmitted(true);
-    }, 600);
+    } catch (err: any) {
+      setErrorMessage(
+        err.response?.data?.message || "Failed to deliver inquiry to SuperAdmin. Please check your network and try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,16 +111,20 @@ export default function ContactPage() {
                 <div className="h-14 w-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
                   <CheckCircle2 className="h-8 w-8" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900">Inquiry Received Successfully!</h3>
+                <h3 className="text-xl font-bold text-slate-900">Inquiry Delivered to SuperAdmin!</h3>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-mono font-semibold">
+                  Reference Ticket: {ticketId}
+                </div>
                 <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
-                  Thank you, <strong>{form.name}</strong>. Our rental portfolio specialist will call you at{" "}
-                  <strong>+91 {form.mobile}</strong> within 2 hours to help you configure your account.
+                  Thank you, <strong>{form.name}</strong>. Your message is now registered in our SuperAdmin desk. Our representative will contact you on{" "}
+                  <strong>+91 {form.mobile}</strong> shortly.
                 </p>
                 <div className="pt-3">
                   <Button
                     variant="outline"
                     onClick={() => {
                       setSubmitted(false);
+                      setTicketId("");
                       setForm({ name: "", mobile: "", email: "", units: "1-10", message: "" });
                     }}
                     className="text-xs font-semibold rounded-xl"
@@ -114,6 +136,13 @@ export default function ContactPage() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <h3 className="text-lg font-bold text-slate-900 mb-2">Send us a Message</h3>
+
+                {errorMessage && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
