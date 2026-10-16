@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
-import { LogOut, Menu, Search } from "lucide-react";
+import { LogOut, Menu, Search, MessageSquarePlus } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useLogout } from "@/features/auth/useLogout";
 import { toggleSidebar } from "@/features/ui/uiSlice";
 import { Button } from "@/components/ui/button";
 import GlobalSearchModal from "./GlobalSearchModal";
 import { NotificationDropdown } from "./NotificationDropdown";
+import SupportHelpModal from "./SupportHelpModal";
 
 export default function Navbar() {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
   const handleLogout = useLogout();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   // Keyboard shortcut listener: Cmd+K / Ctrl+K
   useEffect(() => {
@@ -83,39 +85,54 @@ export default function Navbar() {
           >
             <Search className="h-4.5 w-4.5" />
           </button>
-        {/* Notifications Dropdown */}
-        <NotificationDropdown />
+          {/* SuperAdmin Support Desk Trigger */}
+          <button
+            type="button"
+            onClick={() => setSupportOpen(true)}
+            title="Message SuperAdmin / Help & Support"
+            aria-label="Support desk"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors shadow-2xs"
+          >
+            <MessageSquarePlus className="h-4 w-4 text-blue-600" />
+            <span className="hidden md:inline">Support</span>
+          </button>
 
-        <div className="h-6 w-px bg-slate-200" />
+          {/* Notifications Dropdown */}
+          <NotificationDropdown />
 
-        {/* User Profile Chip */}
-        <div className="flex items-center gap-3">
-          <div className="hidden text-right md:block">
-            <p className="text-xs font-bold text-slate-800 leading-tight">{user?.name || "User"}</p>
-            <p className="text-[11px] font-medium text-slate-400 leading-tight">
-              {user?.role || "Landlord"}
-            </p>
+          <div className="h-6 w-px bg-slate-200" />
+
+          {/* User Profile Chip */}
+          <div className="flex items-center gap-3">
+            <div className="hidden text-right md:block">
+              <p className="text-xs font-bold text-slate-800 leading-tight">{user?.name || "User"}</p>
+              <p className="text-[11px] font-medium text-slate-400 leading-tight">
+                {user?.role || "Landlord"}
+              </p>
+            </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-600 text-xs font-bold text-white shadow-xs">
+              {getInitials(user?.name)}
+            </div>
           </div>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-600 text-xs font-bold text-white shadow-xs">
-            {getInitials(user?.name)}
-          </div>
+
+          {/* Logout Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="gap-1.5 text-xs font-semibold text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Logout</span>
+          </Button>
         </div>
+      </header>
 
-        {/* Logout Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleLogout}
-          className="gap-1.5 text-xs font-semibold text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Logout</span>
-        </Button>
-      </div>
-    </header>
+      {/* Universal Command Palette / Global Search Modal */}
+      <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
 
-    {/* Universal Command Palette / Global Search Modal */}
-    <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
-  </>
+      {/* Direct SuperAdmin Support Desk Modal */}
+      <SupportHelpModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+    </>
   );
 }
