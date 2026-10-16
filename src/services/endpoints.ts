@@ -155,6 +155,18 @@ export const ENDPOINTS = {
     DEFAULTERS: "/reports/defaulters",
     PROPERTY_PNL: "/reports/property-pnl",
   },
+
+  // Support Messages & Inquiries Hub
+  MESSAGES: {
+    SUBMIT: "/messages",
+    MY_LIST: "/messages/my",
+    LIST: "/messages",
+    METRICS: "/messages/metrics",
+    DETAIL: (id: string) => `/messages/${id}`,
+    REPLY: (id: string) => `/messages/${id}/reply`,
+    STATUS: (id: string) => `/messages/${id}/status`,
+    DELETE: (id: string) => `/messages/${id}`,
+  },
 } as const;
 
 export default ENDPOINTS;
