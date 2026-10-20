@@ -197,14 +197,33 @@ export default function SuperAdminSettingsPage() {
   // Submit Create
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!createForm.key.trim()) {
+    const sanitizedKey = createForm.key.trim().toLowerCase();
+    if (!sanitizedKey) {
       showToast("Variable Key name is required", "error");
       return;
     }
+    if (!/^[a-z0-9_]+$/.test(sanitizedKey)) {
+      showToast("Key must contain only lowercase letters, numbers, and underscores (e.g. max_late_fee)", "error");
+      return;
+    }
+    if (createForm.dataType === "number" && isNaN(Number(createForm.value))) {
+      showToast("Setting value must be a valid number for dataType 'number'", "error");
+      return;
+    }
+    if (createForm.dataType === "boolean" && !["true", "false", "0", "1"].includes(createForm.value.toLowerCase().trim())) {
+      showToast("Setting value must be 'true' or 'false' for dataType 'boolean'", "error");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await adminService.createSetting(createForm);
-      showToast(`Setting "${createForm.key}" created successfully!`, "success");
+      await adminService.createSetting({
+        ...createForm,
+        key: sanitizedKey,
+        description: createForm.description?.trim() || undefined,
+        unit: createForm.unit?.trim() || undefined,
+      });
+      showToast(`Setting "${sanitizedKey}" created successfully!`, "success");
       setIsCreateOpen(false);
       await reload();
     } catch (err: any) {
@@ -218,9 +237,23 @@ export default function SuperAdminSettingsPage() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSetting) return;
+
+    if (editForm.dataType === "number" && isNaN(Number(editForm.value))) {
+      showToast("Setting value must be a valid number for dataType 'number'", "error");
+      return;
+    }
+    if (editForm.dataType === "boolean" && !["true", "false", "0", "1"].includes(editForm.value.toLowerCase().trim())) {
+      showToast("Setting value must be 'true' or 'false' for dataType 'boolean'", "error");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await adminService.updateSetting(editingSetting.key, editForm);
+      await adminService.updateSetting(editingSetting.key, {
+        ...editForm,
+        description: editForm.description?.trim() || undefined,
+        unit: editForm.unit?.trim() || undefined,
+      });
       showToast(`Setting "${editingSetting.key}" updated successfully!`, "success");
       setEditingSetting(null);
       await reload();

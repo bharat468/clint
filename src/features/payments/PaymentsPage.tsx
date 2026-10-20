@@ -411,6 +411,22 @@ export default function PaymentsPage() {
 
   const onSubmit = async (v: Form) => {
     setFormError(null);
+
+    if (baseRent <= 0) {
+      setFormError("Base monthly rent must be a valid amount greater than ₹0");
+      return;
+    }
+
+    if (includeUtilities && elecCurrent && parsedElec < elecPrev) {
+      setFormError(`Current electricity reading (${parsedElec}) cannot be less than previous reading (${elecPrev})`);
+      return;
+    }
+
+    if (includeUtilities && waterCurrent && parsedWater < waterPrev) {
+      setFormError(`Current water reading (${parsedWater}) cannot be less than previous reading (${waterPrev})`);
+      return;
+    }
+
     const tenant = tenants.find((t) => t.id === v.tenantId);
     const propId = tenant?.propertyId ?? (editingPayment ? editingPayment.propertyId : "");
     const property = properties.find((pr) => pr.id === propId);

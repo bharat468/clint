@@ -57,8 +57,12 @@ export default function SupportHelpModal({ open, onClose }: SupportHelpModalProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.message.trim()) {
-      showFeedback("Please enter your message", "error");
+    if (!form.subject.trim() || form.subject.trim().length < 3) {
+      showFeedback("Subject must be at least 3 characters", "error");
+      return;
+    }
+    if (!form.message.trim() || form.message.trim().length < 5) {
+      showFeedback("Message must be at least 5 characters", "error");
       return;
     }
 
@@ -68,10 +72,10 @@ export default function SupportHelpModal({ open, onClose }: SupportHelpModalProp
         name: user?.name || "Workspace User",
         mobile: user?.mobile || "",
         email: user?.email || null,
-        subject: form.subject || "Support Request",
+        subject: form.subject.trim(),
         category: form.category,
         priority: form.priority,
-        message: form.message,
+        message: form.message.trim(),
       });
 
       showFeedback("Your message has been delivered to SuperAdmin!");

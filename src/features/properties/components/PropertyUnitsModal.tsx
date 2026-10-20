@@ -23,6 +23,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAppSelector } from "@/app/hooks";
 import { canAccess } from "@/lib/permissions";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
+import { cn } from "@/lib/utils";
 import type { Property } from "@/types";
 
 const UNIT_TYPE_OPTIONS: SelectOptionItem[] = [
@@ -111,6 +112,12 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
     return units.slice(start, start + pageSize);
   }, [units, page, pageSize]);
 
+  const [singleUnitErrors, setSingleUnitErrors] = useState<{
+    unitNumber?: string;
+    rentAmount?: string;
+    depositAmount?: string;
+  }>({});
+
   /**
    * Single Unit Creation Handler
    * -------------------------------------------------------------------------
@@ -126,11 +133,29 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
    */
   const handleCreateUnit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSingleUnitErrors({});
+
+    const errs: { unitNumber?: string; rentAmount?: string; depositAmount?: string } = {};
+    if (!unitNumber.trim()) {
+      errs.unitNumber = "Unit or flat number is required (e.g. A-101, Room 4)";
+    }
+    if (isNaN(rentAmount) || rentAmount <= 0) {
+      errs.rentAmount = "Monthly rent must be a valid amount greater than ₹0";
+    }
+    if (isNaN(depositAmount) || depositAmount < 0) {
+      errs.depositAmount = "Security deposit cannot be a negative amount";
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setSingleUnitErrors(errs);
+      return;
+    }
+
     setSavingUnit(true);
     try {
       const created = await rentalLifecycleService.createUnit({
         propertyId: property.id,
-        unitNumber,
+        unitNumber: unitNumber.trim(),
         floor,
         type: unitType,
         rentAmount,
@@ -140,6 +165,7 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
       });
       setIsAdding(false);
       setUnitNumber("");
+      setSingleUnitErrors({});
       if (created) {
         setUnits((prev) => [...prev, created]);
       }
@@ -176,8 +202,24 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
    */
   const handleBulkCreateUnits = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (bulkCount <= 0 || bulkCount > 100) {
-      setToast({ show: true, type: "error", message: "Please enter a valid flat count between 1 and 100" });
+    if (!bulkPrefix.trim()) {
+      setToast({ show: true, type: "error", message: "Bulk prefix is required (e.g. Flat-)" });
+      return;
+    }
+    if (bulkStartNum < 1) {
+      setToast({ show: true, type: "error", message: "Starting flat number must be at least 1" });
+      return;
+    }
+    if (bulkCount <= 0 || bulkCount > 50) {
+      setToast({ show: true, type: "error", message: "Please enter a valid flat count between 1 and 50" });
+      return;
+    }
+    if (bulkUnitsPerFloor < 1 || bulkUnitsPerFloor > 25) {
+      setToast({ show: true, type: "error", message: "Flats per floor must be between 1 and 25" });
+      return;
+    }
+    if (isNaN(rentAmount) || rentAmount <= 0) {
+      setToast({ show: true, type: "error", message: "Monthly rent must be greater than ₹0" });
       return;
     }
     setSavingUnit(true);
@@ -188,7 +230,7 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
       for (let i = 0; i < bulkCount; i++) {
         const currentFlatNum = bulkStartNum + i;
         const currentFloor = Math.max(1, Math.floor(i / bulkUnitsPerFloor) + 1);
-        const name = `${bulkPrefix}${currentFlatNum}`;
+        const name = `${bulkPrefix.trim()}${currentFlatNum}`;
 
         await rentalLifecycleService.createUnit({
           propertyId: property.id,
@@ -239,11 +281,15 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
   const handlePublishListing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!publishingUnit) return;
+    if (!listingTitle.trim() || listingTitle.trim().length < 3) {
+      setToast({ show: true, type: "error", message: "Listing title must be at least 3 characters" });
+      return;
+    }
     setPublishing(true);
     try {
       await rentalLifecycleService.createListing({
         unitId: publishingUnit.id,
-        title: listingTitle,
+        title: listingTitle.trim(),
         category,
         monthlyRent: publishingUnit.rentAmount,
         securityDeposit: publishingUnit.depositAmount,
@@ -343,16 +389,31 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Unit / Flat Number *
+                  Unit / Flat Number <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. A-101, Room 4"
                   value={unitNumber}
-                  onChange={(e) => setUnitNumber(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500"
+                  onChange={(e) => {
+                    setUnitNumber(e.target.value);
+                    if (singleUnitErrors.unitNumber) {
+                      setSingleUnitErrors((prev) => ({ ...prev, unitNumber: undefined }));
+                    }
+                  }}
+                  className={cn(
+                    "w-full px-3 py-2 bg-white border rounded-xl text-sm text-slate-900 focus:outline-none",
+                    singleUnitErrors.unitNumber
+                      ? "border-rose-400 focus:border-rose-500 bg-rose-50/30"
+                      : "border-slate-300 focus:border-blue-500"
+                  )}
                 />
+                {singleUnitErrors.unitNumber && (
+                  <span className="block text-[11px] font-medium text-rose-600 mt-1">
+                    {singleUnitErrors.unitNumber}
+                  </span>
+                )}
               </div>
 
               <div>
@@ -360,7 +421,7 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
                 <input
                   type="number"
                   value={floor}
-                  onChange={(e) => setFloor(parseInt(e.target.value, 10))}
+                  onChange={(e) => setFloor(parseInt(e.target.value, 10) || 0)}
                   className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -379,15 +440,31 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Expected Monthly Rent (₹) *
+                  Expected Monthly Rent (₹) <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="number"
+                  min="1"
                   required
                   value={rentAmount}
-                  onChange={(e) => setRentAmount(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500"
+                  onChange={(e) => {
+                    setRentAmount(parseFloat(e.target.value) || 0);
+                    if (singleUnitErrors.rentAmount) {
+                      setSingleUnitErrors((prev) => ({ ...prev, rentAmount: undefined }));
+                    }
+                  }}
+                  className={cn(
+                    "w-full px-3 py-2 bg-white border rounded-xl text-sm text-slate-900 focus:outline-none",
+                    singleUnitErrors.rentAmount
+                      ? "border-rose-400 focus:border-rose-500 bg-rose-50/30"
+                      : "border-slate-300 focus:border-blue-500"
+                  )}
                 />
+                {singleUnitErrors.rentAmount && (
+                  <span className="block text-[11px] font-medium text-rose-600 mt-1">
+                    {singleUnitErrors.rentAmount}
+                  </span>
+                )}
               </div>
 
               <div>
@@ -396,10 +473,26 @@ export default function PropertyUnitsModal({ property, onClose }: Props) {
                 </label>
                 <input
                   type="number"
+                  min="0"
                   value={depositAmount}
-                  onChange={(e) => setDepositAmount(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500"
+                  onChange={(e) => {
+                    setDepositAmount(parseFloat(e.target.value) || 0);
+                    if (singleUnitErrors.depositAmount) {
+                      setSingleUnitErrors((prev) => ({ ...prev, depositAmount: undefined }));
+                    }
+                  }}
+                  className={cn(
+                    "w-full px-3 py-2 bg-white border rounded-xl text-sm text-slate-900 focus:outline-none",
+                    singleUnitErrors.depositAmount
+                      ? "border-rose-400 focus:border-rose-500 bg-rose-50/30"
+                      : "border-slate-300 focus:border-blue-500"
+                  )}
                 />
+                {singleUnitErrors.depositAmount && (
+                  <span className="block text-[11px] font-medium text-rose-600 mt-1">
+                    {singleUnitErrors.depositAmount}
+                  </span>
+                )}
               </div>
 
               <div>

@@ -157,8 +157,8 @@ export default function CustomRoleModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setError("Role name is required");
+    if (!name.trim() || name.trim().length < 2) {
+      setError("Role title must be at least 2 characters long");
       return;
     }
 

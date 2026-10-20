@@ -95,6 +95,8 @@ export default function ApplicationsPage() {
   );
   const [applicantNotes, setApplicantNotes] = useState("");
   const [submittingApp, setSubmittingApp] = useState(false);
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
+  const [approveErrors, setApproveErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadApplications();
@@ -152,12 +154,40 @@ export default function ApplicationsPage() {
 
   const handleOpenApprove = (app: RentalApplication) => {
     setSelectedApp(app);
+    setApproveErrors({});
     setApproveModalOpen(true);
   };
 
   const handleConfirmApprove = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedApp) return;
+
+    const errors: Record<string, string> = {};
+    if (dueDay < 1 || dueDay > 28) {
+      errors.dueDay = "Due day must be between 1 and 28.";
+    }
+    if (graceDays < 0 || graceDays > 15) {
+      errors.graceDays = "Grace days must be between 0 and 15.";
+    }
+    if (penaltyAmount < 0) {
+      errors.penaltyAmount = "Penalty amount cannot be negative.";
+    }
+    if (penaltyType === "PERCENTAGE" && penaltyAmount > 100) {
+      errors.penaltyAmount = "Percentage penalty cannot exceed 100%.";
+    }
+    if (maxPenaltyCap < 0) {
+      errors.maxPenaltyCap = "Maximum penalty cap cannot be negative.";
+    }
+    if (penaltyType === "FIXED" && maxPenaltyCap > 0 && maxPenaltyCap < penaltyAmount) {
+      errors.maxPenaltyCap = "Max penalty cap cannot be less than single penalty amount.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setApproveErrors(errors);
+      return;
+    }
+    setApproveErrors({});
+
     setApproving(true);
     try {
       await rentalLifecycleService.approveApplication(selectedApp.id, {
@@ -219,6 +249,7 @@ export default function ApplicationsPage() {
   };
 
   const handleOpenCreateModal = async () => {
+    setCreateErrors({});
     setIsCreateModalOpen(true);
     try {
       const props = await propertyService.list();
@@ -281,30 +312,28 @@ export default function ApplicationsPage() {
 
   const handleCreateApplication = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs: Record<string, string> = {};
     if (!selectedUnitId) {
-      setToast({
-        show: true,
-        type: "error",
-        message: "Please select an available unit.",
-      });
+      errs.unit = "Please select an available unit.";
+    }
+    if (!applicantName.trim() || applicantName.trim().length < 2) {
+      errs.name = "Applicant full name must be at least 2 characters.";
+    }
+    if (!/^[6-9]\d{9}$/.test(applicantPhone.trim())) {
+      errs.phone = "Please enter a valid 10-digit Indian mobile number (e.g. 9876543210).";
+    }
+    if (applicantEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(applicantEmail.trim())) {
+      errs.email = "Please enter a valid email address.";
+    }
+    if (monthlyRent !== "" && (isNaN(Number(monthlyRent)) || Number(monthlyRent) <= 0)) {
+      errs.monthlyRent = "Monthly rent must be greater than 0.";
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setCreateErrors(errs);
       return;
     }
-    if (!applicantName.trim()) {
-      setToast({
-        show: true,
-        type: "error",
-        message: "Please enter applicant full name.",
-      });
-      return;
-    }
-    if (applicantPhone.trim().length !== 10) {
-      setToast({
-        show: true,
-        type: "error",
-        message: "Please enter a valid 10-digit mobile number.",
-      });
-      return;
-    }
+    setCreateErrors({});
 
     setSubmittingApp(true);
     try {
@@ -325,17 +354,18 @@ export default function ApplicationsPage() {
       setApplicantEmail("");
       setApplicantOccupation("");
       setApplicantNotes("");
+      setMonthlyRent("");
       setToast({
         show: true,
         type: "success",
-        message: "Rental application recorded successfully in pipeline.",
+        message: "Rental application recorded successfully.",
       });
       await loadApplications();
     } catch (err: any) {
       setToast({
         show: true,
         type: "error",
-        message: err.response?.data?.message || "Failed to record application",
+        message: err.response?.data?.message || "Failed to submit application",
       });
     } finally {
       setSubmittingApp(false);
@@ -666,10 +696,19 @@ export default function ApplicationsPage() {
                   min="1"
                   max="28"
                   value={dueDay}
-                  onChange={(e) => setDueDay(parseInt(e.target.value, 10))}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                  onChange={(e) => {
+                    setDueDay(parseInt(e.target.value, 10) || 1);
+                    if (approveErrors.dueDay) setApproveErrors({ ...approveErrors, dueDay: "" });
+                  }}
+                  className={`w-full px-3.5 py-2 bg-slate-50 border ${
+                    approveErrors.dueDay ? "border-rose-400 focus:border-rose-500" : "border-slate-300 focus:border-blue-500"
+                  } rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white transition`}
                 />
-                <span className="text-[10px] text-slate-500">e.g. 5th of every month</span>
+                {approveErrors.dueDay ? (
+                  <span className="text-[10px] text-rose-500 font-medium">{approveErrors.dueDay}</span>
+                ) : (
+                  <span className="text-[10px] text-slate-500">e.g. 5th of every month</span>
+                )}
               </div>
 
               <div>
@@ -681,10 +720,19 @@ export default function ApplicationsPage() {
                   min="0"
                   max="15"
                   value={graceDays}
-                  onChange={(e) => setGraceDays(parseInt(e.target.value, 10))}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                  onChange={(e) => {
+                    setGraceDays(parseInt(e.target.value, 10) || 0);
+                    if (approveErrors.graceDays) setApproveErrors({ ...approveErrors, graceDays: "" });
+                  }}
+                  className={`w-full px-3.5 py-2 bg-slate-50 border ${
+                    approveErrors.graceDays ? "border-rose-400 focus:border-rose-500" : "border-slate-300 focus:border-blue-500"
+                  } rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white transition`}
                 />
-                <span className="text-[10px] text-slate-500">Days before penalty begins</span>
+                {approveErrors.graceDays ? (
+                  <span className="text-[10px] text-rose-500 font-medium">{approveErrors.graceDays}</span>
+                ) : (
+                  <span className="text-[10px] text-slate-500">Days before penalty begins</span>
+                )}
               </div>
             </div>
 
@@ -705,14 +753,23 @@ export default function ApplicationsPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Penalty Amount (₹)
+                  Penalty Amount {penaltyType === "PERCENTAGE" ? "(%)" : "(₹)"}
                 </label>
                 <input
                   type="number"
+                  min="0"
                   value={penaltyAmount}
-                  onChange={(e) => setPenaltyAmount(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                  onChange={(e) => {
+                    setPenaltyAmount(parseFloat(e.target.value) || 0);
+                    if (approveErrors.penaltyAmount) setApproveErrors({ ...approveErrors, penaltyAmount: "" });
+                  }}
+                  className={`w-full px-3.5 py-2 bg-slate-50 border ${
+                    approveErrors.penaltyAmount ? "border-rose-400 focus:border-rose-500" : "border-slate-300 focus:border-blue-500"
+                  } rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white transition`}
                 />
+                {approveErrors.penaltyAmount && (
+                  <span className="text-[10px] text-rose-500 font-medium">{approveErrors.penaltyAmount}</span>
+                )}
               </div>
             </div>
 
@@ -722,10 +779,19 @@ export default function ApplicationsPage() {
               </label>
               <input
                 type="number"
+                min="0"
                 value={maxPenaltyCap}
-                onChange={(e) => setMaxPenaltyCap(parseFloat(e.target.value) || 0)}
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                onChange={(e) => {
+                  setMaxPenaltyCap(parseFloat(e.target.value) || 0);
+                  if (approveErrors.maxPenaltyCap) setApproveErrors({ ...approveErrors, maxPenaltyCap: "" });
+                }}
+                className={`w-full px-3.5 py-2 bg-slate-50 border ${
+                  approveErrors.maxPenaltyCap ? "border-rose-400 focus:border-rose-500" : "border-slate-300 focus:border-blue-500"
+                } rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white transition`}
               />
+              {approveErrors.maxPenaltyCap && (
+                <span className="text-[10px] text-rose-500 font-medium">{approveErrors.maxPenaltyCap}</span>
+              )}
             </div>
 
             <div className="pt-4 flex justify-end gap-2 border-t border-slate-100">
@@ -791,7 +857,10 @@ export default function ApplicationsPage() {
               </label>
               <Select
                 value={selectedUnitId}
-                onChange={(e) => handleUnitChange(e.target.value)}
+                onChange={(e) => {
+                  handleUnitChange(e.target.value);
+                  if (createErrors.unit) setCreateErrors({ ...createErrors, unit: "" });
+                }}
                 disabled={loadingUnits}
                 placeholder={loadingUnits ? "Loading units..." : "Select unit..."}
               >
@@ -812,6 +881,9 @@ export default function ApplicationsPage() {
                   ))
                 )}
               </Select>
+              {createErrors.unit && (
+                <span className="text-[10px] text-rose-500 font-medium">{createErrors.unit}</span>
+              )}
             </div>
           </div>
 
@@ -823,11 +895,19 @@ export default function ApplicationsPage() {
               <input
                 type="text"
                 value={applicantName}
-                onChange={(e) => setApplicantName(e.target.value)}
+                onChange={(e) => {
+                  setApplicantName(e.target.value);
+                  if (createErrors.name) setCreateErrors({ ...createErrors, name: "" });
+                }}
                 placeholder="e.g. Rahul Sharma"
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                className={`w-full px-3.5 py-2 bg-slate-50 border ${
+                  createErrors.name ? "border-rose-400 focus:border-rose-500" : "border-slate-300 focus:border-blue-500"
+                } rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white transition`}
                 required
               />
+              {createErrors.name && (
+                <span className="text-[10px] text-rose-500 font-medium">{createErrors.name}</span>
+              )}
             </div>
 
             <div>
@@ -838,16 +918,23 @@ export default function ApplicationsPage() {
                 type="tel"
                 maxLength={10}
                 value={applicantPhone}
-                onChange={(e) =>
-                  setApplicantPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
-                }
+                onChange={(e) => {
+                  setApplicantPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
+                  if (createErrors.phone) setCreateErrors({ ...createErrors, phone: "" });
+                }}
                 placeholder="10-digit mobile number"
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                className={`w-full px-3.5 py-2 bg-slate-50 border ${
+                  createErrors.phone ? "border-rose-400 focus:border-rose-500" : "border-slate-300 focus:border-blue-500"
+                } rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white transition`}
                 required
               />
-              <span className="text-[10px] text-slate-500">
-                Strictly 10 digits without prefix
-              </span>
+              {createErrors.phone ? (
+                <span className="text-[10px] text-rose-500 font-medium">{createErrors.phone}</span>
+              ) : (
+                <span className="text-[10px] text-slate-500">
+                  Strictly 10 digits without prefix (e.g. 9876543210)
+                </span>
+              )}
             </div>
           </div>
 
@@ -859,10 +946,18 @@ export default function ApplicationsPage() {
               <input
                 type="email"
                 value={applicantEmail}
-                onChange={(e) => setApplicantEmail(e.target.value)}
+                onChange={(e) => {
+                  setApplicantEmail(e.target.value);
+                  if (createErrors.email) setCreateErrors({ ...createErrors, email: "" });
+                }}
                 placeholder="e.g. rahul@example.com"
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                className={`w-full px-3.5 py-2 bg-slate-50 border ${
+                  createErrors.email ? "border-rose-400 focus:border-rose-500" : "border-slate-300 focus:border-blue-500"
+                } rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white transition`}
               />
+              {createErrors.email && (
+                <span className="text-[10px] text-rose-500 font-medium">{createErrors.email}</span>
+              )}
             </div>
 
             <div>
@@ -886,11 +981,20 @@ export default function ApplicationsPage() {
               </label>
               <input
                 type="number"
+                min="0"
                 value={monthlyRent}
-                onChange={(e) => setMonthlyRent(e.target.value)}
+                onChange={(e) => {
+                  setMonthlyRent(e.target.value);
+                  if (createErrors.monthlyRent) setCreateErrors({ ...createErrors, monthlyRent: "" });
+                }}
                 placeholder="e.g. 15000"
-                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                className={`w-full px-3.5 py-2 bg-slate-50 border ${
+                  createErrors.monthlyRent ? "border-rose-400 focus:border-rose-500" : "border-slate-300 focus:border-blue-500"
+                } rounded-xl text-xs text-slate-900 focus:outline-none focus:bg-white transition`}
               />
+              {createErrors.monthlyRent && (
+                <span className="text-[10px] text-rose-500 font-medium">{createErrors.monthlyRent}</span>
+              )}
             </div>
 
             <div>

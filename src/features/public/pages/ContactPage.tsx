@@ -18,18 +18,38 @@ export default function ContactPage() {
     units: "1-10",
     message: "",
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const validate = () => {
+    const errs: Record<string, string> = {};
+    if (!form.name.trim() || form.name.trim().length < 2) {
+      errs.name = "Full name must be at least 2 characters.";
+    }
+    if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) {
+      errs.mobile = "Please enter a valid 10-digit Indian mobile number (e.g. 9876543210).";
+    }
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errs.email = "Please enter a valid email address.";
+    }
+    if (form.message.trim() && form.message.trim().length < 5) {
+      errs.message = "Message should be at least 5 characters if provided.";
+    }
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
     setLoading(true);
     setErrorMessage("");
     try {
       const res = await api.post(ENDPOINTS.MESSAGES.SUBMIT, {
-        name: form.name,
-        mobile: form.mobile,
-        email: form.email,
+        name: form.name.trim(),
+        mobile: form.mobile.trim(),
+        email: form.email.trim() || undefined,
         subject: `Portfolio Inquiry (${form.units} Units)`,
-        message: form.message,
+        message: form.message.trim() || undefined,
         category: "PORTFOLIO_INQUIRY",
       });
       setTicketId(res.data?.data?.id || `TICK-${Date.now().toString().slice(-6)}`);
@@ -152,9 +172,17 @@ export default function ContactPage() {
                       required
                       placeholder="e.g. Rahul Sharma"
                       value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className="w-full h-11 px-3 text-xs rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                      onChange={(e) => {
+                        setForm({ ...form, name: e.target.value });
+                        if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: "" });
+                      }}
+                      className={`w-full h-11 px-3 text-xs rounded-xl border ${
+                        fieldErrors.name ? "border-rose-400 focus:ring-rose-100" : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
+                      } focus:ring-2 outline-none`}
                     />
+                    {fieldErrors.name && (
+                      <p className="text-[11px] text-rose-500 font-medium mt-1">{fieldErrors.name}</p>
+                    )}
                   </div>
 
                   <div>
@@ -165,14 +193,20 @@ export default function ContactPage() {
                       maxLength={10}
                       placeholder="e.g. 9876543210"
                       value={form.mobile}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setForm({
                           ...form,
                           mobile: e.target.value.replace(/\D/g, "").slice(0, 10),
-                        })
-                      }
-                      className="w-full h-11 px-3 text-xs rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                        });
+                        if (fieldErrors.mobile) setFieldErrors({ ...fieldErrors, mobile: "" });
+                      }}
+                      className={`w-full h-11 px-3 text-xs rounded-xl border ${
+                        fieldErrors.mobile ? "border-rose-400 focus:ring-rose-100" : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
+                      } focus:ring-2 outline-none`}
                     />
+                    {fieldErrors.mobile && (
+                      <p className="text-[11px] text-rose-500 font-medium mt-1">{fieldErrors.mobile}</p>
+                    )}
                   </div>
                 </div>
 
@@ -183,9 +217,17 @@ export default function ContactPage() {
                       type="email"
                       placeholder="e.g. rahul@example.com"
                       value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className="w-full h-11 px-3 text-xs rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                      onChange={(e) => {
+                        setForm({ ...form, email: e.target.value });
+                        if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: "" });
+                      }}
+                      className={`w-full h-11 px-3 text-xs rounded-xl border ${
+                        fieldErrors.email ? "border-rose-400 focus:ring-rose-100" : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
+                      } focus:ring-2 outline-none`}
                     />
+                    {fieldErrors.email && (
+                      <p className="text-[11px] text-rose-500 font-medium mt-1">{fieldErrors.email}</p>
+                    )}
                   </div>
 
                   <div>
@@ -208,9 +250,17 @@ export default function ContactPage() {
                     rows={4}
                     placeholder="Tell us about your properties or what you'd like to achieve..."
                     value={form.message}
-                    onChange={(e) => setForm({ ...form, message: e.target.value })}
-                    className="w-full p-3 text-xs rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                    onChange={(e) => {
+                      setForm({ ...form, message: e.target.value });
+                      if (fieldErrors.message) setFieldErrors({ ...fieldErrors, message: "" });
+                    }}
+                    className={`w-full p-3 text-xs rounded-xl border ${
+                      fieldErrors.message ? "border-rose-400 focus:ring-rose-100" : "border-slate-300 focus:border-blue-600 focus:ring-blue-100"
+                    } focus:ring-2 outline-none`}
                   />
+                  {fieldErrors.message && (
+                    <p className="text-[11px] text-rose-500 font-medium mt-1">{fieldErrors.message}</p>
+                  )}
                 </div>
 
                 <Button

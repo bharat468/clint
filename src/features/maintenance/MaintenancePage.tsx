@@ -140,6 +140,10 @@ export default function MaintenancePage() {
   const handleSaveStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTicket) return;
+    if (isNaN(cost) || cost < 0) {
+      showToast("Repair and material cost cannot be a negative amount", "error");
+      return;
+    }
     setSaving(true);
     try {
       await rentalLifecycleService.updateMaintenanceStatus(
@@ -167,8 +171,12 @@ export default function MaintenancePage() {
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPropertyId || !newTitle.trim()) {
-      showToast("Please select a property and enter a descriptive title", "error");
+    if (!newPropertyId) {
+      showToast("Please select a target property for the maintenance ticket", "error");
+      return;
+    }
+    if (!newTitle.trim() || newTitle.trim().length < 3) {
+      showToast("Issue title must be at least 3 characters long", "error");
       return;
     }
     setCreatingTicket(true);

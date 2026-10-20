@@ -126,16 +126,26 @@ export function MeterReadingModal({
     ? Math.round((consumedUnits * parsedRate) * 100) / 100
     : 0;
 
+  const [formErrors, setFormErrors] = useState<{ currentReading?: string; customRate?: string }>({});
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!unit) return;
+    setFormErrors({});
 
-    if (!isValidCurrent) {
-      setToast({
-        show: true,
-        type: "error",
-        message: `Current reading must be a valid number greater than or equal to previous reading (${previousReading}).`,
-      });
+    const errs: { currentReading?: string; customRate?: string } = {};
+    if (isNaN(parsedCurrent) || parsedCurrent < 0) {
+      errs.currentReading = "Current reading must be a valid non-negative number";
+    } else if (parsedCurrent < previousReading) {
+      errs.currentReading = `Current reading (${parsedCurrent}) cannot be less than previous reading (${previousReading})`;
+    }
+
+    if (isNaN(parsedRate) || parsedRate <= 0) {
+      errs.customRate = "Rate per unit must be greater than ₹0";
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setFormErrors(errs);
       return;
     }
 
@@ -292,22 +302,33 @@ export function MeterReadingModal({
                   step="0.01"
                   min={previousReading}
                   value={currentReading}
-                  onChange={(e) => setCurrentReading(e.target.value)}
+                  onChange={(e) => {
+                    setCurrentReading(e.target.value);
+                    if (formErrors.currentReading) {
+                      setFormErrors((prev) => ({ ...prev, currentReading: undefined }));
+                    }
+                  }}
                   placeholder={`Min ${previousReading}`}
-                  className="font-bold text-blue-700 focus:border-blue-500"
+                  className={formErrors.currentReading ? "border-rose-400 focus:border-rose-500 font-bold" : "font-bold text-blue-700 focus:border-blue-500"}
                   required
                   autoFocus
                 />
-                <span className="text-[10px] text-slate-400 mt-1 block">
-                  New reading from physical meter
-                </span>
+                {formErrors.currentReading ? (
+                  <span className="text-[11px] font-medium text-rose-600 mt-1 block">
+                    {formErrors.currentReading}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    New reading from physical meter
+                  </span>
+                )}
               </div>
 
               {/* Rate per Unit */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-slate-700">
-                    Rate per Unit
+                    Rate per Unit <span className="text-rose-500">*</span>
                   </label>
                   <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded">
                     From Settings
@@ -318,16 +339,27 @@ export function MeterReadingModal({
                   <Input
                     type="number"
                     step="0.01"
-                    min="0"
+                    min="0.01"
                     value={customRate}
-                    onChange={(e) => setCustomRate(e.target.value)}
-                    className="pl-7 font-bold text-slate-800"
+                    onChange={(e) => {
+                      setCustomRate(e.target.value);
+                      if (formErrors.customRate) {
+                        setFormErrors((prev) => ({ ...prev, customRate: undefined }));
+                      }
+                    }}
+                    className={formErrors.customRate ? "pl-7 font-bold border-rose-400 focus:border-rose-500" : "pl-7 font-bold text-slate-800"}
                     required
                   />
                 </div>
-                <span className="text-[10px] text-slate-400 mt-1 block">
-                  Default from Org Settings
-                </span>
+                {formErrors.customRate ? (
+                  <span className="text-[11px] font-medium text-rose-600 mt-1 block">
+                    {formErrors.customRate}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Default from Org Settings
+                  </span>
+                )}
               </div>
             </div>
 

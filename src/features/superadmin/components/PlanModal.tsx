@@ -78,6 +78,27 @@ export default function PlanModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim() || formData.name.trim().length < 2) {
+      setError("Plan name must be at least 2 characters.");
+      return;
+    }
+    if (formData.priceMonthly < 0 || formData.priceYearly < 0) {
+      setError("Monthly and yearly prices cannot be negative.");
+      return;
+    }
+    if (formData.maxProperties < 1) {
+      setError("Maximum properties limit must be at least 1.");
+      return;
+    }
+    if (formData.maxTenants < 1) {
+      setError("Maximum tenants limit must be at least 1.");
+      return;
+    }
+    if (formData.maxStaff < 1) {
+      setError("Maximum staff limit must be at least 1.");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {

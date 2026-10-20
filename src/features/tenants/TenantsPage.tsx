@@ -36,14 +36,34 @@ import { Toast } from "@/components/ui/toast";
 import { DatePicker } from "@/components/ui/date-picker";
 import type { Property, Tenant } from "@/types";
 
-const schema = z.object({
-  name: z.string().min(2, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().min(10, "Enter a valid 10-digit phone number"),
-  propertyId: z.string().optional(),
-  leaseStart: z.string().optional(),
-  leaseEnd: z.string().optional(),
-});
+const schema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Full name must be at least 2 characters")
+      .max(60, "Full name cannot exceed 60 characters"),
+    email: z.string().trim().email("Please provide a valid email address"),
+    phone: z
+      .string()
+      .trim()
+      .regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit Indian mobile number"),
+    propertyId: z.string().optional(),
+    leaseStart: z.string().optional(),
+    leaseEnd: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.leaseStart && data.leaseEnd) {
+        return new Date(data.leaseEnd) >= new Date(data.leaseStart);
+      }
+      return true;
+    },
+    {
+      message: "Lease end date must be on or after lease start date",
+      path: ["leaseEnd"],
+    }
+  );
 type Form = z.infer<typeof schema>;
 
 export default function TenantsPage() {

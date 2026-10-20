@@ -184,12 +184,22 @@ export default function TeamSettingsPage() {
     e.preventDefault();
     if (!editingMember) return;
     setEditMemberFormError(null);
+
+    if (editMemberForm.name && editMemberForm.name.trim().length > 0 && editMemberForm.name.trim().length < 2) {
+      setEditMemberFormError("Staff member name must be at least 2 characters.");
+      return;
+    }
+    if (editMemberForm.email && editMemberForm.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editMemberForm.email.trim())) {
+      setEditMemberFormError("Please enter a valid email address.");
+      return;
+    }
+
     setIsSubmittingMember(true);
     try {
       const orgId = await getEffectiveOrgId();
       await organizationService.updateMember(orgId, editingMember.userId, {
-        name: editMemberForm.name,
-        email: editMemberForm.email,
+        name: editMemberForm.name.trim() || undefined,
+        email: editMemberForm.email.trim() || undefined,
         roleId: editMemberForm.roleId || undefined,
         propertyScope: editScopeMode === "ALL" ? [] : editMemberForm.propertyScope,
       });
@@ -209,15 +219,26 @@ export default function TeamSettingsPage() {
     e.preventDefault();
     setMemberFormError(null);
     const sanitizedMobile = memberForm.mobile.replace(/\D/g, "").slice(0, 10);
-    if (!/^\d{10}$/.test(sanitizedMobile)) {
-      setMemberFormError("Please enter a valid 10-digit mobile number");
+    if (!/^[6-9]\d{9}$/.test(sanitizedMobile)) {
+      setMemberFormError("Please enter a valid 10-digit Indian mobile number (e.g. 9876543210)");
       return;
     }
+    if (memberForm.name && memberForm.name.trim().length > 0 && memberForm.name.trim().length < 2) {
+      setMemberFormError("Staff member name must be at least 2 characters.");
+      return;
+    }
+    if (memberForm.email && memberForm.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(memberForm.email.trim())) {
+      setMemberFormError("Please enter a valid email address.");
+      return;
+    }
+
     setIsSubmittingMember(true);
     try {
       const orgId = await getEffectiveOrgId();
       await organizationService.addMember(orgId, {
         ...memberForm,
+        name: memberForm.name?.trim() || undefined,
+        email: memberForm.email?.trim() || undefined,
         mobile: sanitizedMobile,
         propertyScope: scopeMode === "ALL" ? [] : memberForm.propertyScope,
       });

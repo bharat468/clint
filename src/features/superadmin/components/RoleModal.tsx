@@ -154,27 +154,34 @@ export default function RoleModal({ open, roleToEdit, onClose, onSuccess }: Role
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!roleName) return;
+    if (!roleName.trim() || roleName.trim().length < 2) {
+      setError("Role name must be at least 2 characters.");
+      return;
+    }
+    if (selectedPermissions.length === 0) {
+      setError("Please select at least one permission for this platform role.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      const slug = roleSlug || roleName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      const slug = roleSlug.trim() || roleName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
       if (roleToEdit) {
         await adminService.updateRoleDefinition(roleToEdit.id, {
-          name: roleName,
+          name: roleName.trim(),
           slug,
-          description: roleDesc,
+          description: roleDesc.trim() || undefined,
           permissions: selectedPermissions,
         });
-        onSuccess(`Successfully updated role: ${roleName}`);
+        onSuccess(`Successfully updated role: ${roleName.trim()}`);
       } else {
         await adminService.createRole({
-          name: roleName,
+          name: roleName.trim(),
           slug,
-          description: roleDesc,
+          description: roleDesc.trim() || undefined,
           permissions: selectedPermissions,
         });
-        onSuccess(`Successfully created platform role: ${roleName}`);
+        onSuccess(`Successfully created platform role: ${roleName.trim()}`);
       }
       onClose();
     } catch (err: any) {

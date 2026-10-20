@@ -62,13 +62,18 @@ export default function OrganizationModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setError("Organization name is required.");
+    if (!name.trim() || name.trim().length < 2) {
+      setError("Organization name must be at least 2 characters.");
       return;
     }
 
-    if (!orgToEdit && !/^\d{10}$/.test(ownerMobile.trim())) {
-      setError("A valid 10-digit owner mobile number is required.");
+    if (!orgToEdit && !/^[6-9]\d{9}$/.test(ownerMobile.trim())) {
+      setError("A valid 10-digit Indian mobile number is required for the owner (e.g. 9876543210).");
+      return;
+    }
+
+    if (ownerEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail.trim())) {
+      setError("Please enter a valid email address for the owner.");
       return;
     }
 

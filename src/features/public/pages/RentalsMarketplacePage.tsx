@@ -40,6 +40,7 @@ export default function RentalsMarketplacePage() {
   const [applicantMessage, setApplicantMessage] = useState("");
   const [submittingApp, setSubmittingApp] = useState(false);
   const [appSuccess, setAppSuccess] = useState(false);
+  const [applyErrors, setApplyErrors] = useState<{ name?: string; phone?: string }>({});
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
@@ -85,20 +86,36 @@ export default function RentalsMarketplacePage() {
     setApplicantName(currentUser.name || "");
     setApplicantPhone(currentUser.mobile || "");
     setAppSuccess(false);
+    setApplyErrors({});
     setApplyModalOpen(true);
   };
 
   const handleSubmitApplication = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedListing) return;
+    setApplyErrors({});
+
+    const errs: { name?: string; phone?: string } = {};
+    if (!applicantName.trim() || applicantName.trim().length < 2) {
+      errs.name = "Full name must be at least 2 characters";
+    }
+    if (!/^[6-9]\d{9}$/.test(applicantPhone.trim())) {
+      errs.phone = "Please enter a valid 10-digit Indian mobile number";
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setApplyErrors(errs);
+      return;
+    }
+
     setSubmittingApp(true);
     try {
       await rentalLifecycleService.submitApplication({
         listingId: selectedListing.id,
-        name: applicantName,
-        phone: applicantPhone,
-        occupation: applicantOccupation,
-        message: applicantMessage,
+        name: applicantName.trim(),
+        phone: applicantPhone.trim(),
+        occupation: applicantOccupation.trim() || undefined,
+        message: applicantMessage.trim() || undefined,
       });
       setAppSuccess(true);
     } catch (err: any) {
@@ -361,31 +378,53 @@ export default function RentalsMarketplacePage() {
                 <form onSubmit={handleSubmitApplication} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Full Name *
+                      Full Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
                       placeholder="e.g. Ramesh Kumar"
                       value={applicantName}
-                      onChange={(e) => setApplicantName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500"
+                      onChange={(e) => {
+                        setApplicantName(e.target.value);
+                        if (applyErrors.name) setApplyErrors((p) => ({ ...p, name: undefined }));
+                      }}
+                      className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-sm text-slate-900 focus:outline-none ${
+                        applyErrors.name ? "border-rose-400 focus:border-rose-500 bg-rose-50/20" : "border-slate-300 focus:border-blue-500"
+                      }`}
                     />
+                    {applyErrors.name && (
+                      <span className="block text-xs text-rose-600 font-medium mt-1">
+                        {applyErrors.name}
+                      </span>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Contact Mobile *
+                        Contact Mobile <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="tel"
                         required
+                        maxLength={10}
                         placeholder="10-digit mobile"
                         value={applicantPhone}
-                        onChange={(e) => setApplicantPhone(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500"
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                          setApplicantPhone(val);
+                          if (applyErrors.phone) setApplyErrors((p) => ({ ...p, phone: undefined }));
+                        }}
+                        className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-sm text-slate-900 focus:outline-none ${
+                          applyErrors.phone ? "border-rose-400 focus:border-rose-500 bg-rose-50/20" : "border-slate-300 focus:border-blue-500"
+                        }`}
                       />
+                      {applyErrors.phone && (
+                        <span className="block text-xs text-rose-600 font-medium mt-1">
+                          {applyErrors.phone}
+                        </span>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
