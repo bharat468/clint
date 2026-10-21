@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Spinner } from "@/components/ui/spinner";
 import { Toast } from "@/components/ui/toast";
+import { Select } from "@/components/ui/input";
 
 interface ReplyItem {
   id: string;
@@ -354,19 +355,21 @@ export default function SuperAdminMessagesPage() {
 
           {/* Search & Category Inputs */}
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full sm:w-auto h-9 px-3 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 outline-none"
-            >
-              <option value="ALL">All Categories</option>
-              <option value="PORTFOLIO_INQUIRY">Portfolio Inquiry</option>
-              <option value="GENERAL_INQUIRY">General Inquiry</option>
-              <option value="SUPPORT">Support</option>
-              <option value="BILLING">Billing & Accounts</option>
-              <option value="ENTERPRISE_PLAN">Enterprise Plan</option>
-              <option value="BUG_REPORT">Bug Report</option>
-            </select>
+            <div className="w-full sm:w-48">
+              <Select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="h-9.5 text-xs rounded-xl px-3"
+              >
+                <option value="ALL">All Categories</option>
+                <option value="PORTFOLIO_INQUIRY">Portfolio Inquiry</option>
+                <option value="GENERAL_INQUIRY">General Inquiry</option>
+                <option value="SUPPORT">Support</option>
+                <option value="BILLING">Billing & Accounts</option>
+                <option value="ENTERPRISE_PLAN">Enterprise Plan</option>
+                <option value="BUG_REPORT">Bug Report</option>
+              </Select>
+            </div>
 
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
@@ -572,18 +575,20 @@ export default function SuperAdminMessagesPage() {
 
                 {/* Status selector */}
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-slate-500">Status:</span>
-                  <select
-                    value={selectedMessage.status}
-                    onChange={(e) => handleUpdateStatus(selectedMessage.id, e.target.value)}
-                    className="h-8 px-2 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-800 outline-none"
-                  >
-                    <option value="UNREAD">Unread</option>
-                    <option value="READ">Read</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="RESOLVED">Resolved</option>
-                    <option value="ARCHIVED">Archived</option>
-                  </select>
+                  <span className="text-[11px] font-semibold text-slate-500 shrink-0">Status:</span>
+                  <div className="w-36">
+                    <Select
+                      value={selectedMessage.status}
+                      onChange={(e) => handleUpdateStatus(selectedMessage.id, e.target.value)}
+                      className="h-8.5 text-xs font-semibold rounded-lg px-2.5"
+                    >
+                      <option value="UNREAD">Unread</option>
+                      <option value="READ">Read</option>
+                      <option value="IN_PROGRESS">In Progress</option>
+                      <option value="RESOLVED">Resolved</option>
+                      <option value="ARCHIVED">Archived</option>
+                    </Select>
+                  </div>
                 </div>
               </div>
 

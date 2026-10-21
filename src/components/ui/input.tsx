@@ -262,6 +262,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 bottom: coords.placeAbove ? window.innerHeight - coords.top : undefined,
                 left: coords.left,
                 width: coords.width,
+                minWidth: Math.max(coords.width, 140),
                 zIndex: 99999,
               }}
               className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl animate-in fade-in zoom-in-95 duration-150"

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Toast } from "@/components/ui/toast";
+import { Select } from "@/components/ui/input";
 import { useAppSelector } from "@/app/hooks";
 
 interface SupportHelpModalProps {
@@ -168,33 +169,33 @@ export default function SupportHelpModal({ open, onClose }: SupportHelpModalProp
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Category
                 </label>
-                <select
+                <Select
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="w-full h-10 px-3 text-xs rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+                  className="h-10 text-xs"
                 >
                   <option value="SUPPORT">General Support</option>
                   <option value="BILLING">Billing & GST Receipt</option>
                   <option value="QUOTA_REQUEST">Property/Unit Quota Request</option>
                   <option value="BUG_REPORT">Technical Issue / Bug</option>
                   <option value="FEATURE_REQUEST">Feature Request</option>
-                </select>
+                </Select>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Urgency
                 </label>
-                <select
+                <Select
                   value={form.priority}
                   onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                  className="w-full h-10 px-3 text-xs rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none bg-white"
+                  className="h-10 text-xs"
                 >
                   <option value="LOW">Low (General question)</option>
                   <option value="MEDIUM">Medium (Standard request)</option>
                   <option value="HIGH">High (Urgent tenant/billing issue)</option>
                   <option value="URGENT">Urgent (Platform blocking)</option>
-                </select>
+                </Select>
               </div>
             </div>
 
